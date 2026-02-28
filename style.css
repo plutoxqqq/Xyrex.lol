@@ -38,6 +38,27 @@ a { color: inherit; text-decoration: none; }
   cursor: pointer;
 }
 
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.brand,
+.product-name,
+.page-switch-btn,
+.subtab-btn{
+  user-select:none;
+  -webkit-user-select:none;
+}
+
+.script-card pre,
+.script-card pre *{
+  user-select:text;
+  -webkit-user-select:text;
+}
+
 .topnav{
   position: fixed;
   inset: 0 0 auto 0;

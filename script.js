@@ -482,7 +482,7 @@ function createProductCard(product, index) {
   header.appendChild(right);
 
   const summary = document.createElement('p');
-  summary.className = 'summary no-text-select';
+  summary.className = 'summary';
   summary.textContent = product.description;
 
   const price = document.createElement('div');
