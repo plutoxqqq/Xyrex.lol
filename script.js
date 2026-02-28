@@ -565,7 +565,6 @@ function applyAllFilters() {
 function openModal(product) {
   const overlay = qs('#modalOverlay');
   const content = qs('#modalContent');
-  overlay.setAttribute('aria-hidden', 'false');
 
   content.innerHTML = `
     <h2>${escapeHtml(product.name)}</h2>
@@ -584,12 +583,22 @@ function openModal(product) {
       </aside>
     </div>`;
 
+  overlay.classList.remove('is-closing');
+  overlay.setAttribute('aria-hidden', 'false');
   qs('#modalCloseBtn').focus();
 }
 
 function closeModal() {
-  qs('#modalOverlay').setAttribute('aria-hidden', 'true');
-  qs('#modalContent').innerHTML = '';
+  const overlay = qs('#modalOverlay');
+  if (overlay.getAttribute('aria-hidden') === 'true') return;
+
+  overlay.classList.add('is-closing');
+  window.setTimeout(() => {
+    if (!overlay.classList.contains('is-closing')) return;
+    overlay.setAttribute('aria-hidden', 'true');
+    overlay.classList.remove('is-closing');
+    qs('#modalContent').innerHTML = '';
+  }, 190);
 }
 
 function renderTierList(containerId, entries) {
@@ -706,12 +715,35 @@ function deleteSelectedScript() {
   renderSavedScriptsList();
 }
 
+let activePageId = null;
+let activeSubtabId = 'tierPaidPanel';
+
+function restartAnimationClass(element, animationClass) {
+  if (!element) return;
+  element.classList.remove(animationClass);
+  void element.offsetWidth;
+  element.classList.add(animationClass);
+}
+
+function animateMainContentTransition() {
+  restartAnimationClass(qs('.main-content'), 'is-view-switching');
+}
+
 function setActivePage(targetPageId) {
+  if (targetPageId === activePageId) return;
+
+  const nextPage = qs(`#${targetPageId}`);
+  if (!nextPage) return;
+
   qsa('.app-page').forEach(page => {
-    const active = page.id === targetPageId;
-    page.hidden = !active;
-    page.classList.toggle('is-active', active);
+    const isTarget = page.id === targetPageId;
+    page.hidden = !isTarget;
+    page.classList.toggle('is-active', isTarget);
   });
+
+  animateMainContentTransition();
+  restartAnimationClass(nextPage, 'animate-in-page');
+  activePageId = targetPageId;
 
   const onScriptsPage = targetPageId === 'scriptsPage';
   const onEasterPage = targetPageId === 'easterEggPage';
@@ -719,6 +751,21 @@ function setActivePage(targetPageId) {
   qs('#searchInput').disabled = onScriptsPage;
   qs('#clearSearchBtn').disabled = onScriptsPage;
   qs('.page-layout').classList.toggle('scripts-mode', onScriptsPage || onEasterPage);
+}
+
+function setActiveSubtab(targetSubtabId) {
+  if (targetSubtabId === activeSubtabId) return;
+
+  const nextPanel = qs(`#${targetSubtabId}`);
+  if (!nextPanel) return;
+
+  qsa('.subtab-panel').forEach(panel => {
+    panel.hidden = panel.id !== targetSubtabId;
+  });
+
+  animateMainContentTransition();
+  restartAnimationClass(nextPanel, 'animate-in-subtab');
+  activeSubtabId = targetSubtabId;
 }
 
 function injectLegendIcons() {
@@ -744,9 +791,7 @@ function initScriptsHub() {
         item.classList.toggle('is-active', active);
         item.setAttribute('aria-selected', String(active));
       });
-      qsa('.subtab-panel').forEach(panel => {
-        panel.hidden = panel.id !== target;
-      });
+      setActiveSubtab(target);
     });
   });
 
