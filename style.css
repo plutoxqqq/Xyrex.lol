@@ -159,7 +159,7 @@ h6,
 .page-switch{ display:flex; gap:8px; }
 .page-switch-btn,.subtab-btn{ border:1px solid rgba(178,188,255,.28); background:rgba(17,24,46,.9); color:var(--muted); border-radius:999px; padding:8px 12px; font-weight:700; cursor:pointer; }
 .page-switch-btn.is-active,.subtab-btn.is-active{ color:#090d1d; border-color:transparent; background:linear-gradient(90deg,#8192ff,#adb8ff); }
-.app-page{ display:none; flex-direction:column; gap:14px; width:100%; }
+.app-page{ display:none; flex-direction:column; gap:14px; width:100%; opacity:1; transform:translateY(0); transition:opacity .2s ease, transform .2s ease; }
 .app-page.is-active{ display:flex; }
 .app-page.animate-in-page{ animation:pageFadeIn .22s ease-out; }
 #scriptsPage{ min-height:100%; }
