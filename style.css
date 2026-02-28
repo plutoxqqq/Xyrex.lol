@@ -89,7 +89,8 @@ h6,
 .page-layout.scripts-mode{ grid-template-columns:minmax(0,1fr); }
 .sidebar,.main-content{ min-height:0; }
 .sidebar{ background:linear-gradient(180deg,var(--panel),#0d1020); border-radius:var(--radius); border:1px solid rgba(178,188,255,.16); box-shadow:var(--soft-shadow); padding:16px; overflow:auto; scrollbar-width:thin; scrollbar-color:rgba(178,188,255,0.45) transparent; }
-.main-content{ background:linear-gradient(180deg, rgba(17,20,38,.86), rgba(12,15,28,.86)); border-radius:var(--radius); border:1px solid rgba(178,188,255,.16); box-shadow:var(--soft-shadow); padding:14px; overflow:auto; scrollbar-width:thin; scrollbar-color:rgba(178,188,255,0.45) transparent; }
+.main-content{ background:linear-gradient(180deg, rgba(17,20,38,.86), rgba(12,15,28,.86)); border-radius:var(--radius); border:1px solid rgba(178,188,255,.16); box-shadow:var(--soft-shadow); padding:14px; overflow:auto; scrollbar-width:thin; scrollbar-color:rgba(178,188,255,0.45) transparent; transform-origin:center center; }
+.main-content.is-view-switching{ animation:viewSwitch .26s cubic-bezier(.2,.75,.3,1); }
 .sidebar::-webkit-scrollbar,.main-content::-webkit-scrollbar{ width:8px; }
 .sidebar::-webkit-scrollbar-thumb,.main-content::-webkit-scrollbar-thumb{ background:rgba(178,188,255,.35); border-radius:999px; }
 .sidebar::-webkit-scrollbar-button,.main-content::-webkit-scrollbar-button{ display:none; width:0; height:0; }
@@ -137,9 +138,12 @@ h6,
 .info-btn:hover{ filter:brightness(1.06); }
 .no-results{ margin-top:24px; text-align:center; color:var(--muted); }
 
-.modal-overlay{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.66); padding:20px; z-index:90; opacity:0; pointer-events:none; transition:opacity .18s ease; }
-.modal-overlay[aria-hidden="false"]{ opacity:1; pointer-events:auto; }
-.modal{ width:min(760px,100%); max-height:88vh; overflow:auto; border-radius:12px; padding:18px; background:linear-gradient(180deg,var(--panel),#0b1020); border:1px solid rgba(178,188,255,.25); box-shadow:0 18px 48px rgba(0,0,0,.62); position:relative; }
+.modal-overlay{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.66); padding:20px; z-index:90; opacity:0; pointer-events:none; }
+.modal-overlay[aria-hidden="false"]{ opacity:1; pointer-events:auto; animation:overlayFadeIn .2s ease-out; }
+.modal-overlay.is-closing{ animation:overlayFadeOut .18s ease-in forwards; }
+.modal{ width:min(760px,100%); max-height:88vh; overflow:auto; border-radius:12px; padding:18px; background:linear-gradient(180deg,var(--panel),#0b1020); border:1px solid rgba(178,188,255,.25); box-shadow:0 18px 48px rgba(0,0,0,.62); position:relative; transform-origin:center top; }
+.modal-overlay[aria-hidden="false"] .modal{ animation:modalIn .22s cubic-bezier(.22,.61,.36,1); }
+.modal-overlay.is-closing .modal{ animation:modalOut .18s ease-in forwards; }
 .modal-close{ position:absolute; right:10px; top:10px; border:0; background:transparent; color:var(--muted); font-size:18px; cursor:pointer; }
 .modal-content h2{ margin-top:0; }
 .modal-section{ margin:12px 0; }
@@ -194,14 +198,40 @@ h6,
 .egg-card h2{ color: var(--periwinkle-2); text-transform: lowercase; letter-spacing: .08em; }
 
 
+@keyframes viewSwitch{
+  0%{ opacity:1; transform:scale(1); }
+  42%{ opacity:.84; transform:scale(.986); }
+  100%{ opacity:1; transform:scale(1); }
+}
+
 @keyframes pageFadeIn{
-  from{ opacity:0; transform:translateY(8px); }
-  to{ opacity:1; transform:translateY(0); }
+  from{ opacity:0; transform:translateY(8px) scale(1.004); }
+  to{ opacity:1; transform:translateY(0) scale(1); }
 }
 
 @keyframes subtabFadeIn{
-  from{ opacity:0; transform:translateY(5px); }
-  to{ opacity:1; transform:translateY(0); }
+  from{ opacity:0; transform:translateY(6px) scale(1.003); }
+  to{ opacity:1; transform:translateY(0) scale(1); }
+}
+
+@keyframes overlayFadeIn{
+  from{ opacity:0; }
+  to{ opacity:1; }
+}
+
+@keyframes overlayFadeOut{
+  from{ opacity:1; }
+  to{ opacity:0; }
+}
+
+@keyframes modalIn{
+  from{ opacity:0; transform:translateY(10px) scale(.97); }
+  to{ opacity:1; transform:translateY(0) scale(1); }
+}
+
+@keyframes modalOut{
+  from{ opacity:1; transform:translateY(0) scale(1); }
+  to{ opacity:0; transform:translateY(8px) scale(.975); }
 }
 
 @media (max-width: 980px){ .legend{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
@@ -242,8 +272,13 @@ h6,
 }
 
 @media (prefers-reduced-motion: reduce){
+  .main-content.is-view-switching,
   .app-page.animate-in-page,
-  .subtab-panel.animate-in-subtab{
+  .subtab-panel.animate-in-subtab,
+  .modal-overlay[aria-hidden="false"],
+  .modal-overlay.is-closing,
+  .modal-overlay[aria-hidden="false"] .modal,
+  .modal-overlay.is-closing .modal{
     animation:none;
   }
 }

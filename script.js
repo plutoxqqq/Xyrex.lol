@@ -565,7 +565,6 @@ function applyAllFilters() {
 function openModal(product) {
   const overlay = qs('#modalOverlay');
   const content = qs('#modalContent');
-  overlay.setAttribute('aria-hidden', 'false');
 
   content.innerHTML = `
     <h2>${escapeHtml(product.name)}</h2>
@@ -584,12 +583,22 @@ function openModal(product) {
       </aside>
     </div>`;
 
+  overlay.classList.remove('is-closing');
+  overlay.setAttribute('aria-hidden', 'false');
   qs('#modalCloseBtn').focus();
 }
 
 function closeModal() {
-  qs('#modalOverlay').setAttribute('aria-hidden', 'true');
-  qs('#modalContent').innerHTML = '';
+  const overlay = qs('#modalOverlay');
+  if (overlay.getAttribute('aria-hidden') === 'true') return;
+
+  overlay.classList.add('is-closing');
+  window.setTimeout(() => {
+    if (!overlay.classList.contains('is-closing')) return;
+    overlay.setAttribute('aria-hidden', 'true');
+    overlay.classList.remove('is-closing');
+    qs('#modalContent').innerHTML = '';
+  }, 190);
 }
 
 function renderTierList(containerId, entries) {
@@ -709,11 +718,15 @@ function deleteSelectedScript() {
 let activePageId = null;
 let activeSubtabId = 'tierPaidPanel';
 
-function animateInElement(element, animationClass) {
+function restartAnimationClass(element, animationClass) {
   if (!element) return;
   element.classList.remove(animationClass);
   void element.offsetWidth;
   element.classList.add(animationClass);
+}
+
+function animateMainContentTransition() {
+  restartAnimationClass(qs('.main-content'), 'is-view-switching');
 }
 
 function setActivePage(targetPageId) {
@@ -728,7 +741,8 @@ function setActivePage(targetPageId) {
     page.classList.toggle('is-active', isTarget);
   });
 
-  animateInElement(nextPage, 'animate-in-page');
+  animateMainContentTransition();
+  restartAnimationClass(nextPage, 'animate-in-page');
   activePageId = targetPageId;
 
   const onScriptsPage = targetPageId === 'scriptsPage';
@@ -749,7 +763,8 @@ function setActiveSubtab(targetSubtabId) {
     panel.hidden = panel.id !== targetSubtabId;
   });
 
-  animateInElement(nextPanel, 'animate-in-subtab');
+  animateMainContentTransition();
+  restartAnimationClass(nextPanel, 'animate-in-subtab');
   activeSubtabId = targetSubtabId;
 }
 
