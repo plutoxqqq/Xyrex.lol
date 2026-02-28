@@ -3,18 +3,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ROBLOXExecs.xyz</title>
-  <link rel="stylesheet" href="style.css?v=1.0.1" />
+  <title>Xyrex.lol</title>
+  <link rel="stylesheet" href="style.css?v=1.1.0" />
 </head>
 <body>
-  <!-- TOP NAV -->
   <header class="topnav">
     <div class="nav-inner">
-      <div class="brand">ROBLOXExecs.xyz</div>
+      <button id="brandHomeBtn" class="brand brand-btn" type="button">Xyrex.lol</button>
 
-      <!-- Fixed top search: always visible while sidebar/content scroll independently -->
       <div class="search-wrap">
-        <input id="searchInput" class="search-input" type="search" placeholder="Search products..." aria-label="Search products" />
+        <input id="searchInput" class="search-input" type="text" placeholder="Search Executors..." aria-label="Search Executors" autocomplete="off" />
         <button id="clearSearchBtn" class="btn-ghost" title="Clear search">✕</button>
       </div>
 
@@ -28,23 +26,18 @@
   </header>
 
   <div class="page-layout">
-    <!-- LEFT SIDEBAR (FILTERS) -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-inner">
         <h2 class="sidebar-title">Filters</h2>
 
-        <!-- PLATFORM FILTERS -->
         <section class="filter-group">
           <h3 class="filter-title">Platform</h3>
-          <!-- Checkbox inputs: to add another platform, copy the label block below and change data-filter-group & value -->
           <label><input type="checkbox" class="filter-checkbox" data-filter-group="platform" value="Windows" /> Windows</label>
           <label><input type="checkbox" class="filter-checkbox" data-filter-group="platform" value="macOS" /> macOS</label>
           <label><input type="checkbox" class="filter-checkbox" data-filter-group="platform" value="Android" /> Android</label>
           <label><input type="checkbox" class="filter-checkbox" data-filter-group="platform" value="iOS" /> iOS</label>
-          <!-- END add more by duplicating above -->
         </section>
 
-        <!-- TAG FILTERS -->
         <section class="filter-group">
           <h3 class="filter-title">Tags</h3>
           <label><input type="checkbox" class="filter-checkbox" data-filter-group="tags" value="Decompiler" /> Decompiler</label>
@@ -54,55 +47,45 @@
           <label><input type="checkbox" class="filter-checkbox" data-filter-group="tags" value="Multi-instance" /> Multi-instance</label>
         </section>
 
-        <!-- CHEAT TYPE FILTERS -->
         <section class="filter-group">
           <h3 class="filter-title">Cheat Type</h3>
           <label><input type="checkbox" class="filter-checkbox" data-filter-group="cheatType" value="Internal" /> Internal (Executor)</label>
           <label><input type="checkbox" class="filter-checkbox" data-filter-group="cheatType" value="External" /> External</label>
         </section>
 
-        <!-- KEY SYSTEM FILTERS -->
         <section class="filter-group">
           <h3 class="filter-title">Key System</h3>
           <label><input type="checkbox" class="filter-checkbox" data-filter-group="keySystem" value="Keyed" /> Keyed</label>
           <label><input type="checkbox" class="filter-checkbox" data-filter-group="keySystem" value="Keyless" /> Keyless</label>
         </section>
 
-        <!-- PRICE FILTER -->
         <section class="filter-group">
           <h3 class="filter-title">Price</h3>
           <div class="price-controls">
             <label><input id="priceFree" type="checkbox" class="price-checkbox" value="free" /> Free</label>
             <label><input id="pricePaid" type="checkbox" class="price-checkbox" value="paid" /> Paid</label>
+            <label><input id="priceBoth" type="checkbox" class="price-checkbox" value="both" /> Free + Paid</label>
           </div>
-          <!-- To expand pricing categories later, add more .price-checkbox inputs (e.g. value="subscription") and update isPriceMatch() in script.js -->
         </section>
 
-        <hr />
+        <hr class="sidebar-divider" />
         <button id="resetFilters" class="btn-primary block">Reset filters</button>
       </div>
     </aside>
 
-    <!-- MAIN AREA -->
     <main class="main-content">
       <section id="executorsPage" class="app-page" data-page="executors">
-        <!-- LEGEND / KEY ABOVE PRODUCT LIST -->
-        <div class="legend">
-          <!-- To add legend items: duplicate one .legend-item with icon + short label -->
+        <div class="legend no-text-select">
           <div class="legend-item"><span class="legend-icon verified">✓</span><span>Verified</span></div>
-          <div class="legend-item"><span class="legend-icon warning">!</span><span>Warning</span></div>
-          <div class="legend-item"><span class="legend-icon trending">↗</span><span>Trending</span></div>
+          <div class="legend-item"><span class="legend-icon warning" data-icon="warning"></span><span>Warning</span></div>
+          <div class="legend-item"><span class="legend-icon trending" data-icon="trending"></span><span>Trending</span></div>
           <div class="legend-item"><span class="legend-icon internal">I</span><span>Internal</span></div>
           <div class="legend-item"><span class="legend-icon external">E</span><span>External</span></div>
           <div class="legend-item"><span class="legend-icon sunc">S</span><span>sUNC</span></div>
         </div>
 
-        <!-- Product grid -->
-        <section id="productGrid" class="product-grid" aria-live="polite">
-          <!-- Product cards are injected here by script.js -->
-        </section>
+        <section id="productGrid" class="product-grid" aria-live="polite"></section>
 
-        <!-- empty state -->
         <div id="noResults" class="no-results" hidden>
           <p>No products match your filters.</p>
         </div>
@@ -111,7 +94,6 @@
       <section id="scriptsPage" class="app-page" data-page="scripts" hidden>
         <header class="subpage-header">
           <h2>Scripts Hub</h2>
-          <p>Use these tabs to manage tier lists, browse scripts, and keep your own saved snippets.</p>
         </header>
 
         <div class="subtabs" role="tablist" aria-label="Scripts hub tabs">
@@ -119,30 +101,26 @@
           <button class="subtab-btn" role="tab" aria-selected="false" data-subtab-target="tierFreePanel">Executor Tier List (Free)</button>
           <button class="subtab-btn" role="tab" aria-selected="false" data-subtab-target="popularScriptsPanel">Popular Scripts</button>
           <button class="subtab-btn" role="tab" aria-selected="false" data-subtab-target="savedScriptsPanel">Saved Scripts</button>
-          <button class="subtab-btn" role="tab" aria-selected="false" data-subtab-target="inDevelopmentPanel">In Development</button>
+          <button class="subtab-btn" role="tab" aria-selected="false" data-subtab-target="recentChangesPanel">Recent Changes</button>
         </div>
 
         <section id="tierPaidPanel" class="subtab-panel" role="tabpanel">
           <h3>Paid Executor Tier List</h3>
-          <p class="panel-note">Edit the <code>scriptsHubData.tierListPaid</code> array in <code>script.js</code> to change rankings and notes.</p>
           <div id="tierPaidList" class="rank-list"></div>
         </section>
 
         <section id="tierFreePanel" class="subtab-panel" role="tabpanel" hidden>
           <h3>Free Executor Tier List</h3>
-          <p class="panel-note">Edit the <code>scriptsHubData.tierListFree</code> array in <code>script.js</code> to change rankings and notes.</p>
           <div id="tierFreeList" class="rank-list"></div>
         </section>
 
         <section id="popularScriptsPanel" class="subtab-panel" role="tabpanel" hidden>
           <h3>Popular Scripts</h3>
-          <p class="panel-note">Edit the <code>scriptsHubData.popularScripts</code> array in <code>script.js</code> to add/remove script cards.</p>
           <div id="popularScriptsList" class="script-list"></div>
         </section>
 
         <section id="savedScriptsPanel" class="subtab-panel" role="tabpanel" hidden>
           <h3>Saved Scripts</h3>
-          <p class="panel-note">Paste script text below, then click Save Script to store it in your browser.</p>
           <label class="input-label" for="savedScriptName">Script title</label>
           <input id="savedScriptName" class="script-input" type="text" placeholder="Example: Auto Farm v2" />
 
@@ -151,40 +129,33 @@
 
           <div class="saved-script-actions">
             <button id="saveScriptBtn" class="btn-primary" type="button">Save Script</button>
+            <button id="deleteScriptBtn" class="btn-danger" type="button">Delete</button>
           </div>
 
+          <div id="savedScriptError" class="saved-error" hidden>Please provide both a script title and script content.</div>
           <div id="savedScriptsList" class="saved-script-list"></div>
         </section>
 
-        <section id="inDevelopmentPanel" class="subtab-panel" role="tabpanel" hidden>
-          <h3>In Development</h3>
-          <ul class="dev-list">
-            <li>Advanced script categories and search inside saved scripts.</li>
-            <li>Version history for script revisions.</li>
-            <li>Cloud sync for saved scripts across devices.</li>
-          </ul>
+        <section id="recentChangesPanel" class="subtab-panel" role="tabpanel" hidden>
+          <h3>Recent Changes</h3>
+          <ul id="recentChangesList" class="dev-list"></ul>
         </section>
+      </section>
+
+      <section id="easterEggPage" class="app-page" data-page="easter" hidden>
+        <div class="egg-card">
+          <h2>coming soon!</h2>
+        </div>
       </section>
     </main>
   </div>
 
-  <!-- INFO MODAL -->
   <div id="modalOverlay" class="modal-overlay" aria-hidden="true" role="dialog" aria-modal="true">
     <div class="modal">
       <button id="modalCloseBtn" class="modal-close" aria-label="Close modal">✕</button>
-      <div id="modalContent" class="modal-content">
-        <!-- Modal content injected by script.js -->
-      </div>
+      <div id="modalContent" class="modal-content"></div>
     </div>
   </div>
-
-  <!-- SVG ICONS (inline so no external assets) -->
-  <svg style="display:none" aria-hidden="true">
-    <symbol id="icon-decompiler" viewBox="0 0 24 24"><path d="M4 4h16v2H4zM4 9h10v2H4zM4 14h16v2H4zM4 19h10v2H4z" /></symbol>
-    <symbol id="icon-multi" viewBox="0 0 24 24"><path d="M12 2l4 4-4 4-4-4zM2 12l4 4 4-4-4-4zM12 18l4 4 4-4-4-4z"/></symbol>
-    <symbol id="icon-kernel" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 5h-2v7h2z"/></symbol>
-    <symbol id="icon-info" viewBox="0 0 24 24"><path d="M11 9h2V7h-2zM11 17h2v-6h-2zM12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20z"/></symbol>
-  </svg>
 
   <script src="./script.js" defer></script>
 </body>
