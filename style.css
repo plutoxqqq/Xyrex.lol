@@ -161,14 +161,12 @@ h6,
 .page-switch-btn.is-active,.subtab-btn.is-active{ color:#090d1d; border-color:transparent; background:linear-gradient(90deg,#8192ff,#adb8ff); }
 .app-page{ display:none; flex-direction:column; gap:14px; width:100%; opacity:1; transform:translateY(0); transition:opacity .2s ease, transform .2s ease; }
 .app-page.is-active{ display:flex; }
-.app-page.is-entering{ opacity:0; transform:translateY(6px); }
-.app-page.is-leaving{ opacity:0; transform:translateY(-6px); }
+.app-page.animate-in-page{ animation:pageFadeIn .22s ease-out; }
 #scriptsPage{ min-height:100%; }
 .subpage-header h2{ margin:0; color:var(--periwinkle-2); }
 .subtabs{ display:flex; flex-wrap:wrap; gap:8px; padding:10px; border-radius:12px; border:1px solid rgba(178,188,255,.18); background:rgba(18,23,43,.65); }
-.subtab-panel{ border:1px solid rgba(178,188,255,.2); border-radius:12px; background:rgba(10,14,28,.72); padding:14px; opacity:1; transform:translateY(0); transition:opacity .16s ease, transform .16s ease; }
-.subtab-panel.is-entering{ opacity:0; transform:translateY(4px); }
-.subtab-panel.is-leaving{ opacity:0; transform:translateY(-4px); }
+.subtab-panel{ border:1px solid rgba(178,188,255,.2); border-radius:12px; background:rgba(10,14,28,.72); padding:14px; }
+.subtab-panel.animate-in-subtab{ animation:subtabFadeIn .18s ease-out; }
 .subtab-panel h3{ margin:0; }
 .rank-list,.script-list,.saved-script-list{ margin-top:12px; display:grid; gap:10px; }
 .rank-item,.script-card,.saved-script-item{ border:1px solid rgba(178,188,255,.2); border-radius:10px; background:rgba(17,20,38,.7); }
@@ -194,6 +192,17 @@ h6,
 .dev-list{ margin:12px 0 0; line-height:1.5; }
 .egg-card{ min-height: 300px; display:flex; align-items:center; justify-content:center; border:1px solid rgba(178,188,255,.2); border-radius:14px; background: linear-gradient(180deg, rgba(28,35,64,.88), rgba(12,15,28,.88)); }
 .egg-card h2{ color: var(--periwinkle-2); text-transform: lowercase; letter-spacing: .08em; }
+
+
+@keyframes pageFadeIn{
+  from{ opacity:0; transform:translateY(8px); }
+  to{ opacity:1; transform:translateY(0); }
+}
+
+@keyframes subtabFadeIn{
+  from{ opacity:0; transform:translateY(5px); }
+  to{ opacity:1; transform:translateY(0); }
+}
 
 @media (max-width: 980px){ .legend{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
 
@@ -233,9 +242,8 @@ h6,
 }
 
 @media (prefers-reduced-motion: reduce){
-  .app-page,
-  .subtab-panel{
-    transition:none;
-    transform:none;
+  .app-page.animate-in-page,
+  .subtab-panel.animate-in-subtab{
+    animation:none;
   }
 }
