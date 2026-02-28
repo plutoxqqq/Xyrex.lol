@@ -708,7 +708,7 @@ function deleteSelectedScript() {
 
 const PAGE_TRANSITION_MS = 200;
 const SUBTAB_TRANSITION_MS = 160;
-let activePageId = 'executorsPage';
+let activePageId = null;
 let activeSubtabId = 'tierPaidPanel';
 
 function setActivePage(targetPageId) {
