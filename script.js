@@ -706,12 +706,30 @@ function deleteSelectedScript() {
   renderSavedScriptsList();
 }
 
+let activePageId = null;
+let activeSubtabId = 'tierPaidPanel';
+
+function animateInElement(element, animationClass) {
+  if (!element) return;
+  element.classList.remove(animationClass);
+  void element.offsetWidth;
+  element.classList.add(animationClass);
+}
+
 function setActivePage(targetPageId) {
+  if (targetPageId === activePageId) return;
+
+  const nextPage = qs(`#${targetPageId}`);
+  if (!nextPage) return;
+
   qsa('.app-page').forEach(page => {
-    const active = page.id === targetPageId;
-    page.hidden = !active;
-    page.classList.toggle('is-active', active);
+    const isTarget = page.id === targetPageId;
+    page.hidden = !isTarget;
+    page.classList.toggle('is-active', isTarget);
   });
+
+  animateInElement(nextPage, 'animate-in-page');
+  activePageId = targetPageId;
 
   const onScriptsPage = targetPageId === 'scriptsPage';
   const onEasterPage = targetPageId === 'easterEggPage';
@@ -719,6 +737,20 @@ function setActivePage(targetPageId) {
   qs('#searchInput').disabled = onScriptsPage;
   qs('#clearSearchBtn').disabled = onScriptsPage;
   qs('.page-layout').classList.toggle('scripts-mode', onScriptsPage || onEasterPage);
+}
+
+function setActiveSubtab(targetSubtabId) {
+  if (targetSubtabId === activeSubtabId) return;
+
+  const nextPanel = qs(`#${targetSubtabId}`);
+  if (!nextPanel) return;
+
+  qsa('.subtab-panel').forEach(panel => {
+    panel.hidden = panel.id !== targetSubtabId;
+  });
+
+  animateInElement(nextPanel, 'animate-in-subtab');
+  activeSubtabId = targetSubtabId;
 }
 
 function injectLegendIcons() {
@@ -744,9 +776,7 @@ function initScriptsHub() {
         item.classList.toggle('is-active', active);
         item.setAttribute('aria-selected', String(active));
       });
-      qsa('.subtab-panel').forEach(panel => {
-        panel.hidden = panel.id !== target;
-      });
+      setActiveSubtab(target);
     });
   });
 
