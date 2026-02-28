@@ -706,12 +706,35 @@ function deleteSelectedScript() {
   renderSavedScriptsList();
 }
 
+const PAGE_TRANSITION_MS = 200;
+const SUBTAB_TRANSITION_MS = 160;
+let activePageId = null;
+let activeSubtabId = 'tierPaidPanel';
+
 function setActivePage(targetPageId) {
-  qsa('.app-page').forEach(page => {
-    const active = page.id === targetPageId;
-    page.hidden = !active;
-    page.classList.toggle('is-active', active);
+  if (targetPageId === activePageId) return;
+
+  const currentPage = qs(`#${activePageId}`);
+  const nextPage = qs(`#${targetPageId}`);
+
+  if (!nextPage) return;
+
+  if (currentPage) {
+    currentPage.classList.remove('is-entering');
+    currentPage.classList.add('is-leaving');
+    window.setTimeout(() => {
+      currentPage.hidden = true;
+      currentPage.classList.remove('is-active', 'is-leaving');
+    }, PAGE_TRANSITION_MS);
+  }
+
+  nextPage.hidden = false;
+  nextPage.classList.add('is-active', 'is-entering');
+  window.requestAnimationFrame(() => {
+    nextPage.classList.remove('is-entering');
   });
+
+  activePageId = targetPageId;
 
   const onScriptsPage = targetPageId === 'scriptsPage';
   const onEasterPage = targetPageId === 'easterEggPage';
@@ -719,6 +742,32 @@ function setActivePage(targetPageId) {
   qs('#searchInput').disabled = onScriptsPage;
   qs('#clearSearchBtn').disabled = onScriptsPage;
   qs('.page-layout').classList.toggle('scripts-mode', onScriptsPage || onEasterPage);
+}
+
+function setActiveSubtab(targetSubtabId) {
+  if (targetSubtabId === activeSubtabId) return;
+
+  const currentPanel = qs(`#${activeSubtabId}`);
+  const nextPanel = qs(`#${targetSubtabId}`);
+
+  if (!nextPanel) return;
+
+  if (currentPanel) {
+    currentPanel.classList.remove('is-entering');
+    currentPanel.classList.add('is-leaving');
+    window.setTimeout(() => {
+      currentPanel.hidden = true;
+      currentPanel.classList.remove('is-leaving');
+    }, SUBTAB_TRANSITION_MS);
+  }
+
+  nextPanel.hidden = false;
+  nextPanel.classList.add('is-entering');
+  window.requestAnimationFrame(() => {
+    nextPanel.classList.remove('is-entering');
+  });
+
+  activeSubtabId = targetSubtabId;
 }
 
 function injectLegendIcons() {
@@ -744,9 +793,7 @@ function initScriptsHub() {
         item.classList.toggle('is-active', active);
         item.setAttribute('aria-selected', String(active));
       });
-      qsa('.subtab-panel').forEach(panel => {
-        panel.hidden = panel.id !== target;
-      });
+      setActiveSubtab(target);
     });
   });
 
