@@ -1,11 +1,11 @@
 const products = [
   {
     name: 'Pluton',
-    featured: true,
+    featured: false,
     platform: ['Windows', 'Android', 'iOS', 'macOS'],
     cheatType: 'Internal',
     keySystem: 'Keyless',
-    tags: ['Verified', 'Trending', 'Internal'],
+    tags: ['Trending', 'Internal'],
     features: [],
     sunc: 100,
     description: 'Pluton Executor is a next-gen Roblox executor built for raw performance and stealth, featuring a custom Lua VM, instant injection, and adaptive hot-patching to stay resilient against modern anti-cheat updates.',
@@ -13,6 +13,348 @@ const products = [
     cons: ['Can conflict with antivirus software', 'Setup complexity is higher than average'],
     pricingOptions: ['Free plan available', '1 Week — $4.99', '1 Month — $13.99'],
     freeOrPaid: 'both',
+    stability: 'Stable',
+    trustLevel: 'High',
+    status: 'Undetected'
+  },
+  {
+    name: 'SkibX',
+    featured: false,
+    platform: ['iOS', 'Android'],
+    cheatType: 'Internal',
+    keySystem: 'Keyless',
+    tags: ['Internal'],
+    features: ['Decompiler'],
+    sunc: 96,
+    description: 'Internal executor with keyless access, iOS support, and high sUNC.',
+    pros: ['Keyless', 'iOS support', 'High sUNC'],
+    cons: ['None listed'],
+    pricingOptions: ['Free'],
+    freeOrPaid: 'free',
+    stability: 'Unknown',
+    trustLevel: 'Unknown',
+    status: 'Unknown'
+  },
+  {
+    name: 'Potassium',
+    featured: true,
+    platform: ['Windows'],
+    cheatType: 'Internal',
+    keySystem: 'Keyless',
+    tags: ['Verified', 'Internal'],
+    features: ['Decompiler', 'Kernel', 'Multi-instance'],
+    sunc: 98,
+    description: 'Internal executor with full sUNC support and advanced feature coverage.',
+    pros: ['sUNC 100%'],
+    cons: ['Unknown developers', 'Frequent ban waves', 'Stability issues'],
+    pricingOptions: ['$22.99 lifetime'],
+    freeOrPaid: 'paid',
+    stability: 'Unstable',
+    trustLevel: 'Low',
+    status: 'Detected risk'
+  },
+  {
+    name: 'JJSploit',
+    featured: false,
+    platform: ['Windows', 'Android'],
+    cheatType: 'Internal',
+    keySystem: 'Keyless',
+    tags: ['Internal'],
+    features: ['Decompiler'],
+    sunc: 40,
+    description: 'Simple internal executor with script buttons and broad accessibility.',
+    pros: ['Simple interface with script buttons'],
+    cons: ['Very simplified'],
+    pricingOptions: ['Free'],
+    freeOrPaid: 'free',
+    stability: 'Basic',
+    trustLevel: 'Medium',
+    status: 'Undetected'
+  },
+  {
+    name: 'Velocity',
+    featured: true,
+    platform: ['Windows'],
+    cheatType: 'Internal',
+    keySystem: 'Keyless',
+    tags: ['Verified', 'Internal'],
+    features: ['Decompiler', 'Multi-instance'],
+    sunc: 94,
+    description: 'Keyless internal executor with extensive customization options.',
+    pros: ['Keyless', 'Lots of customizations'],
+    cons: ['Stability issues'],
+    pricingOptions: ['Free'],
+    freeOrPaid: 'free',
+    stability: 'Mixed',
+    trustLevel: 'Medium',
+    status: 'Undetected'
+  },
+  {
+    name: 'Xeno',
+    featured: false,
+    platform: ['Windows'],
+    cheatType: 'Internal',
+    keySystem: 'Keyless',
+    tags: ['Internal'],
+    features: ['Decompiler', 'Multi-instance'],
+    sunc: 33,
+    description: 'Stable internal executor with script saves and multi-instance support.',
+    pros: ['Stable', 'Script saves'],
+    cons: ['Low sUNC', 'Level 3 execution'],
+    pricingOptions: ['Free'],
+    freeOrPaid: 'free',
+    stability: 'Stable',
+    trustLevel: 'Medium',
+    status: 'Undetected'
+  },
+  {
+    name: 'Solara',
+    featured: false,
+    platform: ['Windows'],
+    cheatType: 'Internal',
+    keySystem: 'Keyless',
+    tags: ['Internal'],
+    features: ['Decompiler', 'Multi-instance'],
+    sunc: 38,
+    description: 'Free internal executor known for solid performance.',
+    pros: ['Solid performance', 'Free'],
+    cons: ['Very low sUNC'],
+    pricingOptions: ['Free'],
+    freeOrPaid: 'free',
+    stability: 'Stable',
+    trustLevel: 'Medium',
+    status: 'Undetected'
+  },
+  {
+    name: 'Vega X',
+    featured: false,
+    platform: ['Android'],
+    cheatType: 'Internal',
+    keySystem: 'Keyed',
+    tags: ['Internal'],
+    features: [],
+    sunc: null,
+    description: 'Android internal executor with short key duration options.',
+    pros: ['2-day keys'],
+    cons: ['Fails sUNC'],
+    pricingOptions: ['Free', 'From $4.99 for 30 days'],
+    freeOrPaid: 'both',
+    stability: 'Unknown',
+    trustLevel: 'Unknown',
+    status: 'Unknown'
+  },
+  {
+    name: 'Macsploit',
+    featured: false,
+    platform: ['macOS'],
+    cheatType: 'Internal',
+    keySystem: 'Keyless',
+    tags: ['Internal'],
+    features: ['Decompiler', 'Multi-instance'],
+    sunc: 100,
+    description: 'macOS internal executor with decompiler and multi-instance support.',
+    pros: ['Multi-instance', 'Decompiler', 'Source leak'],
+    cons: ['None listed'],
+    pricingOptions: ['From $4.99 for 30 days'],
+    freeOrPaid: 'paid',
+    stability: 'Stable',
+    trustLevel: 'Medium',
+    status: 'Undetected'
+  },
+  {
+    name: 'Seliware',
+    featured: true,
+    platform: ['Windows'],
+    cheatType: 'Internal',
+    keySystem: 'Keyless',
+    tags: ['Verified', 'Internal'],
+    features: ['Decompiler', 'Multi-instance'],
+    sunc: 98,
+    description: 'Windows internal executor focused on smooth injection and execution.',
+    pros: ['Smooth injection and execution'],
+    cons: ['Frequent detection issues'],
+    pricingOptions: ['From $3.99 for 7 days'],
+    freeOrPaid: 'paid',
+    stability: 'Mixed',
+    trustLevel: 'Medium',
+    status: 'Detection issues'
+  },
+  {
+    name: 'Serotonin',
+    featured: false,
+    platform: ['Windows'],
+    cheatType: 'External',
+    keySystem: 'Keyless',
+    tags: ['External'],
+    features: ['Kernel'],
+    sunc: null,
+    description: 'External executor with kernel capabilities and many features.',
+    pros: ['Kernel', 'Feature-rich'],
+    cons: ['None listed'],
+    pricingOptions: ['From $8.47 for 30 days'],
+    freeOrPaid: 'paid',
+    stability: 'Unknown',
+    trustLevel: 'Unknown',
+    status: 'Unknown'
+  },
+  {
+    name: 'Severe',
+    featured: false,
+    platform: ['Windows'],
+    cheatType: 'External',
+    keySystem: 'Keyed',
+    tags: ['External'],
+    features: ['Decompiler'],
+    sunc: null,
+    description: 'External tool with decompiler and code explorer functionality.',
+    pros: ['Decompiler', 'Code explorer'],
+    cons: ['Password reset costs extra'],
+    pricingOptions: ['$20 lifetime'],
+    freeOrPaid: 'paid',
+    stability: 'Unknown',
+    trustLevel: 'Unknown',
+    status: 'Unknown'
+  },
+  {
+    name: 'Arceus X',
+    featured: false,
+    platform: ['iOS', 'Android'],
+    cheatType: 'Internal',
+    keySystem: 'Keyed',
+    tags: ['Internal'],
+    features: ['Supports VNG'],
+    sunc: null,
+    description: 'Internal mobile executor with VNG support.',
+    pros: ['Supports VNG'],
+    cons: ['Fails sUNC'],
+    pricingOptions: ['From $7.47 for 30 days'],
+    freeOrPaid: 'paid',
+    stability: 'Unknown',
+    trustLevel: 'Unknown',
+    status: 'Unknown'
+  },
+  {
+    name: 'Bunni',
+    featured: false,
+    platform: ['Windows'],
+    cheatType: 'Internal',
+    keySystem: 'Keyed',
+    tags: ['Internal'],
+    features: ['Decompiler'],
+    sunc: 100,
+    description: 'Internal Windows executor with decompiler and high sUNC.',
+    pros: ['Decompiler', 'High sUNC'],
+    cons: ['Lag/slowness reports'],
+    pricingOptions: ['Free', 'Paid from $1.99'],
+    freeOrPaid: 'both',
+    stability: 'Mixed',
+    trustLevel: 'Medium',
+    status: 'Undetected'
+  },
+  {
+    name: 'Delta',
+    featured: false,
+    platform: ['iOS', 'Android'],
+    cheatType: 'Internal',
+    keySystem: 'Keyed',
+    tags: ['Internal'],
+    features: ['Decompiler'],
+    sunc: 97,
+    description: 'Mobile internal executor with decompiler and high sUNC.',
+    pros: ['Decompiler', 'High sUNC'],
+    cons: ['Keyed'],
+    pricingOptions: ['Free', 'From $8 for 30 days'],
+    freeOrPaid: 'both',
+    stability: 'Stable',
+    trustLevel: 'Medium',
+    status: 'Undetected'
+  },
+  {
+    name: 'Hydrogen',
+    featured: false,
+    platform: ['macOS'],
+    cheatType: 'Internal',
+    keySystem: 'Keyless',
+    tags: ['Internal'],
+    features: ['Decompiler'],
+    sunc: 96,
+    description: 'Fast and customizable internal macOS executor with Luarmor support.',
+    pros: ['Fast', 'Customizable', 'Luarmor support'],
+    cons: ['None listed'],
+    pricingOptions: ['Free', 'Paid from $4'],
+    freeOrPaid: 'both',
+    stability: 'Stable',
+    trustLevel: 'Medium',
+    status: 'Undetected'
+  },
+  {
+    name: 'Matcha',
+    featured: false,
+    platform: ['Windows'],
+    cheatType: 'External',
+    keySystem: 'Keyless',
+    tags: ['External'],
+    features: ['Kernel', 'Decompiler'],
+    sunc: null,
+    description: 'Feature-rich external executor with kernel and decompiler support.',
+    pros: ['Lots of features'],
+    cons: ['Registration process very complex'],
+    pricingOptions: ['$9.99 lifetime'],
+    freeOrPaid: 'paid',
+    stability: 'Unknown',
+    trustLevel: 'Unknown',
+    status: 'Unknown'
+  },
+  {
+    name: 'Volt',
+    featured: false,
+    platform: ['Windows'],
+    cheatType: 'Internal',
+    keySystem: 'Keyless',
+    tags: ['Internal'],
+    features: ['Multi-instance'],
+    sunc: 98,
+    description: 'Internal Windows executor with Hyperion emulation and easy UI.',
+    pros: ['Hyperion emulation', 'Easy UI'],
+    cons: ['Exit scams'],
+    pricingOptions: ['From $5.99 for 7 days'],
+    freeOrPaid: 'paid',
+    stability: 'Unknown',
+    trustLevel: 'Low',
+    status: 'Unknown'
+  },
+  {
+    name: 'Aimmy',
+    featured: false,
+    platform: ['Windows'],
+    cheatType: 'External',
+    keySystem: 'Keyless',
+    tags: ['External'],
+    features: ['AI'],
+    sunc: null,
+    description: 'AI-based external tool with no key system.',
+    pros: ['AI-based', 'No key system'],
+    cons: ['Requires powerful hardware'],
+    pricingOptions: ['Free'],
+    freeOrPaid: 'free',
+    stability: 'Unknown',
+    trustLevel: 'Unknown',
+    status: 'Unknown'
+  },
+  {
+    name: 'Volcano',
+    featured: false,
+    platform: ['Windows'],
+    cheatType: 'Internal',
+    keySystem: 'Keyless',
+    tags: ['Internal'],
+    features: ['Decompiler', 'Multi-instance'],
+    sunc: 98,
+    description: 'Internal Windows executor known for long history and safety.',
+    pros: ['Safe', 'Long history'],
+    cons: ['Expensive'],
+    pricingOptions: ['Paid'],
+    freeOrPaid: 'paid',
     stability: 'Stable',
     trustLevel: 'High',
     status: 'Undetected'
@@ -131,7 +473,7 @@ function createProductCard(product, index) {
 
   const sunc = document.createElement('div');
   sunc.className = 'sunc no-text-select';
-  sunc.textContent = `sUNC ${product.sunc}%`;
+  sunc.textContent = Number.isFinite(product.sunc) ? `sUNC ${product.sunc}%` : 'sUNC None';
 
   right.appendChild(sunc);
   right.appendChild(createTagSymbols(product));
@@ -169,8 +511,14 @@ function renderProducts(list) {
     qs('#noResults').hidden = false;
     return;
   }
+
+  const sorted = [...list].sort((a, b) => {
+    if (a.featured === b.featured) return a.name.localeCompare(b.name);
+    return a.featured ? -1 : 1;
+  });
+
   qs('#noResults').hidden = true;
-  list.forEach((p, i) => grid.appendChild(createProductCard(p, i)));
+  sorted.forEach((p, i) => grid.appendChild(createProductCard(p, i)));
 }
 
 function getActiveFilters() {
@@ -190,9 +538,9 @@ function getPriceControls() {
 
 function isPriceMatch(prod, priceControls) {
   if (!priceControls.free && !priceControls.paid && !priceControls.both) return true;
-  if (priceControls.both && prod.freeOrPaid === 'both') return true;
-  if (priceControls.free && (prod.freeOrPaid === 'free' || prod.freeOrPaid === 'both')) return true;
-  if (priceControls.paid && (prod.freeOrPaid === 'paid' || prod.freeOrPaid === 'both')) return true;
+  if ((priceControls.free && priceControls.paid) || priceControls.both) return prod.freeOrPaid === 'both';
+  if (priceControls.free) return prod.freeOrPaid === 'free' || prod.freeOrPaid === 'both';
+  if (priceControls.paid) return prod.freeOrPaid === 'paid' || prod.freeOrPaid === 'both';
   return false;
 }
 
