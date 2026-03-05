@@ -365,11 +365,11 @@ const scriptsHubData = {
     }
   ],
   recentChanges: [
-    'Updated all requested platform and status icons to new Font Awesome v7.2.0 SVGs.',
-    'Added Free + Paid pricing filter and support for executors with both plans.',
-    'Added XYREX easter egg route to a hidden themed Coming Soon page.',
-    'Major mobile layout/safe-area and overscroll polish for cleaner full-screen rendering.',
-    'Refreshed Paid and Free best-executor tier lists in Scripts Hub.'
+    'Added a dedicated New UI toggle that cleanly switches between New UI and Default UI modes.',
+    'Introduced an optional New UI module with a Theme Customizer (BETA) and local theme persistence.',
+    'Refined legend key sizing so each key uses only the required space while still allowing responsive shrink behavior.',
+    'Updated Paid and Free best-executor tier lists in Scripts Hub for clearer recommendations.',
+    'Improved modal hierarchy and transition polish for a cleaner and more modern browsing experience.'
   ]
 };
 
