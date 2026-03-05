@@ -2,6 +2,7 @@
   const THEME_KEY = 'xyrex_new_ui_theme';
   const AI_ENDPOINT = 'https://text.pollinations.ai/';
   const THEME_MODAL_ID = 'newUiThemeModal';
+  const AI_REQUEST_TIMEOUT_MS = 9000;
 
   let cssLoaded = false;
   let gridObserver = null;
@@ -47,6 +48,13 @@
     const root = document.documentElement;
     root.style.removeProperty('--periwinkle');
     root.style.removeProperty('--periwinkle-2');
+  }
+
+
+  function closeThemeModal() {
+    const modal = document.getElementById(THEME_MODAL_ID);
+    if (!modal) return;
+    modal.setAttribute('aria-hidden', 'true');
   }
 
   function ensureThemeModal() {
@@ -97,18 +105,22 @@
       clearThemeOverrides();
     });
 
-    const closeThemeModal = () => modal.setAttribute('aria-hidden', 'true');
     modal.querySelector('.new-ui-theme-close').addEventListener('click', closeThemeModal);
     modal.addEventListener('click', event => {
       if (event.target === modal) closeThemeModal();
     });
+    modal.addEventListener('keydown', event => {
+      if (event.key === 'Escape') closeThemeModal();
+    });
   }
 
   function toggleThemeCustomizer() {
+    if (!document.body.classList.contains('new-ui-enabled')) return;
     const modal = document.getElementById(THEME_MODAL_ID);
     if (!modal) return;
     const isHidden = modal.getAttribute('aria-hidden') !== 'false';
     modal.setAttribute('aria-hidden', isHidden ? 'false' : 'true');
+    if (isHidden) modal.querySelector('.new-ui-theme-close')?.focus();
   }
 
   function ensureInsightsPanel() {
@@ -150,11 +162,18 @@
       'Focus on reliability, who this is suitable for, and practical caution.'
     ].join('\n');
 
-    const response = await fetch(`${AI_ENDPOINT}${encodeURIComponent(prompt)}`);
-    if (!response.ok) throw new Error(`AI request failed (${response.status})`);
-    const text = (await response.text()).trim();
-    if (!text) throw new Error('AI returned an empty response.');
-    return text;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
+
+    try {
+      const response = await fetch(`${AI_ENDPOINT}${encodeURIComponent(prompt)}`, { signal: controller.signal });
+      if (!response.ok) throw new Error(`AI request failed (${response.status})`);
+      const text = (await response.text()).trim();
+      if (!text) throw new Error('AI returned an empty response.');
+      return text;
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
   }
 
   async function handleInsightClick(card, button) {
@@ -265,6 +284,7 @@
 
   function disable() {
     document.body.classList.remove('new-ui-enabled');
+    closeThemeModal();
     stopWatchingGridUpdates();
     restoreDefaultCardActions();
     removeInjectedElements();

@@ -749,7 +749,10 @@ async function applyUiMode() {
 
   if (!isNewUiMode) {
     if (window.XyrexNewUI) window.XyrexNewUI.disable();
-    if (themeBtn) themeBtn.hidden = true;
+    if (themeBtn) {
+      themeBtn.hidden = true;
+      themeBtn.setAttribute('aria-hidden', 'true');
+    }
     return;
   }
 
@@ -758,12 +761,18 @@ async function applyUiMode() {
     isNewUiMode = false;
     localStorage.setItem(uiModeStorageKey, 'default');
     updateUiToggleButton();
-    if (themeBtn) themeBtn.hidden = true;
+    if (themeBtn) {
+      themeBtn.hidden = true;
+      themeBtn.setAttribute('aria-hidden', 'true');
+    }
     return;
   }
 
   window.XyrexNewUI.enable();
-  if (themeBtn) themeBtn.hidden = false;
+  if (themeBtn) {
+    themeBtn.hidden = false;
+    themeBtn.setAttribute('aria-hidden', 'false');
+  }
 }
 
 let activePageId = null;
