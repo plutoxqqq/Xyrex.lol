@@ -18,24 +18,6 @@ const products = [
     status: 'Undetected'
   },
   {
-    name: 'SkibX',
-    featured: false,
-    platform: ['iOS', 'Android'],
-    cheatType: 'Internal',
-    keySystem: 'Keyless',
-    tags: ['Internal'],
-    features: ['Decompiler'],
-    sunc: 96,
-    description: 'Internal executor with keyless access, iOS support, and high sUNC.',
-    pros: ['Keyless', 'iOS support', 'High sUNC'],
-    cons: ['None listed'],
-    pricingOptions: ['Free'],
-    freeOrPaid: 'free',
-    stability: 'Unknown',
-    trustLevel: 'Unknown',
-    status: 'Unknown'
-  },
-  {
     name: 'Potassium',
     featured: true,
     platform: ['Windows'],
@@ -362,8 +344,18 @@ const products = [
 ];
 
 const scriptsHubData = {
-  tierListPaid: [{ tier: 'S', executor: 'Pluton', notes: 'Best overall reliability and performance.' }],
-  tierListFree: [{ tier: 'S', executor: 'Pluton', notes: 'Best current free option.' }],
+  tierListPaid: [
+    { tier: 'S', executor: 'Pluton', notes: 'Top paid pick for balanced performance, consistency, and support coverage.' },
+    { tier: 'A', executor: 'Potassium', notes: 'Strong feature depth with excellent sUNC support, but trust concerns remain.' },
+    { tier: 'A', executor: 'Seliware', notes: 'Smooth execution and polished UX, with occasional detection instability.' },
+    { tier: 'B', executor: 'Volcano', notes: 'Stable long-term option with reliable execution, but comparatively expensive.' }
+  ],
+  tierListFree: [
+    { tier: 'S', executor: 'Pluton', notes: 'Best free overall package right now with broad platform support.' },
+    { tier: 'A', executor: 'Velocity', notes: 'Fast keyless free option with modern tooling and customization.' },
+    { tier: 'A', executor: 'Solara', notes: 'Reliable free Windows option with steady day-to-day stability.' },
+    { tier: 'B', executor: 'JJSploit', notes: 'Beginner-friendly choice with a simplified workflow.' }
+  ],
   popularScripts: [
     {
       name: 'Universal Auto-Farm',
@@ -373,11 +365,11 @@ const scriptsHubData = {
     }
   ],
   recentChanges: [
-    'Updated all requested platform and status icons to new Font Awesome v7.2.0 SVGs.',
-    'Added Free + Paid pricing filter and support for executors with both plans.',
-    'Added XYREX easter egg route to a hidden themed Coming Soon page.',
-    'Major mobile layout/safe-area and overscroll polish for cleaner full-screen rendering.',
-    'Restored saved-script Delete action and added title+content validation.'
+    'Added a dedicated New UI toggle that cleanly switches between New UI and Default UI modes.',
+    'Introduced an optional New UI module with a Theme Customizer (BETA) and local theme persistence.',
+    'Refined legend key sizing so each key uses only the required space while still allowing responsive shrink behavior.',
+    'Updated Paid and Free best-executor tier lists in Scripts Hub for clearer recommendations.',
+    'Improved modal hierarchy and transition polish for a cleaner and more modern browsing experience.'
   ]
 };
 
@@ -538,7 +530,9 @@ function getPriceControls() {
 
 function isPriceMatch(prod, priceControls) {
   if (!priceControls.free && !priceControls.paid && !priceControls.both) return true;
-  if ((priceControls.free && priceControls.paid) || priceControls.both) return prod.freeOrPaid === 'both';
+
+  if (priceControls.free && priceControls.paid) return ['free', 'paid', 'both'].includes(prod.freeOrPaid);
+  if (priceControls.both) return prod.freeOrPaid === 'both';
   if (priceControls.free) return prod.freeOrPaid === 'free' || prod.freeOrPaid === 'both';
   if (priceControls.paid) return prod.freeOrPaid === 'paid' || prod.freeOrPaid === 'both';
   return false;
@@ -568,18 +562,28 @@ function openModal(product) {
 
   content.innerHTML = `
     <h2>${escapeHtml(product.name)}</h2>
+    <p class="modal-headline">${escapeHtml(product.description)}</p>
+    <div class="info-badges">
+      <span class="info-chip">${escapeHtml(getPriceLabel(product))}</span>
+      <span class="info-chip">${escapeHtml(product.cheatType)}</span>
+      <span class="info-chip">${escapeHtml(product.keySystem)}</span>
+    </div>
+    <section class="info-grid">
+      <article class="info-stat"><span>sUNC</span><strong>${Number.isFinite(product.sunc) ? `${product.sunc}%` : 'None'}</strong></article>
+      <article class="info-stat"><span>Trust Level</span><strong>${escapeHtml(product.trustLevel)}</strong></article>
+      <article class="info-stat"><span>Stability</span><strong>${escapeHtml(product.stability)}</strong></article>
+    </section>
     <div class="modal-layout">
       <div>
-        <div class="modal-section"><strong>Description</strong><p>${escapeHtml(product.description)}</p></div>
         <div class="modal-section"><strong>Pros</strong><ul>${product.pros.map(f => `<li>${escapeHtml(f)}</li>`).join('')}</ul></div>
         <div class="modal-section"><strong>Cons</strong><ul>${product.cons.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul></div>
         <div class="modal-section"><strong>Pricing</strong><ul>${product.pricingOptions.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul></div>
       </div>
       <aside class="status-panel">
         <h3>Status</h3>
-        <div class="status-item"><span>Stability</span><strong>${escapeHtml(product.stability)}</strong></div>
-        <div class="status-item"><span>Trust Level</span><strong>${escapeHtml(product.trustLevel)}</strong></div>
         <div class="status-item"><span>Current State</span><strong>${escapeHtml(product.status)}</strong></div>
+        <div class="status-item"><span>Trust Level</span><strong>${escapeHtml(product.trustLevel)}</strong></div>
+        <div class="status-item"><span>Stability</span><strong>${escapeHtml(product.stability)}</strong></div>
       </aside>
     </div>`;
 
@@ -715,6 +719,52 @@ function deleteSelectedScript() {
   renderSavedScriptsList();
 }
 
+
+const uiModeStorageKey = 'xyrex_ui_mode';
+let isNewUiMode = localStorage.getItem(uiModeStorageKey) === 'new';
+let newUiLoadAttempted = false;
+
+function loadNewUiModule() {
+  if (window.XyrexNewUI) return Promise.resolve(true);
+  if (newUiLoadAttempted) return Promise.resolve(false);
+  newUiLoadAttempted = true;
+
+  return new Promise(resolve => {
+    const script = document.createElement('script');
+    script.src = './new-ui.js?v=1.0.0';
+    script.defer = true;
+    script.onload = () => resolve(Boolean(window.XyrexNewUI));
+    script.onerror = () => resolve(false);
+    document.head.appendChild(script);
+  });
+}
+
+function updateUiToggleButton() {
+  const button = qs('#uiModeToggleBtn');
+  if (!button) return;
+  button.textContent = isNewUiMode ? 'Default UI' : 'New UI';
+  button.classList.toggle('is-active', isNewUiMode);
+  button.setAttribute('aria-pressed', String(isNewUiMode));
+}
+
+async function applyUiMode() {
+  updateUiToggleButton();
+  if (!isNewUiMode) {
+    if (window.XyrexNewUI) window.XyrexNewUI.disable();
+    return;
+  }
+
+  const loaded = await loadNewUiModule();
+  if (!loaded || !window.XyrexNewUI) {
+    isNewUiMode = false;
+    localStorage.setItem(uiModeStorageKey, 'default');
+    updateUiToggleButton();
+    return;
+  }
+
+  window.XyrexNewUI.enable();
+}
+
 let activePageId = null;
 let activeSubtabId = 'tierPaidPanel';
 
@@ -839,6 +889,12 @@ function init() {
     setActivePage('executorsPage');
   });
 
+  qs('#uiModeToggleBtn').addEventListener('click', async () => {
+    isNewUiMode = !isNewUiMode;
+    localStorage.setItem(uiModeStorageKey, isNewUiMode ? 'new' : 'default');
+    await applyUiMode();
+  });
+
   qsa('.filter-checkbox').forEach(cb => cb.addEventListener('change', applyAllFilters));
   qsa('.price-checkbox').forEach(cb => cb.addEventListener('change', applyAllFilters));
 
@@ -858,6 +914,7 @@ function init() {
   });
 
   setActivePage('executorsPage');
+  applyUiMode();
 }
 
 document.addEventListener('DOMContentLoaded', init);
