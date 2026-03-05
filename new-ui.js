@@ -42,8 +42,8 @@
   }
 
   function buildThemeCustomizerPanel() {
-    const scriptsPage = document.querySelector('#scriptsPage');
-    if (!scriptsPage || scriptsPage.querySelector('.new-ui-panel.theme-customizer')) return;
+    const executorsPage = document.querySelector('#executorsPage');
+    if (!executorsPage || executorsPage.querySelector('.new-ui-panel.theme-customizer')) return;
 
     const wrap = document.createElement('section');
     wrap.className = 'new-ui-panel theme-customizer';
@@ -65,7 +65,9 @@
       </div>
     `;
 
-    scriptsPage.prepend(wrap);
+    const legend = executorsPage.querySelector('.legend');
+    if (legend) legend.insertAdjacentElement('afterend', wrap);
+    else executorsPage.prepend(wrap);
 
     const theme = getThemeFromStorage();
     if (theme?.accent) wrap.querySelector('#newUiAccent').value = theme.accent;
