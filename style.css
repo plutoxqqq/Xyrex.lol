@@ -306,8 +306,8 @@ body.new-ui-enabled .theme-customizer-btn{
   .page-layout{ grid-template-columns:1fr; margin-top:112px; min-height:calc(100dvh - 112px); height:auto; padding:12px; gap:12px; background: transparent; }
   .sidebar,.main-content{ padding:12px; backdrop-filter: blur(8px); }
   .sidebar{ max-height:34dvh; }
-  .legend{ gap:8px; padding:8px; }
-  .legend-item{ min-height:34px; font-size:.8rem; gap:6px; }
+  .legend{ gap:8px; padding:8px; justify-content:flex-start; }
+  .legend-item{ min-height:34px; font-size:.8rem; gap:6px; flex:0 1 auto; }
   .product-grid{ grid-template-columns:1fr; }
   .card-body{ padding:12px; gap:8px; }
   .info-btn{ min-height:40px; }
@@ -318,7 +318,7 @@ body.new-ui-enabled .theme-customizer-btn{
 @media (max-width: 900px) and (orientation: landscape){
   .page-layout{ margin-top:68px; min-height:calc(100dvh - 68px); grid-template-columns:minmax(220px,30%) 1fr; gap:10px; }
   .sidebar{ max-height:none; }
-  .legend{ grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .legend-item{ flex:0 1 auto; }
 }
 
 @media (max-width: 720px) and (orientation: landscape){
