@@ -12,9 +12,10 @@
       cssLoaded = true;
       return;
     }
+
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = './new-ui.css?v=2.0.0';
+    link.href = './new-ui.css?v=2.1.0';
     link.dataset.newUiCss = 'true';
     document.head.appendChild(link);
     cssLoaded = true;
@@ -37,19 +38,56 @@
     }
   }
 
+  function hexToRgb(hex) {
+    const match = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '');
+    if (!match) return null;
+    return {
+      r: parseInt(match[1], 16),
+      g: parseInt(match[2], 16),
+      b: parseInt(match[3], 16)
+    };
+  }
+
+  function rgbToHex(r, g, b) {
+    return `#${[r, g, b].map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('')}`;
+  }
+
+  function shiftRgb(rgb, amount) {
+    return rgbToHex(rgb.r + amount, rgb.g + amount, rgb.b + amount);
+  }
+
+  function mixRgb(a, b, ratio) {
+    return rgbToHex(
+      a.r * (1 - ratio) + b.r * ratio,
+      a.g * (1 - ratio) + b.g * ratio,
+      a.b * (1 - ratio) + b.b * ratio
+    );
+  }
+
   function applyTheme(theme) {
     if (!theme || typeof theme !== 'object') return;
     const root = document.documentElement;
-    if (theme.accent) root.style.setProperty('--periwinkle', theme.accent);
-    if (theme.accentSoft) root.style.setProperty('--periwinkle-2', theme.accentSoft);
+
+    const accentRgb = hexToRgb(theme.accent || '#8f9cff');
+    const accentSoftRgb = hexToRgb(theme.accentSoft || '#b2bcff');
+    if (!accentRgb || !accentSoftRgb) return;
+
+    root.style.setProperty('--periwinkle', theme.accent);
+    root.style.setProperty('--periwinkle-2', theme.accentSoft);
+    root.style.setProperty('--bg', mixRgb(accentRgb, { r: 3, g: 6, b: 14 }, 0.88));
+    root.style.setProperty('--bg-2', mixRgb(accentRgb, { r: 5, g: 10, b: 22 }, 0.9));
+    root.style.setProperty('--panel', mixRgb(accentRgb, { r: 18, g: 24, b: 45 }, 0.68));
+    root.style.setProperty('--panel-2', mixRgb(accentSoftRgb, { r: 15, g: 20, b: 38 }, 0.72));
+    root.style.setProperty('--card', mixRgb(accentSoftRgb, { r: 20, g: 26, b: 48 }, 0.76));
+    root.style.setProperty('--muted', shiftRgb(accentSoftRgb, 12));
   }
 
   function clearThemeOverrides() {
     const root = document.documentElement;
-    root.style.removeProperty('--periwinkle');
-    root.style.removeProperty('--periwinkle-2');
+    ['--periwinkle', '--periwinkle-2', '--bg', '--bg-2', '--panel', '--panel-2', '--card', '--muted'].forEach(prop => {
+      root.style.removeProperty(prop);
+    });
   }
-
 
   function closeThemeModal() {
     const modal = document.getElementById(THEME_MODAL_ID);
@@ -69,13 +107,13 @@
         <header class="new-ui-theme-head">
           <div>
             <h3>Theme Customizer</h3>
-            <p>Adjust New UI accent colors with live preview.</p>
+            <p>Adjust the full New UI theme colors with live preview.</p>
           </div>
           <button type="button" class="new-ui-theme-close" aria-label="Close Theme Customizer">✕</button>
         </header>
         <div class="new-ui-theme-grid">
-          <label>Primary Accent <input type="color" id="newUiAccent" value="#8f9cff" /></label>
-          <label>Secondary Accent <input type="color" id="newUiAccentSoft" value="#b2bcff" /></label>
+          <label>Primary Theme <input type="color" id="newUiAccent" value="#8f9cff" /></label>
+          <label>Secondary Theme <input type="color" id="newUiAccentSoft" value="#b2bcff" /></label>
         </div>
         <div class="new-ui-theme-actions">
           <button type="button" class="btn-primary" id="saveNewUiThemeBtn">Apply Theme</button>
@@ -109,9 +147,6 @@
     modal.addEventListener('click', event => {
       if (event.target === modal) closeThemeModal();
     });
-    modal.addEventListener('keydown', event => {
-      if (event.key === 'Escape') closeThemeModal();
-    });
   }
 
   function toggleThemeCustomizer() {
@@ -132,7 +167,7 @@
     panel.innerHTML = `
       <div class="insights-head">
         <h3>Executor Insights</h3>
-        <span class="new-ui-chip">AI Powered</span>
+        <span class="new-ui-chip no-text-select">AI Powered</span>
       </div>
       <p class="modal-headline">Select <strong>AI Insight</strong> on any executor card to generate a focused recommendation and caution summary.</p>
       <div id="executorInsightResult" class="ai-result" hidden></div>
@@ -151,10 +186,42 @@
     };
   }
 
+  function cleanInsightText(text) {
+    const cleaned = String(text || '')
+      .replace(/⚠️\s*\*\*IMPORTANT NOTICE\*\*[\s\S]*?continue to work normally\./gi, '')
+      .replace(/pollinations legacy text api[\s\S]*?models\./gi, '')
+      .trim();
+    return cleaned;
+  }
+
+  function buildFallbackInsight(product) {
+    return [
+      `${product.name} appears best suited for users who prioritize ${product.price.toLowerCase()} options and straightforward execution behavior. Based on the listed description, it should be assessed first for stability in your own setup before daily use.`,
+      `A practical approach is to test with low-risk scripts first and monitor performance consistency. Keep your workflow conservative if your environment changes frequently.`,
+      `- Recommended for users who value predictable setup and maintenance.`,
+      `- Validate reliability after updates before long sessions.`,
+      `- Use caution with scripts you have not reviewed.`
+    ].join('\n\n');
+  }
+
+  async function requestInsight(prompt) {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
+
+    try {
+      const response = await fetch(`${AI_ENDPOINT}${encodeURIComponent(prompt)}`, { signal: controller.signal });
+      if (!response.ok) throw new Error(`AI request failed (${response.status})`);
+      return (await response.text()).trim();
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
+  }
+
   async function generateInsight(product) {
     const prompt = [
       'You are a concise product analyst.',
       'Write two short paragraphs and then exactly three bullet points.',
+      'Do not include service notices, policy notices, or API deprecation notices.',
       `Executor: ${product.name}`,
       `Description: ${product.description}`,
       `Pricing: ${product.price}`,
@@ -162,18 +229,13 @@
       'Focus on reliability, who this is suitable for, and practical caution.'
     ].join('\n');
 
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
-
-    try {
-      const response = await fetch(`${AI_ENDPOINT}${encodeURIComponent(prompt)}`, { signal: controller.signal });
-      if (!response.ok) throw new Error(`AI request failed (${response.status})`);
-      const text = (await response.text()).trim();
-      if (!text) throw new Error('AI returned an empty response.');
-      return text;
-    } finally {
-      window.clearTimeout(timeoutId);
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const rawText = await requestInsight(prompt);
+      const cleaned = cleanInsightText(rawText);
+      if (cleaned) return cleaned;
     }
+
+    return buildFallbackInsight(product);
   }
 
   async function handleInsightClick(card, button) {
@@ -181,16 +243,20 @@
     if (!result) return;
 
     const product = productFromCard(card);
+    const mainContent = document.querySelector('.main-content');
+    if (mainContent) mainContent.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
     button.disabled = true;
     button.textContent = 'Generating...';
     result.hidden = false;
-    result.innerHTML = `<strong>${escapeHtml(product.name)}</strong><p>Generating AI insight...</p>`;
+    result.innerHTML = `<strong class="no-text-select">${escapeHtml(product.name)}</strong><p>Generating AI insight...</p>`;
 
     try {
       const insight = await generateInsight(product);
-      result.innerHTML = `<strong>${escapeHtml(product.name)}</strong><p>${escapeHtml(insight).replace(/\n/g, '<br />')}</p>`;
+      result.innerHTML = `<strong class="no-text-select">${escapeHtml(product.name)}</strong><p>${escapeHtml(insight).replace(/\n/g, '<br />')}</p>`;
     } catch (error) {
-      result.innerHTML = `<strong>${escapeHtml(product.name)}</strong><p>AI insight is temporarily unavailable. Please try again shortly.</p>`;
+      result.innerHTML = `<strong class="no-text-select">${escapeHtml(product.name)}</strong><p>${escapeHtml(buildFallbackInsight(product)).replace(/\n/g, '<br />')}</p>`;
       console.warn(error);
     } finally {
       button.disabled = false;

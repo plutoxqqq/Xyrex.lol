@@ -441,6 +441,7 @@ function createProductCard(product, index) {
   card.className = 'card';
   if (product.featured) card.classList.add('featured-card');
   card.setAttribute('data-index', index);
+  card.setAttribute('data-name', product.name);
 
   const body = document.createElement('div');
   body.className = 'card-body';
@@ -494,19 +495,62 @@ function createProductCard(product, index) {
 
 function renderProducts(list) {
   const grid = qs('#productGrid');
-  grid.innerHTML = '';
-  if (!list.length) {
-    qs('#noResults').hidden = false;
-    return;
-  }
-
   const sorted = [...list].sort((a, b) => {
     if (a.featured === b.featured) return a.name.localeCompare(b.name);
     return a.featured ? -1 : 1;
   });
 
-  qs('#noResults').hidden = true;
-  sorted.forEach((p, i) => grid.appendChild(createProductCard(p, i)));
+  if (!grid.dataset.renderVersion) grid.dataset.renderVersion = '0';
+  const nextVersion = String(Number(grid.dataset.renderVersion) + 1);
+  grid.dataset.renderVersion = nextVersion;
+
+  const oldCards = Array.from(grid.querySelectorAll('.card'));
+  if (!oldCards.length) {
+    grid.innerHTML = '';
+    qs('#noResults').hidden = Boolean(sorted.length);
+    if (!sorted.length) return;
+    sorted.forEach((product, index) => grid.appendChild(createProductCard(product, index)));
+    return;
+  }
+
+  const oldRectByName = new Map(oldCards.map(card => [card.getAttribute('data-name'), card.getBoundingClientRect()]));
+  const nextNames = new Set(sorted.map(item => item.name));
+
+  oldCards.forEach(card => {
+    if (!nextNames.has(card.getAttribute('data-name'))) card.classList.add('card-exit');
+  });
+
+  window.setTimeout(() => {
+    if (grid.dataset.renderVersion !== nextVersion) return;
+
+    grid.innerHTML = '';
+    qs('#noResults').hidden = Boolean(sorted.length);
+    if (!sorted.length) return;
+
+    sorted.forEach((product, index) => {
+      const card = createProductCard(product, index);
+      grid.appendChild(card);
+
+      const oldRect = oldRectByName.get(product.name);
+      if (!oldRect) {
+        card.classList.add('card-enter');
+        return;
+      }
+
+      const newRect = card.getBoundingClientRect();
+      const deltaX = oldRect.left - newRect.left;
+      const deltaY = oldRect.top - newRect.top;
+      if (Math.abs(deltaX) < 0.5 && Math.abs(deltaY) < 0.5) return;
+
+      card.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+      card.style.transition = 'transform 0s';
+      requestAnimationFrame(() => {
+        card.classList.add('card-shift');
+        card.style.transform = '';
+        card.style.transition = '';
+      });
+    });
+  }, 180);
 }
 
 function getActiveFilters() {
@@ -555,20 +599,19 @@ function applyAllFilters() {
 function openModal(product) {
   const overlay = qs('#modalOverlay');
   const content = qs('#modalContent');
+  const officialSite = product.officialSite || `https://www.google.com/search?q=${encodeURIComponent(`${product.name} executor official site`)}`;
+  const officialSiteHost = (() => {
+    try {
+      return new URL(officialSite).hostname;
+    } catch {
+      return 'Official site';
+    }
+  })();
+  const faviconUrl = `https://www.google.com/s2/favicons?sz=64&domain_url=${encodeURIComponent(officialSite)}`;
 
   content.innerHTML = `
     <h2>${escapeHtml(product.name)}</h2>
     <p class="modal-headline">${escapeHtml(product.description)}</p>
-    <div class="info-badges">
-      <span class="info-chip">${escapeHtml(getPriceLabel(product))}</span>
-      <span class="info-chip">${escapeHtml(product.cheatType)}</span>
-      <span class="info-chip">${escapeHtml(product.keySystem)}</span>
-    </div>
-    <section class="info-grid">
-      <article class="info-stat"><span>sUNC</span><strong>${Number.isFinite(product.sunc) ? `${product.sunc}%` : 'None'}</strong></article>
-      <article class="info-stat"><span>Trust Level</span><strong>${escapeHtml(product.trustLevel)}</strong></article>
-      <article class="info-stat"><span>Stability</span><strong>${escapeHtml(product.stability)}</strong></article>
-    </section>
     <div class="modal-layout">
       <div>
         <div class="modal-section"><strong>Pros</strong><ul>${product.pros.map(f => `<li>${escapeHtml(f)}</li>`).join('')}</ul></div>
@@ -580,6 +623,8 @@ function openModal(product) {
         <div class="status-item"><span>Current State</span><strong>${escapeHtml(product.status)}</strong></div>
         <div class="status-item"><span>Trust Level</span><strong>${escapeHtml(product.trustLevel)}</strong></div>
         <div class="status-item"><span>Stability</span><strong>${escapeHtml(product.stability)}</strong></div>
+        <div class="status-item"><span>sUNC</span><strong>${Number.isFinite(product.sunc) ? `${product.sunc}%` : 'None'}</strong></div>
+        <div class="status-item status-site"><span>Official Site</span><a class="official-site-btn" href="${escapeHtml(officialSite)}" target="_blank" rel="noopener noreferrer"><img src="${escapeHtml(faviconUrl)}" alt="Site icon" /><span>${escapeHtml(officialSiteHost)}</span></a></div>
       </aside>
     </div>`;
 
@@ -727,7 +772,7 @@ function loadNewUiModule() {
 
   return new Promise(resolve => {
     const script = document.createElement('script');
-    script.src = './new-ui.js?v=2.0.0';
+    script.src = './new-ui.js?v=2.1.0';
     script.defer = true;
     script.onload = () => resolve(Boolean(window.XyrexNewUI));
     script.onerror = () => resolve(false);

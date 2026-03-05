@@ -92,7 +92,7 @@ h6,
 
 .ui-toggle-btn{ border:1px solid rgba(178,188,255,.3); background:rgba(17,24,46,.82); color:var(--periwinkle-2); border-radius:999px; min-height:40px; padding:8px 14px; font-weight:700; cursor:pointer; transition: all var(--motion-fast) var(--motion-ease); white-space:nowrap; }
 .ui-toggle-btn:hover{ border-color:rgba(178,188,255,.6); background:rgba(26,35,66,.96); }
-.ui-toggle-btn.is-active{ color:#090d1d; border-color:transparent; background:linear-gradient(90deg,#8192ff,#adb8ff); }
+.ui-toggle-btn.is-active{ color:var(--periwinkle-2); border-color:rgba(178,188,255,.3); background:rgba(17,24,46,.82); }
 
 .theme-customizer-btn{
   display:none;
@@ -136,6 +136,21 @@ body.new-ui-enabled .theme-customizer-btn{
 .product-grid{ display:grid; gap:16px; align-items:stretch; grid-template-columns:repeat(2,1fr); }
 .card{ position:relative; display:flex; flex-direction:column; min-height:280px; background:linear-gradient(180deg,var(--card),var(--panel-2)); border:1px solid rgba(178,188,255,.15); border-radius:12px; overflow:hidden; box-shadow:var(--soft-shadow); transition: transform var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease); }
 .card:hover{ transform:translateY(-3px); border-color:rgba(178,188,255,.36); box-shadow:var(--hover-shadow); }
+.card.card-enter{
+  animation:cardEnter 220ms var(--motion-ease);
+}
+
+.card.card-exit{
+  opacity:0;
+  transform:scale(.98);
+  transition:opacity 170ms var(--motion-ease), transform 170ms var(--motion-ease);
+  pointer-events:none;
+}
+
+.card.card-shift{
+  transition:transform 230ms var(--motion-ease);
+}
+
 .card-body{ padding:14px; display:flex; flex-direction:column; gap:10px; flex:1; }
 .card-header{ display:flex; align-items:start; justify-content:space-between; gap:10px; }
 .card-header-left{ display:flex; flex-direction:column; gap:7px; }
@@ -180,6 +195,11 @@ body.new-ui-enabled .theme-customizer-btn{
 .status-item:first-of-type{ border-top:0; padding-top:0; }
 .status-item span{ color:var(--muted); font-size:.8rem; }
 .status-item strong{ font-size:.95rem; }
+.status-panel{ display:flex; flex-direction:column; gap:8px; }
+.status-site{ margin-top:4px; }
+.official-site-btn{ display:inline-flex; align-items:center; gap:8px; width:100%; padding:8px 10px; border-radius:10px; border:1px solid rgba(178,188,255,.25); background:rgba(20,26,48,.8); color:var(--text); text-decoration:none; }
+.official-site-btn img{ width:16px; height:16px; border-radius:4px; }
+.official-site-btn span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
 .btn-primary,.btn-danger{ border:0; padding:10px 12px; border-radius:10px; cursor:pointer; font-weight:700; }
 .btn-primary{ background:linear-gradient(90deg,#8192ff,#adb8ff); color:#090d1d; }
@@ -195,8 +215,10 @@ body.new-ui-enabled .theme-customizer-btn{
 #scriptsPage{ min-height:100%; }
 .subpage-header h2{ margin:0; color:var(--periwinkle-2); }
 .subtabs{ display:flex; flex-wrap:wrap; gap:8px; padding:10px; border-radius:12px; border:1px solid rgba(178,188,255,.18); background:rgba(18,23,43,.65); }
-.subtab-panel{ border:1px solid rgba(178,188,255,.2); border-radius:12px; background:rgba(10,14,28,.72); padding:14px; }
-.subtab-panel.animate-in-subtab{ animation:subtabFadeIn var(--motion-fast) var(--motion-ease); }
+.subtab-panel{ border:1px solid rgba(178,188,255,.2); border-radius:12px; background:rgba(10,14,28,.72); padding:14px; transition:opacity var(--motion-med) var(--motion-ease), transform var(--motion-med) var(--motion-ease); }
+.subtab-panel.animate-in-subtab{ animation:subtabFadeIn var(--motion-med) var(--motion-ease); }
+.script-card,.rank-item{ transition:transform var(--motion-med) var(--motion-ease), opacity var(--motion-med) var(--motion-ease); }
+.subtab-panel.animate-in-subtab .script-card,.subtab-panel.animate-in-subtab .rank-item{ animation:cardEnter var(--motion-med) var(--motion-ease); }
 .subtab-panel h3{ margin:0; }
 .rank-list,.script-list,.saved-script-list{ margin-top:12px; display:grid; gap:10px; }
 .rank-item,.script-card,.saved-script-item{ border:1px solid rgba(178,188,255,.2); border-radius:10px; background:rgba(17,20,38,.7); }
@@ -237,6 +259,11 @@ body.new-ui-enabled .theme-customizer-btn{
 
 @keyframes subtabFadeIn{
   from{ opacity:0; transform:translateY(6px) scale(1.003); }
+  to{ opacity:1; transform:translateY(0) scale(1); }
+}
+
+@keyframes cardEnter{
+  from{ opacity:0; transform:translateY(8px) scale(.986); }
   to{ opacity:1; transform:translateY(0) scale(1); }
 }
 
