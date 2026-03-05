@@ -2,6 +2,8 @@
 
 **Xyrex.lol** is an executor hub that displays details about different executors - including pricing, official websites, features, and relevant info. It aims to help users compare options and discover trustworthy information about your favourite executors
 
+> https://plutoxqqq.github.io/Xyrex.lol/
+
 ---
 
 ## 🚀 Overview
