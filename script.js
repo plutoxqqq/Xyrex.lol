@@ -365,11 +365,7 @@ const scriptsHubData = {
     }
   ],
   recentChanges: [
-    'Added a dedicated New UI toggle that cleanly switches between New UI and Default UI modes.',
-    'Introduced an optional New UI module with a Theme Customizer (BETA) and local theme persistence.',
-    'Refined legend key sizing so each key uses only the required space while still allowing responsive shrink behavior.',
-    'Updated Paid and Free best-executor tier lists in Scripts Hub for clearer recommendations.',
-    'Improved modal hierarchy and transition polish for a cleaner and more modern browsing experience.'
+    'Revamped the New UI with a modern visual refresh, modal-based Theme Customizer, and smoother AI Insight actions on executor cards.'
   ]
 };
 
@@ -731,7 +727,7 @@ function loadNewUiModule() {
 
   return new Promise(resolve => {
     const script = document.createElement('script');
-    script.src = './new-ui.js?v=1.0.0';
+    script.src = './new-ui.js?v=2.0.0';
     script.defer = true;
     script.onload = () => resolve(Boolean(window.XyrexNewUI));
     script.onerror = () => resolve(false);
@@ -749,8 +745,11 @@ function updateUiToggleButton() {
 
 async function applyUiMode() {
   updateUiToggleButton();
+  const themeBtn = qs('#themeCustomizerBtn');
+
   if (!isNewUiMode) {
     if (window.XyrexNewUI) window.XyrexNewUI.disable();
+    if (themeBtn) themeBtn.hidden = true;
     return;
   }
 
@@ -759,10 +758,12 @@ async function applyUiMode() {
     isNewUiMode = false;
     localStorage.setItem(uiModeStorageKey, 'default');
     updateUiToggleButton();
+    if (themeBtn) themeBtn.hidden = true;
     return;
   }
 
   window.XyrexNewUI.enable();
+  if (themeBtn) themeBtn.hidden = false;
 }
 
 let activePageId = null;
@@ -893,6 +894,11 @@ function init() {
     isNewUiMode = !isNewUiMode;
     localStorage.setItem(uiModeStorageKey, isNewUiMode ? 'new' : 'default');
     await applyUiMode();
+  });
+
+  qs('#themeCustomizerBtn').addEventListener('click', () => {
+    if (!isNewUiMode || !window.XyrexNewUI?.toggleThemeCustomizer) return;
+    window.XyrexNewUI.toggleThemeCustomizer();
   });
 
   qsa('.filter-checkbox').forEach(cb => cb.addEventListener('change', applyAllFilters));

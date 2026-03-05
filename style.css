@@ -72,7 +72,7 @@ h6,
   backdrop-filter: blur(12px);
 }
 .topnav .nav-inner{
-  max-width: var(--max-width);
+  width:min(100%, var(--max-width));
   margin: 0 auto;
   display: flex;
   align-items: center;
@@ -94,7 +94,17 @@ h6,
 .ui-toggle-btn:hover{ border-color:rgba(178,188,255,.6); background:rgba(26,35,66,.96); }
 .ui-toggle-btn.is-active{ color:#090d1d; border-color:transparent; background:linear-gradient(90deg,#8192ff,#adb8ff); }
 
-.page-layout{ height: calc(100vh - 68px); margin-top:68px; max-width:var(--max-width); margin-inline:auto; padding:16px; display:grid; grid-template-columns:280px 1fr; gap:var(--layout-gap); }
+.theme-customizer-btn{
+  display:none;
+}
+
+body.new-ui-enabled .theme-customizer-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.page-layout{ height: calc(100vh - 68px); margin-top:68px; width:min(100%, var(--max-width)); margin-inline:auto; padding:16px; display:grid; grid-template-columns:280px 1fr; gap:var(--layout-gap); }
 .page-layout.scripts-mode{ grid-template-columns:minmax(0,1fr); }
 .sidebar,.main-content{ min-height:0; }
 .sidebar{ background:linear-gradient(180deg,var(--panel),#0d1020); border-radius:var(--radius); border:1px solid rgba(178,188,255,.16); box-shadow:var(--soft-shadow); padding:16px 16px 22px; overflow-y:auto; overflow-x:hidden; scrollbar-width:thin; scrollbar-color:rgba(178,188,255,0.45) transparent; }
@@ -258,8 +268,9 @@ h6,
   .topnav{ padding-top: env(safe-area-inset-top); }
   .topnav .nav-inner{ flex-wrap:wrap; gap:10px; padding:10px 12px; }
   .ui-toggle-btn{ order:2; }
+  .theme-customizer-btn{ order:3; }
   .brand{ font-size:.95rem; }
-  .search-wrap{ order:3; flex:1 0 100%; max-width:none; }
+  .search-wrap{ order:4; flex:1 0 100%; max-width:none; }
   .search-input{ font-size:16px; }
   .nav-spacer{ display:none; }
   .modal-layout{ grid-template-columns:1fr; }
@@ -273,7 +284,7 @@ h6,
   .product-grid{ grid-template-columns:1fr; }
   .card-body{ padding:12px; gap:8px; }
   .info-btn{ min-height:40px; }
-  .page-switch{ width:100%; order:4; justify-content:flex-start; overflow-y:auto; overflow-x:hidden; }
+  .page-switch{ width:100%; order:5; justify-content:flex-start; overflow-y:auto; overflow-x:hidden; }
   .subtabs{ padding:8px; }
 }
 
