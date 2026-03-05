@@ -1,0 +1,111 @@
+body.new-ui-enabled{
+  --panel: #0f1425;
+  --panel-2: #101a2f;
+  --card: #111b33;
+  --soft-shadow: 0 14px 34px rgba(0,0,0,.38);
+  background-image: radial-gradient(circle at 80% 0%, color-mix(in srgb, var(--periwinkle) 35%, transparent), transparent 42%), linear-gradient(180deg, var(--bg), var(--bg-2));
+}
+
+body.new-ui-enabled .main-content,
+body.new-ui-enabled .sidebar{
+  border-color: color-mix(in srgb, var(--periwinkle-2) 25%, transparent);
+}
+
+body.new-ui-enabled .subtabs,
+body.new-ui-enabled .subtab-panel,
+body.new-ui-enabled .legend,
+body.new-ui-enabled .card,
+body.new-ui-enabled .modal,
+body.new-ui-enabled .rank-item,
+body.new-ui-enabled .script-card{
+  border-color: color-mix(in srgb, var(--periwinkle-2) 28%, transparent);
+}
+
+.new-ui-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:.72rem;
+  font-weight:700;
+  color:var(--periwinkle-2);
+  border:1px solid color-mix(in srgb, var(--periwinkle-2) 28%, transparent);
+  border-radius:999px;
+  padding:4px 10px;
+  background:rgba(18,24,46,.72);
+}
+
+.new-ui-panel{
+  margin-top:10px;
+  padding:12px;
+  border-radius:12px;
+  border:1px solid color-mix(in srgb, var(--periwinkle-2) 28%, transparent);
+  background:rgba(12,17,33,.72);
+}
+
+.new-ui-panel h3{
+  margin:0 0 10px;
+}
+
+.new-ui-stats{
+  display:grid;
+  gap:10px;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+}
+
+.new-ui-stats article{
+  padding:10px;
+  border-radius:10px;
+  background:rgba(16,21,40,.76);
+  border:1px solid color-mix(in srgb, var(--periwinkle-2) 24%, transparent);
+}
+
+.theme-customizer-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:10px;
+}
+
+.theme-customizer-grid label{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:9px 10px;
+  border-radius:10px;
+  background:rgba(16,22,42,.74);
+  border:1px solid color-mix(in srgb, var(--periwinkle-2) 24%, transparent);
+}
+
+.theme-customizer-grid input[type="color"]{
+  inline-size:42px;
+  block-size:28px;
+  padding:0;
+  border:none;
+  background:transparent;
+}
+
+.theme-actions{
+  margin-top:10px;
+  display:flex;
+  gap:8px;
+}
+
+.new-ui-chip-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:8px;
+}
+
+.new-ui-chip-row span{
+  border-radius:999px;
+  padding:5px 10px;
+  font-size:.8rem;
+  color:var(--periwinkle-2);
+  border:1px solid color-mix(in srgb, var(--periwinkle-2) 28%, transparent);
+  background:rgba(16,20,39,.76);
+}
+
+@media (max-width: 720px){
+  .new-ui-stats{ grid-template-columns:1fr; }
+}
