@@ -18,24 +18,6 @@ const products = [
     status: 'Undetected'
   },
   {
-    name: 'SkibX',
-    featured: false,
-    platform: ['iOS', 'Android'],
-    cheatType: 'Internal',
-    keySystem: 'Keyless',
-    tags: ['Internal'],
-    features: ['Decompiler'],
-    sunc: 96,
-    description: 'Internal executor with keyless access, iOS support, and high sUNC.',
-    pros: ['Keyless', 'iOS support', 'High sUNC'],
-    cons: ['None listed'],
-    pricingOptions: ['Free'],
-    freeOrPaid: 'free',
-    stability: 'Unknown',
-    trustLevel: 'Unknown',
-    status: 'Unknown'
-  },
-  {
     name: 'Potassium',
     featured: true,
     platform: ['Windows'],
@@ -362,8 +344,18 @@ const products = [
 ];
 
 const scriptsHubData = {
-  tierListPaid: [{ tier: 'S', executor: 'Pluton', notes: 'Best overall reliability and performance.' }],
-  tierListFree: [{ tier: 'S', executor: 'Pluton', notes: 'Best current free option.' }],
+  tierListPaid: [
+    { tier: 'S', executor: 'Pluton', notes: 'Top paid pick for balanced performance, consistency, and support coverage.' },
+    { tier: 'A', executor: 'Potassium', notes: 'Strong feature depth with excellent sUNC support, but trust concerns remain.' },
+    { tier: 'A', executor: 'Seliware', notes: 'Smooth execution and polished UX, with occasional detection instability.' },
+    { tier: 'B', executor: 'Volcano', notes: 'Stable long-term option with reliable execution, but comparatively expensive.' }
+  ],
+  tierListFree: [
+    { tier: 'S', executor: 'Pluton', notes: 'Best free overall package right now with broad platform support.' },
+    { tier: 'A', executor: 'Velocity', notes: 'Fast keyless free option with modern tooling and customization.' },
+    { tier: 'A', executor: 'Solara', notes: 'Reliable free Windows option with steady day-to-day stability.' },
+    { tier: 'B', executor: 'JJSploit', notes: 'Beginner-friendly choice with a simplified workflow.' }
+  ],
   popularScripts: [
     {
       name: 'Universal Auto-Farm',
@@ -373,11 +365,7 @@ const scriptsHubData = {
     }
   ],
   recentChanges: [
-    'Updated all requested platform and status icons to new Font Awesome v7.2.0 SVGs.',
-    'Added Free + Paid pricing filter and support for executors with both plans.',
-    'Added XYREX easter egg route to a hidden themed Coming Soon page.',
-    'Major mobile layout/safe-area and overscroll polish for cleaner full-screen rendering.',
-    'Restored saved-script Delete action and added title+content validation.'
+    'Revamped the New UI with a modern visual refresh, modal-based Theme Customizer, and smoother AI Insight actions on executor cards.'
   ]
 };
 
@@ -453,6 +441,7 @@ function createProductCard(product, index) {
   card.className = 'card';
   if (product.featured) card.classList.add('featured-card');
   card.setAttribute('data-index', index);
+  card.setAttribute('data-name', product.name);
 
   const body = document.createElement('div');
   body.className = 'card-body';
@@ -506,19 +495,62 @@ function createProductCard(product, index) {
 
 function renderProducts(list) {
   const grid = qs('#productGrid');
-  grid.innerHTML = '';
-  if (!list.length) {
-    qs('#noResults').hidden = false;
-    return;
-  }
-
   const sorted = [...list].sort((a, b) => {
     if (a.featured === b.featured) return a.name.localeCompare(b.name);
     return a.featured ? -1 : 1;
   });
 
-  qs('#noResults').hidden = true;
-  sorted.forEach((p, i) => grid.appendChild(createProductCard(p, i)));
+  if (!grid.dataset.renderVersion) grid.dataset.renderVersion = '0';
+  const nextVersion = String(Number(grid.dataset.renderVersion) + 1);
+  grid.dataset.renderVersion = nextVersion;
+
+  const oldCards = Array.from(grid.querySelectorAll('.card'));
+  if (!oldCards.length) {
+    grid.innerHTML = '';
+    qs('#noResults').hidden = Boolean(sorted.length);
+    if (!sorted.length) return;
+    sorted.forEach((product, index) => grid.appendChild(createProductCard(product, index)));
+    return;
+  }
+
+  const oldRectByName = new Map(oldCards.map(card => [card.getAttribute('data-name'), card.getBoundingClientRect()]));
+  const nextNames = new Set(sorted.map(item => item.name));
+
+  oldCards.forEach(card => {
+    if (!nextNames.has(card.getAttribute('data-name'))) card.classList.add('card-exit');
+  });
+
+  window.setTimeout(() => {
+    if (grid.dataset.renderVersion !== nextVersion) return;
+
+    grid.innerHTML = '';
+    qs('#noResults').hidden = Boolean(sorted.length);
+    if (!sorted.length) return;
+
+    sorted.forEach((product, index) => {
+      const card = createProductCard(product, index);
+      grid.appendChild(card);
+
+      const oldRect = oldRectByName.get(product.name);
+      if (!oldRect) {
+        card.classList.add('card-enter');
+        return;
+      }
+
+      const newRect = card.getBoundingClientRect();
+      const deltaX = oldRect.left - newRect.left;
+      const deltaY = oldRect.top - newRect.top;
+      if (Math.abs(deltaX) < 0.5 && Math.abs(deltaY) < 0.5) return;
+
+      card.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+      card.style.transition = 'transform 0s';
+      requestAnimationFrame(() => {
+        card.classList.add('card-shift');
+        card.style.transform = '';
+        card.style.transition = '';
+      });
+    });
+  }, 180);
 }
 
 function getActiveFilters() {
@@ -538,7 +570,9 @@ function getPriceControls() {
 
 function isPriceMatch(prod, priceControls) {
   if (!priceControls.free && !priceControls.paid && !priceControls.both) return true;
-  if ((priceControls.free && priceControls.paid) || priceControls.both) return prod.freeOrPaid === 'both';
+
+  if (priceControls.free && priceControls.paid) return ['free', 'paid', 'both'].includes(prod.freeOrPaid);
+  if (priceControls.both) return prod.freeOrPaid === 'both';
   if (priceControls.free) return prod.freeOrPaid === 'free' || prod.freeOrPaid === 'both';
   if (priceControls.paid) return prod.freeOrPaid === 'paid' || prod.freeOrPaid === 'both';
   return false;
@@ -565,21 +599,32 @@ function applyAllFilters() {
 function openModal(product) {
   const overlay = qs('#modalOverlay');
   const content = qs('#modalContent');
+  const officialSite = product.officialSite || `https://www.google.com/search?q=${encodeURIComponent(`${product.name} executor official site`)}`;
+  const officialSiteHost = (() => {
+    try {
+      return new URL(officialSite).hostname;
+    } catch {
+      return 'Official site';
+    }
+  })();
+  const faviconUrl = `https://www.google.com/s2/favicons?sz=64&domain_url=${encodeURIComponent(officialSite)}`;
 
   content.innerHTML = `
     <h2>${escapeHtml(product.name)}</h2>
+    <p class="modal-headline">${escapeHtml(product.description)}</p>
     <div class="modal-layout">
       <div>
-        <div class="modal-section"><strong>Description</strong><p>${escapeHtml(product.description)}</p></div>
         <div class="modal-section"><strong>Pros</strong><ul>${product.pros.map(f => `<li>${escapeHtml(f)}</li>`).join('')}</ul></div>
         <div class="modal-section"><strong>Cons</strong><ul>${product.cons.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul></div>
         <div class="modal-section"><strong>Pricing</strong><ul>${product.pricingOptions.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul></div>
       </div>
       <aside class="status-panel">
         <h3>Status</h3>
-        <div class="status-item"><span>Stability</span><strong>${escapeHtml(product.stability)}</strong></div>
-        <div class="status-item"><span>Trust Level</span><strong>${escapeHtml(product.trustLevel)}</strong></div>
         <div class="status-item"><span>Current State</span><strong>${escapeHtml(product.status)}</strong></div>
+        <div class="status-item"><span>Trust Level</span><strong>${escapeHtml(product.trustLevel)}</strong></div>
+        <div class="status-item"><span>Stability</span><strong>${escapeHtml(product.stability)}</strong></div>
+        <div class="status-item"><span>sUNC</span><strong>${Number.isFinite(product.sunc) ? `${product.sunc}%` : 'None'}</strong></div>
+        <div class="status-item status-site"><span>Official Site</span><a class="official-site-btn" href="${escapeHtml(officialSite)}" target="_blank" rel="noopener noreferrer"><img src="${escapeHtml(faviconUrl)}" alt="Site icon" /><span>${escapeHtml(officialSiteHost)}</span></a></div>
       </aside>
     </div>`;
 
@@ -715,6 +760,66 @@ function deleteSelectedScript() {
   renderSavedScriptsList();
 }
 
+
+const uiModeStorageKey = 'xyrex_ui_mode';
+let isNewUiMode = localStorage.getItem(uiModeStorageKey) === 'new';
+let newUiLoadAttempted = false;
+
+function loadNewUiModule() {
+  if (window.XyrexNewUI) return Promise.resolve(true);
+  if (newUiLoadAttempted) return Promise.resolve(false);
+  newUiLoadAttempted = true;
+
+  return new Promise(resolve => {
+    const script = document.createElement('script');
+    script.src = './new-ui.js?v=2.1.0';
+    script.defer = true;
+    script.onload = () => resolve(Boolean(window.XyrexNewUI));
+    script.onerror = () => resolve(false);
+    document.head.appendChild(script);
+  });
+}
+
+function updateUiToggleButton() {
+  const button = qs('#uiModeToggleBtn');
+  if (!button) return;
+  button.textContent = isNewUiMode ? 'Default UI' : 'New UI';
+  button.classList.toggle('is-active', isNewUiMode);
+  button.setAttribute('aria-pressed', String(isNewUiMode));
+}
+
+async function applyUiMode() {
+  updateUiToggleButton();
+  const themeBtn = qs('#themeCustomizerBtn');
+
+  if (!isNewUiMode) {
+    if (window.XyrexNewUI) window.XyrexNewUI.disable();
+    if (themeBtn) {
+      themeBtn.hidden = true;
+      themeBtn.setAttribute('aria-hidden', 'true');
+    }
+    return;
+  }
+
+  const loaded = await loadNewUiModule();
+  if (!loaded || !window.XyrexNewUI) {
+    isNewUiMode = false;
+    localStorage.setItem(uiModeStorageKey, 'default');
+    updateUiToggleButton();
+    if (themeBtn) {
+      themeBtn.hidden = true;
+      themeBtn.setAttribute('aria-hidden', 'true');
+    }
+    return;
+  }
+
+  window.XyrexNewUI.enable();
+  if (themeBtn) {
+    themeBtn.hidden = false;
+    themeBtn.setAttribute('aria-hidden', 'false');
+  }
+}
+
 let activePageId = null;
 let activeSubtabId = 'tierPaidPanel';
 
@@ -839,6 +944,17 @@ function init() {
     setActivePage('executorsPage');
   });
 
+  qs('#uiModeToggleBtn').addEventListener('click', async () => {
+    isNewUiMode = !isNewUiMode;
+    localStorage.setItem(uiModeStorageKey, isNewUiMode ? 'new' : 'default');
+    await applyUiMode();
+  });
+
+  qs('#themeCustomizerBtn').addEventListener('click', () => {
+    if (!isNewUiMode || !window.XyrexNewUI?.toggleThemeCustomizer) return;
+    window.XyrexNewUI.toggleThemeCustomizer();
+  });
+
   qsa('.filter-checkbox').forEach(cb => cb.addEventListener('change', applyAllFilters));
   qsa('.price-checkbox').forEach(cb => cb.addEventListener('change', applyAllFilters));
 
@@ -858,6 +974,7 @@ function init() {
   });
 
   setActivePage('executorsPage');
+  applyUiMode();
 }
 
 document.addEventListener('DOMContentLoaded', init);
