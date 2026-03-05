@@ -130,6 +130,13 @@ body.new-ui-enabled .price {
   margin-bottom: 6px;
 }
 
+.ai-result p{ margin: 0 0 8px; line-height: 1.5; }
+.ai-result p:last-child{ margin-bottom: 0; }
+.ai-result ul{ margin: 0 0 8px 18px; padding: 0; }
+.ai-result li{ margin: 0 0 4px; }
+.ai-result code{ padding: 1px 6px; border-radius: 6px; background: rgba(255,255,255,.08); }
+.ai-result h3,.ai-result h4,.ai-result h5{ margin: 6px 0; font-size: .94rem; }
+
 .new-ui-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;

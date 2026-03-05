@@ -41,11 +41,7 @@
   function hexToRgb(hex) {
     const match = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '');
     if (!match) return null;
-    return {
-      r: parseInt(match[1], 16),
-      g: parseInt(match[2], 16),
-      b: parseInt(match[3], 16)
-    };
+    return { r: parseInt(match[1], 16), g: parseInt(match[2], 16), b: parseInt(match[3], 16) };
   }
 
   function rgbToHex(r, g, b) {
@@ -187,11 +183,64 @@
   }
 
   function cleanInsightText(text) {
-    const cleaned = String(text || '')
+    return String(text || '')
       .replace(/⚠️\s*\*\*IMPORTANT NOTICE\*\*[\s\S]*?continue to work normally\./gi, '')
       .replace(/pollinations legacy text api[\s\S]*?models\./gi, '')
       .trim();
-    return cleaned;
+  }
+
+  function renderMarkdown(markdownText) {
+    const source = String(markdownText || '').replace(/\r\n/g, '\n').trim();
+    if (!source) return '<p>No insight available.</p>';
+
+    const lines = source.split('\n');
+    const htmlParts = [];
+    let inList = false;
+
+    const inlineFormat = text => {
+      let value = escapeHtml(text);
+      value = value.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      value = value.replace(/\*(.+?)\*/g, '<em>$1</em>');
+      value = value.replace(/`(.+?)`/g, '<code>$1</code>');
+      return value;
+    };
+
+    lines.forEach(rawLine => {
+      const line = rawLine.trim();
+      if (!line) {
+        if (inList) {
+          htmlParts.push('</ul>');
+          inList = false;
+        }
+        return;
+      }
+
+      if (/^[-*]\s+/.test(line)) {
+        if (!inList) {
+          htmlParts.push('<ul>');
+          inList = true;
+        }
+        htmlParts.push(`<li>${inlineFormat(line.replace(/^[-*]\s+/, ''))}</li>`);
+        return;
+      }
+
+      if (inList) {
+        htmlParts.push('</ul>');
+        inList = false;
+      }
+
+      const headingMatch = line.match(/^(#{1,3})\s+(.+)$/);
+      if (headingMatch) {
+        const level = headingMatch[1].length;
+        htmlParts.push(`<h${level + 2}>${inlineFormat(headingMatch[2])}</h${level + 2}>`);
+        return;
+      }
+
+      htmlParts.push(`<p>${inlineFormat(line)}</p>`);
+    });
+
+    if (inList) htmlParts.push('</ul>');
+    return htmlParts.join('');
   }
 
   function buildFallbackInsight(product) {
@@ -254,9 +303,9 @@
 
     try {
       const insight = await generateInsight(product);
-      result.innerHTML = `<strong class="no-text-select">${escapeHtml(product.name)}</strong><p>${escapeHtml(insight).replace(/\n/g, '<br />')}</p>`;
+      result.innerHTML = `<strong class="no-text-select">${escapeHtml(product.name)}</strong>${renderMarkdown(insight)}`;
     } catch (error) {
-      result.innerHTML = `<strong class="no-text-select">${escapeHtml(product.name)}</strong><p>${escapeHtml(buildFallbackInsight(product)).replace(/\n/g, '<br />')}</p>`;
+      result.innerHTML = `<strong class="no-text-select">${escapeHtml(product.name)}</strong>${renderMarkdown(buildFallbackInsight(product))}`;
       console.warn(error);
     } finally {
       button.disabled = false;
