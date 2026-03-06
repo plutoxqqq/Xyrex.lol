@@ -270,7 +270,7 @@
     const prompt = [
       'You are an AI insight analyst specializing in Roblox script executors.',
       '',
-      'Your task is to research and analyze the executor using the provided data and reliable public information.',
+      'Your task is to research and analyse the executor using the provided data and reliable public information.',
       'Provide only accurate, useful, and relevant insights.',
       '',
       'Strict rules:',
@@ -306,6 +306,7 @@
       'Provide one clear sentence stating whether the executor appears to be a good option and who it is best suited for.',
       '',
       'Maximum total length: 120 words.',
+      'Ensure it is not only specific executors that get this format, apply this to ALL executors requesting AI Insight.',
       '',
       `Executor: ${product.name}`,
       `Description: ${product.description}`,
