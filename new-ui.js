@@ -311,7 +311,6 @@
       `Pricing: ${product.price}`,
       `sUNC: ${product.sunc}`
     ].join('\n');
-  }
 
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const rawText = await requestInsight(prompt);
