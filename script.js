@@ -15,7 +15,8 @@ const products = [
     freeOrPaid: 'both',
     stability: 'Stable',
     trustLevel: 'High',
-    status: 'Undetected'
+    status: 'Undetected',
+    officialSite: 'https://example.com'
   },
   {
     name: 'Potassium',
@@ -33,7 +34,8 @@ const products = [
     freeOrPaid: 'paid',
     stability: 'Unstable',
     trustLevel: 'Low',
-    status: 'Detected risk'
+    status: 'Detected risk',
+    officialSite: 'https://example.com'
   },
   {
     name: 'JJSploit',
@@ -51,7 +53,8 @@ const products = [
     freeOrPaid: 'free',
     stability: 'Basic',
     trustLevel: 'Medium',
-    status: 'Undetected'
+    status: 'Undetected',
+    officialSite: 'https://example.com'
   },
   {
     name: 'Velocity',
@@ -69,7 +72,8 @@ const products = [
     freeOrPaid: 'free',
     stability: 'Mixed',
     trustLevel: 'Medium',
-    status: 'Undetected'
+    status: 'Undetected',
+    officialSite: 'https://example.com'
   },
   {
     name: 'Xeno',
@@ -87,7 +91,8 @@ const products = [
     freeOrPaid: 'free',
     stability: 'Stable',
     trustLevel: 'Medium',
-    status: 'Undetected'
+    status: 'Undetected',
+    officialSite: 'https://example.com'
   },
   {
     name: 'Solara',
@@ -105,7 +110,8 @@ const products = [
     freeOrPaid: 'free',
     stability: 'Stable',
     trustLevel: 'Medium',
-    status: 'Undetected'
+    status: 'Undetected',
+    officialSite: 'https://example.com'
   },
   {
     name: 'Vega X',
@@ -123,7 +129,8 @@ const products = [
     freeOrPaid: 'both',
     stability: 'Unknown',
     trustLevel: 'Unknown',
-    status: 'Unknown'
+    status: 'Unknown',
+    officialSite: 'https://example.com'
   },
   {
     name: 'Macsploit',
@@ -141,7 +148,8 @@ const products = [
     freeOrPaid: 'paid',
     stability: 'Stable',
     trustLevel: 'Medium',
-    status: 'Undetected'
+    status: 'Undetected',
+    officialSite: 'https://example.com'
   },
   {
     name: 'Seliware',
@@ -159,7 +167,8 @@ const products = [
     freeOrPaid: 'paid',
     stability: 'Mixed',
     trustLevel: 'Medium',
-    status: 'Detection issues'
+    status: 'Detection issues',
+    officialSite: 'https://example.com'
   },
   {
     name: 'Serotonin',
@@ -177,7 +186,8 @@ const products = [
     freeOrPaid: 'paid',
     stability: 'Unknown',
     trustLevel: 'Unknown',
-    status: 'Unknown'
+    status: 'Unknown',
+    officialSite: 'https://example.com'
   },
   {
     name: 'Severe',
@@ -195,7 +205,8 @@ const products = [
     freeOrPaid: 'paid',
     stability: 'Unknown',
     trustLevel: 'Unknown',
-    status: 'Unknown'
+    status: 'Unknown',
+    officialSite: 'https://example.com'
   },
   {
     name: 'Arceus X',
@@ -213,7 +224,8 @@ const products = [
     freeOrPaid: 'paid',
     stability: 'Unknown',
     trustLevel: 'Unknown',
-    status: 'Unknown'
+    status: 'Unknown',
+    officialSite: 'https://example.com'
   },
   {
     name: 'Bunni',
@@ -231,7 +243,8 @@ const products = [
     freeOrPaid: 'both',
     stability: 'Mixed',
     trustLevel: 'Medium',
-    status: 'Undetected'
+    status: 'Undetected',
+    officialSite: 'https://example.com'
   },
   {
     name: 'Delta',
@@ -249,7 +262,8 @@ const products = [
     freeOrPaid: 'both',
     stability: 'Stable',
     trustLevel: 'Medium',
-    status: 'Undetected'
+    status: 'Undetected',
+    officialSite: 'https://example.com'
   },
   {
     name: 'Hydrogen',
@@ -267,7 +281,8 @@ const products = [
     freeOrPaid: 'both',
     stability: 'Stable',
     trustLevel: 'Medium',
-    status: 'Undetected'
+    status: 'Undetected',
+    officialSite: 'https://example.com'
   },
   {
     name: 'Matcha',
@@ -285,7 +300,8 @@ const products = [
     freeOrPaid: 'paid',
     stability: 'Unknown',
     trustLevel: 'Unknown',
-    status: 'Unknown'
+    status: 'Unknown',
+    officialSite: 'https://example.com'
   },
   {
     name: 'Volt',
@@ -303,7 +319,8 @@ const products = [
     freeOrPaid: 'paid',
     stability: 'Unknown',
     trustLevel: 'Low',
-    status: 'Unknown'
+    status: 'Unknown',
+    officialSite: 'https://example.com'
   },
   {
     name: 'Aimmy',
@@ -321,7 +338,8 @@ const products = [
     freeOrPaid: 'free',
     stability: 'Unknown',
     trustLevel: 'Unknown',
-    status: 'Unknown'
+    status: 'Unknown',
+    officialSite: 'https://example.com'
   },
   {
     name: 'Volcano',
@@ -339,7 +357,8 @@ const products = [
     freeOrPaid: 'paid',
     stability: 'Stable',
     trustLevel: 'High',
-    status: 'Undetected'
+    status: 'Undetected',
+    officialSite: 'https://example.com'
   }
 ];
 
@@ -599,15 +618,21 @@ function applyAllFilters() {
 function openModal(product) {
   const overlay = qs('#modalOverlay');
   const content = qs('#modalContent');
-  const officialSite = product.officialSite || `https://www.google.com/search?q=${encodeURIComponent(`${product.name} executor official site`)}`;
-  const officialSiteHost = (() => {
-    try {
-      return new URL(officialSite).hostname;
-    } catch {
-      return 'Official site';
-    }
-  })();
-  const faviconUrl = `https://www.google.com/s2/favicons?sz=64&domain_url=${encodeURIComponent(officialSite)}`;
+
+  const officialSite = product.officialSite || '';
+  const officialSiteHost = officialSite
+    ? (() => {
+        try {
+          return new URL(officialSite).hostname;
+        } catch {
+          return officialSite;
+        }
+      })()
+    : 'Not provided';
+
+  const faviconUrl = officialSite
+    ? `https://www.google.com/s2/favicons?sz=64&domain_url=${encodeURIComponent(officialSite)}`
+    : '';
 
   content.innerHTML = `
     <h2>${escapeHtml(product.name)}</h2>
@@ -624,7 +649,17 @@ function openModal(product) {
         <div class="status-item"><span>Trust Level</span><strong>${escapeHtml(product.trustLevel)}</strong></div>
         <div class="status-item"><span>Stability</span><strong>${escapeHtml(product.stability)}</strong></div>
         <div class="status-item"><span>sUNC</span><strong>${Number.isFinite(product.sunc) ? `${product.sunc}%` : 'None'}</strong></div>
-        <div class="status-item status-site"><span>Official Site</span><a class="official-site-btn" href="${escapeHtml(officialSite)}" target="_blank" rel="noopener noreferrer"><img src="${escapeHtml(faviconUrl)}" alt="Site icon" /><span>${escapeHtml(officialSiteHost)}</span></a></div>
+        <div class="status-item status-site">
+          <span>Official Site</span>
+          ${
+            officialSite
+              ? `<a class="official-site-btn" href="${escapeHtml(officialSite)}" target="_blank" rel="noopener noreferrer">
+                   ${faviconUrl ? `<img src="${escapeHtml(faviconUrl)}" alt="Site icon" />` : ''}
+                   <span>${escapeHtml(officialSiteHost)}</span>
+                 </a>`
+              : `<span class="no-site">Not provided</span>`
+          }
+        </div>
       </aside>
     </div>`;
 
