@@ -280,6 +280,7 @@
       '- Avoid filler phrases, speculation, or generic statements.',
       '- Write in clear, concise sentences.',
       '- No typos. No emojis. No marketing language.',
+      '- Do research about the executor in question and combine the research knowledge with the information on the site.',
       '',
       'Focus on:',
       '- sUNC compatibility and what it indicates about function support',
