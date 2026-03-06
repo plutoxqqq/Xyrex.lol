@@ -268,15 +268,50 @@
 
   async function generateInsight(product) {
     const prompt = [
-      'You are a concise product analyst.',
-      'Write two short paragraphs and then exactly three bullet points.',
-      'Do not include service notices, policy notices, or API deprecation notices.',
+      'You are an AI insight analyst specializing in Roblox script executors.',
+      '',
+      'Your task is to research and analyze the executor using the provided data and reliable public information.',
+      'Provide only accurate, useful, and relevant insights.',
+      '',
+      'Strict rules:',
+      '- Prioritize accuracy over completeness.',
+      '- Do not invent features, claims, or statistics.',
+      '- If information cannot be verified, state that limited information is available.',
+      '- Avoid filler phrases, speculation, or generic statements.',
+      '- Write in clear, concise sentences.',
+      '- No typos. No emojis. No marketing language.',
+      '',
+      'Focus on:',
+      '- sUNC compatibility and what it indicates about function support',
+      '- Stability and expected reliability',
+      '- Trustworthiness and safety considerations',
+      '- Reputation or community feedback if available',
+      '- Usability and target user type',
+      '',
+      'Output format:',
+      '',
+      'Reliability and Compatibility',
+      'Provide a short paragraph analyzing stability and sUNC compatibility.',
+      '',
+      'Trust and Reputation',
+      'Provide a short paragraph evaluating trustworthiness, safety considerations, and likely user audience.',
+      '',
+      'Key Points',
+      '- One realistic caution or risk',
+      '- One practical recommendation',
+      '- One notable limitation or characteristic',
+      '',
+      'Verdict',
+      'Provide one clear sentence stating whether the executor appears to be a good option and who it is best suited for.',
+      '',
+      'Maximum total length: 120 words.',
+      '',
       `Executor: ${product.name}`,
       `Description: ${product.description}`,
       `Pricing: ${product.price}`,
-      `sUNC: ${product.sunc}`,
-      'Focus on reliability, who this is suitable for, and practical caution.'
+      `sUNC: ${product.sunc}`
     ].join('\n');
+  }
 
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const rawText = await requestInsight(prompt);
