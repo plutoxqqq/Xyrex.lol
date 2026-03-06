@@ -358,10 +358,10 @@ const scriptsHubData = {
   ],
   popularScripts: [
     {
-      name: 'Universal Auto-Farm',
-      game: 'Multi-game',
-      description: 'General-purpose automation loop with teleport and anti-AFK toggles.',
-      script: 'loadstring(game:HttpGet("https://example.com/universal-autofarm.lua"))()'
+      name: 'Voidware Bedwars',
+      game: 'Bedwars',
+      description: 'The most popular Roblox Bedwars script',
+      script: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWRewrite/master/NewMainScript.lua", true))()'
     }
   ],
   recentChanges: [
