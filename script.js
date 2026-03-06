@@ -16,7 +16,7 @@ const products = [
     stability: 'Stable',
     trustLevel: 'High',
     status: 'Undetected',
-    officialSite: 'https://example.com'
+    officialSite: 'https://github.com/plutoxqq/Pluton-Executor'
   },
   {
     name: 'Potassium',
@@ -35,7 +35,7 @@ const products = [
     stability: 'Unstable',
     trustLevel: 'Low',
     status: 'Detected risk',
-    officialSite: 'https://example.com'
+    officialSite: 'https://www.potassium.pro/'
   },
   {
     name: 'JJSploit',
@@ -54,7 +54,7 @@ const products = [
     stability: 'Basic',
     trustLevel: 'Medium',
     status: 'Undetected',
-    officialSite: 'https://example.com'
+    officialSite: 'https://wearedevs.net/d/JJSploit'
   },
   {
     name: 'Velocity',
@@ -73,7 +73,7 @@ const products = [
     stability: 'Mixed',
     trustLevel: 'Medium',
     status: 'Undetected',
-    officialSite: 'https://example.com'
+    officialSite: 'https://work.ink/1Yct/velocitydownload'
   },
   {
     name: 'Xeno',
@@ -92,7 +92,7 @@ const products = [
     stability: 'Stable',
     trustLevel: 'Medium',
     status: 'Undetected',
-    officialSite: 'https://example.com'
+    officialSite: 'https://xeno.now/'
   },
   {
     name: 'Solara',
@@ -111,7 +111,7 @@ const products = [
     stability: 'Stable',
     trustLevel: 'Medium',
     status: 'Undetected',
-    officialSite: 'https://example.com'
+    officialSite: 'https://getsolara.gg/'
   },
   {
     name: 'Vega X',
@@ -130,7 +130,7 @@ const products = [
     stability: 'Unknown',
     trustLevel: 'Unknown',
     status: 'Unknown',
-    officialSite: 'https://example.com'
+    officialSite: 'https://vegax.gg/'
   },
   {
     name: 'Macsploit',
@@ -149,7 +149,7 @@ const products = [
     stability: 'Stable',
     trustLevel: 'Medium',
     status: 'Undetected',
-    officialSite: 'https://example.com'
+    officialSite: 'https://www.raptor.fun/'
   },
   {
     name: 'Seliware',
@@ -168,7 +168,7 @@ const products = [
     stability: 'Mixed',
     trustLevel: 'Medium',
     status: 'Detection issues',
-    officialSite: 'https://example.com'
+    officialSite: 'https://seliware.com/'
   },
   {
     name: 'Serotonin',
@@ -187,7 +187,7 @@ const products = [
     stability: 'Unknown',
     trustLevel: 'Unknown',
     status: 'Unknown',
-    officialSite: 'https://example.com'
+    officialSite: 'https://www.serotonin.win/'
   },
   {
     name: 'Severe',
@@ -206,7 +206,7 @@ const products = [
     stability: 'Unknown',
     trustLevel: 'Unknown',
     status: 'Unknown',
-    officialSite: 'https://example.com'
+    officialSite: 'https://discord.com/invite/4QmWjQCgzV'
   },
   {
     name: 'Arceus X',
@@ -225,7 +225,7 @@ const products = [
     stability: 'Unknown',
     trustLevel: 'Unknown',
     status: 'Unknown',
-    officialSite: 'https://example.com'
+    officialSite: 'https://spdmteam.com/index'
   },
   {
     name: 'Bunni',
@@ -244,7 +244,7 @@ const products = [
     stability: 'Mixed',
     trustLevel: 'Medium',
     status: 'Undetected',
-    officialSite: 'https://example.com'
+    officialSite: 'https://bunni.fun/'
   },
   {
     name: 'Delta',
@@ -263,7 +263,7 @@ const products = [
     stability: 'Stable',
     trustLevel: 'Medium',
     status: 'Undetected',
-    officialSite: 'https://example.com'
+    officialSite: 'https://deltaexploits.gg/'
   },
   {
     name: 'Hydrogen',
@@ -282,7 +282,7 @@ const products = [
     stability: 'Stable',
     trustLevel: 'Medium',
     status: 'Undetected',
-    officialSite: 'https://example.com'
+    officialSite: 'https://hydrogen.lat/'
   },
   {
     name: 'Matcha',
@@ -301,7 +301,7 @@ const products = [
     stability: 'Unknown',
     trustLevel: 'Unknown',
     status: 'Unknown',
-    officialSite: 'https://example.com'
+    officialSite: 'https://discord.com/invite/matchalattewin'
   },
   {
     name: 'Volt',
@@ -320,7 +320,7 @@ const products = [
     stability: 'Unknown',
     trustLevel: 'Low',
     status: 'Unknown',
-    officialSite: 'https://example.com'
+    officialSite: 'https://volt.bz/'
   },
   {
     name: 'Aimmy',
@@ -339,7 +339,7 @@ const products = [
     stability: 'Unknown',
     trustLevel: 'Unknown',
     status: 'Unknown',
-    officialSite: 'https://example.com'
+    officialSite: 'https://aimmy.dev/'
   },
   {
     name: 'Volcano',
@@ -358,7 +358,7 @@ const products = [
     stability: 'Stable',
     trustLevel: 'High',
     status: 'Undetected',
-    officialSite: 'https://example.com'
+    officialSite: 'https://volcano.wtf/'
   }
 ];
 
