@@ -68,11 +68,11 @@
       }
     },
     {
-      id: 'rose-dawn',
-      label: 'Rose Dawn',
+      id: 'pink-bloom',
+      label: 'Pink Bloom',
       colors: {
-        bg: '#281d26', bg2: '#342632', panel: '#422f41', panel2: '#513a51', card: '#614766',
-        text: '#fff1f9', muted: '#e5c9da', accent: '#f3b7d5', accentSoft: '#fbd8ea', success: '#b4e3c4', warning: '#ffddaa'
+        bg: '#2b1423', bg2: '#381a2d', panel: '#4a223c', panel2: '#5d2b4d', card: '#723760',
+        text: '#fff0fb', muted: '#efbfdc', accent: '#ff78c9', accentSoft: '#ffc4e8', success: '#a4e6c8', warning: '#ffd7ad'
       }
     }
   ];
@@ -426,6 +426,39 @@
     } catch {
       // no-op
     }
+  }
+
+  function getInsightCacheKey(product) {
+    return [product.name, product.price, product.sunc, product.description].join('|').toLowerCase();
+  }
+
+  function pause(ms) {
+    return new Promise(resolve => window.setTimeout(resolve, ms));
+  }
+
+  async function requestInsight(prompt) {
+    let lastError = null;
+
+    for (let attempt = 0; attempt < AI_MAX_ATTEMPTS; attempt += 1) {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
+
+      try {
+        const response = await fetch(`${AI_ENDPOINT}${encodeURIComponent(prompt)}`, { signal: controller.signal });
+        if (!response.ok) throw new Error(`AI request failed (${response.status})`);
+        const text = (await response.text()).trim();
+        if (!text) throw new Error('AI request returned an empty response');
+        return text;
+      } catch (error) {
+        lastError = error;
+        const backoffMs = 350 * (2 ** attempt);
+        if (attempt < AI_MAX_ATTEMPTS - 1) await pause(backoffMs);
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
+    }
+
+    throw lastError || new Error('AI request failed');
   }
 
   function getInsightCacheKey(product) {
