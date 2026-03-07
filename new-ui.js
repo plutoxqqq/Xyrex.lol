@@ -2,7 +2,9 @@
   const THEME_KEY = 'xyrex_new_ui_theme';
   const AI_ENDPOINT = 'https://text.pollinations.ai/';
   const THEME_MODAL_ID = 'newUiThemeModal';
-  const AI_REQUEST_TIMEOUT_MS = 9000;
+  const AI_REQUEST_TIMEOUT_MS = 14000;
+  const AI_MAX_ATTEMPTS = 4;
+  const AI_CACHE_KEY = 'xyrex_ai_insight_cache_v1';
 
   let cssLoaded = false;
   let gridObserver = null;
@@ -15,7 +17,7 @@
 
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = './new-ui.css?v=2.1.0';
+    link.href = '/new-ui.css?v=2.1.0';
     link.dataset.newUiCss = 'true';
     document.head.appendChild(link);
     cssLoaded = true;
@@ -165,7 +167,7 @@
         <h3>Executor Insights</h3>
         <span class="new-ui-chip no-text-select">AI Powered</span>
       </div>
-      <p class="modal-headline">Select <strong>AI Insight</strong> on any executor card to generate a focused recommendation and caution summary.</p>
+      <p class="modal-headline">Select <strong>AI Insight</strong> on any executor card to generate a focused recommendation and caution summary</p>
       <div id="executorInsightResult" class="ai-result" hidden></div>
     `;
 
@@ -176,7 +178,7 @@
   function productFromCard(card) {
     return {
       name: card.querySelector('.product-name')?.textContent?.trim() || 'Unknown Executor',
-      description: card.querySelector('.summary')?.textContent?.trim() || 'No description available.',
+      description: card.querySelector('.summary')?.textContent?.trim() || 'No description available',
       price: card.querySelector('.price')?.textContent?.trim() || 'Unknown',
       sunc: card.querySelector('.sunc')?.textContent?.trim() || 'Unknown'
     };
@@ -191,7 +193,7 @@
 
   function renderMarkdown(markdownText) {
     const source = String(markdownText || '').replace(/\r\n/g, '\n').trim();
-    if (!source) return '<p>No insight available.</p>';
+    if (!source) return '<p>No insight available</p>';
 
     const lines = source.split('\n');
     const htmlParts = [];
@@ -249,17 +251,54 @@
     ].join('\n\n');
   }
 
-  async function requestInsight(prompt) {
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
-
+  function getInsightCache() {
     try {
-      const response = await fetch(`${AI_ENDPOINT}${encodeURIComponent(prompt)}`, { signal: controller.signal });
-      if (!response.ok) throw new Error(`AI request failed (${response.status})`);
-      return (await response.text()).trim();
-    } finally {
-      window.clearTimeout(timeoutId);
+      const parsed = JSON.parse(localStorage.getItem(AI_CACHE_KEY) || '{}');
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
     }
+  }
+
+  function writeInsightCache(cache) {
+    try {
+      localStorage.setItem(AI_CACHE_KEY, JSON.stringify(cache));
+    } catch {
+      // no-op
+    }
+  }
+
+  function getInsightCacheKey(product) {
+    return [product.name, product.price, product.sunc, product.description].join('|').toLowerCase();
+  }
+
+  function pause(ms) {
+    return new Promise(resolve => window.setTimeout(resolve, ms));
+  }
+
+  async function requestInsight(prompt) {
+    let lastError = null;
+
+    for (let attempt = 0; attempt < AI_MAX_ATTEMPTS; attempt += 1) {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
+
+      try {
+        const response = await fetch(`${AI_ENDPOINT}${encodeURIComponent(prompt)}`, { signal: controller.signal });
+        if (!response.ok) throw new Error(`AI request failed (${response.status})`);
+        const text = (await response.text()).trim();
+        if (!text) throw new Error('AI request returned an empty response');
+        return text;
+      } catch (error) {
+        lastError = error;
+        const backoffMs = 350 * (2 ** attempt);
+        if (attempt < AI_MAX_ATTEMPTS - 1) await pause(backoffMs);
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
+    }
+
+    throw lastError || new Error('AI request failed');
   }
 
   async function generateInsight(product) {
@@ -310,10 +349,23 @@
       `sUNC: ${product.sunc}`
     ].join('\n');
 
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      const rawText = await requestInsight(prompt);
-      const cleaned = cleanInsightText(rawText);
-      if (cleaned) return cleaned;
+    const cache = getInsightCache();
+    const cacheKey = getInsightCacheKey(product);
+    const cachedInsight = cache[cacheKey];
+    if (typeof cachedInsight === 'string' && cachedInsight.trim()) return cachedInsight;
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        const rawText = await requestInsight(prompt);
+        const cleaned = cleanInsightText(rawText);
+        if (cleaned) {
+          cache[cacheKey] = cleaned;
+          writeInsightCache(cache);
+          return cleaned;
+        }
+      } catch (error) {
+        if (attempt >= 2) throw error;
+      }
     }
 
     return buildFallbackInsight(product);
