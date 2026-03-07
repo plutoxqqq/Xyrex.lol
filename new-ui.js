@@ -34,6 +34,49 @@
     ['warning', '--accent-warning']
   ];
 
+  const pastelThemePresets = [
+    {
+      id: 'lavender-mist',
+      label: 'Lavender Mist',
+      colors: {
+        bg: '#191a29', bg2: '#21233a', panel: '#2a2d49', panel2: '#323556', card: '#3a3e66',
+        text: '#f8f4ff', muted: '#d5cde8', accent: '#c5b7ff', accentSoft: '#e2d8ff', success: '#9fe0bf', warning: '#ffd8a8'
+      }
+    },
+    {
+      id: 'mint-cloud',
+      label: 'Mint Cloud',
+      colors: {
+        bg: '#182324', bg2: '#223032', panel: '#2c3f41', panel2: '#355053', card: '#3f6064',
+        text: '#f2fffa', muted: '#c9e8dd', accent: '#9ddfd3', accentSoft: '#c5f1e8', success: '#a8eac8', warning: '#ffd9aa'
+      }
+    },
+    {
+      id: 'peach-haze',
+      label: 'Peach Haze',
+      colors: {
+        bg: '#2a1f1d', bg2: '#352724', panel: '#43312d', panel2: '#523a35', card: '#60443e',
+        text: '#fff5ef', muted: '#e8ccc2', accent: '#ffb8a6', accentSoft: '#ffd8cc', success: '#b7e5be', warning: '#ffe0a6'
+      }
+    },
+    {
+      id: 'powder-sky',
+      label: 'Powder Sky',
+      colors: {
+        bg: '#1a2230', bg2: '#232d3f', panel: '#2d3950', panel2: '#36445f', card: '#425373',
+        text: '#f1f7ff', muted: '#c8d8ec', accent: '#abcfff', accentSoft: '#d4e6ff', success: '#a7dfcf', warning: '#ffe0aa'
+      }
+    },
+    {
+      id: 'rose-dawn',
+      label: 'Rose Dawn',
+      colors: {
+        bg: '#281d26', bg2: '#342632', panel: '#422f41', panel2: '#513a51', card: '#614766',
+        text: '#fff1f9', muted: '#e5c9da', accent: '#f3b7d5', accentSoft: '#fbd8ea', success: '#b4e3c4', warning: '#ffddaa'
+      }
+    }
+  ];
+
   let cssLoaded = false;
   let gridObserver = null;
 
@@ -132,19 +175,32 @@
           </div>
           <button type="button" class="new-ui-theme-close" aria-label="Close Theme Customizer">✕</button>
         </header>
-        <div class="new-ui-theme-grid">
-          <label>Background <input type="color" id="newUiBg" value="#06070d" /></label>
-          <label>Background 2 <input type="color" id="newUiBg2" value="#0a0c14" /></label>
-          <label>Panel <input type="color" id="newUiPanel" value="#111426" /></label>
-          <label>Panel 2 <input type="color" id="newUiPanel2" value="#12172b" /></label>
-          <label>Card <input type="color" id="newUiCard" value="#12162a" /></label>
-          <label>Text <input type="color" id="newUiText" value="#eef1ff" /></label>
-          <label>Muted Text <input type="color" id="newUiMuted" value="#aeb5d6" /></label>
-          <label>Primary Accent <input type="color" id="newUiAccent" value="#8f9cff" /></label>
-          <label>Secondary Accent <input type="color" id="newUiAccentSoft" value="#b2bcff" /></label>
-          <label>Success Accent <input type="color" id="newUiSuccess" value="#5dd39e" /></label>
-          <label>Warning Accent <input type="color" id="newUiWarning" value="#f0c36f" /></label>
+        <div class="new-ui-theme-tabs" role="tablist" aria-label="Theme customizer mode">
+          <button type="button" class="new-ui-theme-tab is-active" role="tab" aria-selected="true" data-theme-tab-target="newUiThemeBasicPanel">Basic</button>
+          <button type="button" class="new-ui-theme-tab" role="tab" aria-selected="false" data-theme-tab-target="newUiThemeAdvancedPanel">Advanced</button>
         </div>
+
+        <section id="newUiThemeBasicPanel" class="new-ui-theme-panel-block" role="tabpanel">
+          <p class="new-ui-theme-note">Choose a pastel preset</p>
+          <div id="newUiPresetSwatches" class="new-ui-preset-swatches"></div>
+        </section>
+
+        <section id="newUiThemeAdvancedPanel" class="new-ui-theme-panel-block" role="tabpanel" hidden>
+          <div class="new-ui-theme-grid">
+            <label>Background <input type="color" id="newUiBg" value="#06070d" /></label>
+            <label>Background 2 <input type="color" id="newUiBg2" value="#0a0c14" /></label>
+            <label>Panel <input type="color" id="newUiPanel" value="#111426" /></label>
+            <label>Panel 2 <input type="color" id="newUiPanel2" value="#12172b" /></label>
+            <label>Card <input type="color" id="newUiCard" value="#12162a" /></label>
+            <label>Text <input type="color" id="newUiText" value="#eef1ff" /></label>
+            <label>Muted Text <input type="color" id="newUiMuted" value="#aeb5d6" /></label>
+            <label>Primary Accent <input type="color" id="newUiAccent" value="#8f9cff" /></label>
+            <label>Secondary Accent <input type="color" id="newUiAccentSoft" value="#b2bcff" /></label>
+            <label>Success Accent <input type="color" id="newUiSuccess" value="#5dd39e" /></label>
+            <label>Warning Accent <input type="color" id="newUiWarning" value="#f0c36f" /></label>
+          </div>
+        </section>
+
         <div class="new-ui-theme-actions">
           <button type="button" class="btn-primary" id="saveNewUiThemeBtn">Apply Theme</button>
           <button type="button" class="btn-danger" id="resetNewUiThemeBtn">Reset</button>
@@ -169,18 +225,69 @@
     };
 
     const saved = { ...themeDefaults, ...(getThemeFromStorage() || {}) };
-    Object.entries(colorInputMap).forEach(([key, selector]) => {
-      const input = modal.querySelector(selector);
-      if (!input) return;
-      input.value = saved[key] || themeDefaults[key];
-    });
 
-    modal.querySelector('#saveNewUiThemeBtn').addEventListener('click', () => {
+    const presetWrap = modal.querySelector('#newUiPresetSwatches');
+    presetWrap.innerHTML = pastelThemePresets.map(preset => `
+      <button
+        type="button"
+        class="new-ui-preset-swatch"
+        title="${escapeHtml(preset.label)}"
+        aria-label="${escapeHtml(preset.label)}"
+        data-preset-id="${escapeHtml(preset.id)}"
+        style="background: radial-gradient(circle at 28% 22%, ${preset.colors.accentSoft}, ${preset.colors.accent} 44%, ${preset.colors.panel} 100%);"
+      ></button>
+    `).join('');
+
+    const setInputValues = palette => {
+      const merged = { ...themeDefaults, ...(palette || {}) };
+      Object.entries(colorInputMap).forEach(([key, selector]) => {
+        const input = modal.querySelector(selector);
+        if (!input) return;
+        input.value = merged[key] || themeDefaults[key];
+      });
+    };
+
+    const collectInputValues = () => {
       const payload = {};
       Object.entries(colorInputMap).forEach(([key, selector]) => {
         const input = modal.querySelector(selector);
         payload[key] = input?.value || themeDefaults[key];
       });
+      return payload;
+    };
+
+    const setThemeTab = panelId => {
+      modal.querySelectorAll('.new-ui-theme-tab').forEach(tab => {
+        const active = tab.getAttribute('data-theme-tab-target') === panelId;
+        tab.classList.toggle('is-active', active);
+        tab.setAttribute('aria-selected', String(active));
+      });
+      modal.querySelectorAll('.new-ui-theme-panel-block').forEach(panel => {
+        panel.hidden = panel.id !== panelId;
+      });
+    };
+
+    setThemeTab('newUiThemeBasicPanel');
+    setInputValues(saved);
+
+    modal.querySelectorAll('.new-ui-theme-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        setThemeTab(tab.getAttribute('data-theme-tab-target'));
+      });
+    });
+
+    presetWrap.addEventListener('click', event => {
+      const trigger = event.target.closest('[data-preset-id]');
+      if (!trigger) return;
+      const preset = pastelThemePresets.find(item => item.id === trigger.getAttribute('data-preset-id'));
+      if (!preset) return;
+      setInputValues(preset.colors);
+      applyTheme(preset.colors);
+      localStorage.setItem(THEME_KEY, JSON.stringify(preset.colors));
+    });
+
+    modal.querySelector('#saveNewUiThemeBtn').addEventListener('click', () => {
+      const payload = collectInputValues();
       localStorage.setItem(THEME_KEY, JSON.stringify(payload));
       applyTheme(payload);
     });
@@ -319,6 +426,39 @@
     } catch {
       // no-op
     }
+  }
+
+  function getInsightCacheKey(product) {
+    return [product.name, product.price, product.sunc, product.description].join('|').toLowerCase();
+  }
+
+  function pause(ms) {
+    return new Promise(resolve => window.setTimeout(resolve, ms));
+  }
+
+  async function requestInsight(prompt) {
+    let lastError = null;
+
+    for (let attempt = 0; attempt < AI_MAX_ATTEMPTS; attempt += 1) {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
+
+      try {
+        const response = await fetch(`${AI_ENDPOINT}${encodeURIComponent(prompt)}`, { signal: controller.signal });
+        if (!response.ok) throw new Error(`AI request failed (${response.status})`);
+        const text = (await response.text()).trim();
+        if (!text) throw new Error('AI request returned an empty response');
+        return text;
+      } catch (error) {
+        lastError = error;
+        const backoffMs = 350 * (2 ** attempt);
+        if (attempt < AI_MAX_ATTEMPTS - 1) await pause(backoffMs);
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
+    }
+
+    throw lastError || new Error('AI request failed');
   }
 
   function getInsightCacheKey(product) {

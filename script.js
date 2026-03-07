@@ -408,7 +408,8 @@ const scriptsHubData = {
     'Improved AI Insight reliability with retry and backoff handling, stronger timeout behavior, and cached successful responses',
     'Added Official Discord links in the top navigation and executor modal, then refined the top navigation to a clean icon-only Discord logo',
     'Fixed refresh behavior for subpage routes by funneling all route entrypoints to the latest root build',
-    'Reworked Theme Customizer to control the full site mood with complete palette overrides'
+    'Reworked Theme Customizer to control the full site mood with complete palette overrides',
+    'Redesigned Theme Customizer with Basic and Advanced subtabs and added five pastel preset circles for one-click themes'
   ]
 };
 

@@ -228,6 +228,57 @@ body.new-ui-enabled .price {
   gap: 10px;
 }
 
+.new-ui-theme-tabs {
+  display: inline-flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.new-ui-theme-tab {
+  border: 1px solid var(--newui-border);
+  background: rgba(11, 17, 34, 0.82);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.new-ui-theme-tab.is-active {
+  color: #091020;
+  border-color: transparent;
+  background: linear-gradient(90deg, var(--periwinkle), var(--periwinkle-2));
+}
+
+.new-ui-theme-panel-block {
+  margin-top: 4px;
+}
+
+.new-ui-theme-note {
+  margin: 0 0 10px;
+  color: var(--muted);
+}
+
+.new-ui-preset-swatches {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.new-ui-preset-swatch {
+  inline-size: 42px;
+  block-size: 42px;
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--periwinkle-2) 34%, transparent);
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+}
+
+.new-ui-preset-swatch:hover {
+  transform: translateY(-1px);
+}
+
 .new-ui-theme-grid label {
   display: flex;
   align-items: center;
