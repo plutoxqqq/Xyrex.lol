@@ -406,7 +406,9 @@ const scriptsHubData = {
     'Revamped the New UI with a modern visual refresh and a modal-based Theme Customizer',
     'Added route-aware navigation for /scripthub and /newui paths, including Script Hub subtabs and browser history support',
     'Improved AI Insight reliability with retry and backoff handling, stronger timeout behavior, and cached successful responses',
-    'Added Official Discord links in the top navigation and executor modal, then refined the top navigation to a clean icon-only Discord logo'
+    'Added Official Discord links in the top navigation and executor modal, then refined the top navigation to a clean icon-only Discord logo',
+    'Fixed refresh behavior for subpage routes by funneling all route entrypoints to the latest root build',
+    'Reworked Theme Customizer to control the full site mood with complete palette overrides'
   ]
 };
 
@@ -985,6 +987,14 @@ function syncSubtabButtons(targetSubtabId) {
   });
 }
 
+
+function getInitialRoutePath() {
+  const params = new URLSearchParams(window.location.search);
+  const route = (params.get('route') || '').trim();
+  if (!route.startsWith('/')) return window.location.pathname;
+  return route;
+}
+
 async function applyRoute(pathname, replace = false) {
   const routeState = getRouteStateFromPath(pathname);
   suppressRouteSync = true;
@@ -1156,10 +1166,10 @@ function init() {
   });
 
   window.addEventListener('popstate', () => {
-    applyRoute(window.location.pathname, true);
+    applyRoute(getInitialRoutePath(), true);
   });
 
-  applyRoute(window.location.pathname, true);
+  applyRoute(getInitialRoutePath(), true);
 }
 
 document.addEventListener('DOMContentLoaded', init);

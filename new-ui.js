@@ -6,6 +6,34 @@
   const AI_MAX_ATTEMPTS = 4;
   const AI_CACHE_KEY = 'xyrex_ai_insight_cache_v1';
 
+  const themeDefaults = {
+    bg: '#06070d',
+    bg2: '#0a0c14',
+    panel: '#111426',
+    panel2: '#12172b',
+    card: '#12162a',
+    text: '#eef1ff',
+    muted: '#aeb5d6',
+    accent: '#8f9cff',
+    accentSoft: '#b2bcff',
+    success: '#5dd39e',
+    warning: '#f0c36f'
+  };
+
+  const themeFields = [
+    ['bg', '--bg'],
+    ['bg2', '--bg-2'],
+    ['panel', '--panel'],
+    ['panel2', '--panel-2'],
+    ['card', '--card'],
+    ['text', '--text'],
+    ['muted', '--muted'],
+    ['accent', '--periwinkle'],
+    ['accentSoft', '--periwinkle-2'],
+    ['success', '--accent-success'],
+    ['warning', '--accent-warning']
+  ];
+
   let cssLoaded = false;
   let gridObserver = null;
 
@@ -66,24 +94,19 @@
     if (!theme || typeof theme !== 'object') return;
     const root = document.documentElement;
 
-    const accentRgb = hexToRgb(theme.accent || '#8f9cff');
-    const accentSoftRgb = hexToRgb(theme.accentSoft || '#b2bcff');
-    if (!accentRgb || !accentSoftRgb) return;
-
-    root.style.setProperty('--periwinkle', theme.accent);
-    root.style.setProperty('--periwinkle-2', theme.accentSoft);
-    root.style.setProperty('--bg', mixRgb(accentRgb, { r: 3, g: 6, b: 14 }, 0.88));
-    root.style.setProperty('--bg-2', mixRgb(accentRgb, { r: 5, g: 10, b: 22 }, 0.9));
-    root.style.setProperty('--panel', mixRgb(accentRgb, { r: 18, g: 24, b: 45 }, 0.68));
-    root.style.setProperty('--panel-2', mixRgb(accentSoftRgb, { r: 15, g: 20, b: 38 }, 0.72));
-    root.style.setProperty('--card', mixRgb(accentSoftRgb, { r: 20, g: 26, b: 48 }, 0.76));
-    root.style.setProperty('--muted', shiftRgb(accentSoftRgb, 12));
+    const normalized = { ...themeDefaults, ...theme };
+    themeFields.forEach(([key, cssVar]) => {
+      const value = normalized[key];
+      if (typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value)) {
+        root.style.setProperty(cssVar, value);
+      }
+    });
   }
 
   function clearThemeOverrides() {
     const root = document.documentElement;
-    ['--periwinkle', '--periwinkle-2', '--bg', '--bg-2', '--panel', '--panel-2', '--card', '--muted'].forEach(prop => {
-      root.style.removeProperty(prop);
+    themeFields.forEach(([, cssVar]) => {
+      root.style.removeProperty(cssVar);
     });
   }
 
@@ -105,13 +128,22 @@
         <header class="new-ui-theme-head">
           <div>
             <h3>Theme Customizer</h3>
-            <p>Adjust the full New UI theme colors with live preview.</p>
+            <p>Adjust the full site palette and mood with live preview</p>
           </div>
           <button type="button" class="new-ui-theme-close" aria-label="Close Theme Customizer">✕</button>
         </header>
         <div class="new-ui-theme-grid">
-          <label>Primary Theme <input type="color" id="newUiAccent" value="#8f9cff" /></label>
-          <label>Secondary Theme <input type="color" id="newUiAccentSoft" value="#b2bcff" /></label>
+          <label>Background <input type="color" id="newUiBg" value="#06070d" /></label>
+          <label>Background 2 <input type="color" id="newUiBg2" value="#0a0c14" /></label>
+          <label>Panel <input type="color" id="newUiPanel" value="#111426" /></label>
+          <label>Panel 2 <input type="color" id="newUiPanel2" value="#12172b" /></label>
+          <label>Card <input type="color" id="newUiCard" value="#12162a" /></label>
+          <label>Text <input type="color" id="newUiText" value="#eef1ff" /></label>
+          <label>Muted Text <input type="color" id="newUiMuted" value="#aeb5d6" /></label>
+          <label>Primary Accent <input type="color" id="newUiAccent" value="#8f9cff" /></label>
+          <label>Secondary Accent <input type="color" id="newUiAccentSoft" value="#b2bcff" /></label>
+          <label>Success Accent <input type="color" id="newUiSuccess" value="#5dd39e" /></label>
+          <label>Warning Accent <input type="color" id="newUiWarning" value="#f0c36f" /></label>
         </div>
         <div class="new-ui-theme-actions">
           <button type="button" class="btn-primary" id="saveNewUiThemeBtn">Apply Theme</button>
@@ -122,21 +154,42 @@
 
     document.body.appendChild(modal);
 
-    const saved = getThemeFromStorage();
-    if (saved?.accent) modal.querySelector('#newUiAccent').value = saved.accent;
-    if (saved?.accentSoft) modal.querySelector('#newUiAccentSoft').value = saved.accentSoft;
+    const colorInputMap = {
+      bg: '#newUiBg',
+      bg2: '#newUiBg2',
+      panel: '#newUiPanel',
+      panel2: '#newUiPanel2',
+      card: '#newUiCard',
+      text: '#newUiText',
+      muted: '#newUiMuted',
+      accent: '#newUiAccent',
+      accentSoft: '#newUiAccentSoft',
+      success: '#newUiSuccess',
+      warning: '#newUiWarning'
+    };
+
+    const saved = { ...themeDefaults, ...(getThemeFromStorage() || {}) };
+    Object.entries(colorInputMap).forEach(([key, selector]) => {
+      const input = modal.querySelector(selector);
+      if (!input) return;
+      input.value = saved[key] || themeDefaults[key];
+    });
 
     modal.querySelector('#saveNewUiThemeBtn').addEventListener('click', () => {
-      const accent = modal.querySelector('#newUiAccent').value;
-      const accentSoft = modal.querySelector('#newUiAccentSoft').value;
-      const payload = { accent, accentSoft };
+      const payload = {};
+      Object.entries(colorInputMap).forEach(([key, selector]) => {
+        const input = modal.querySelector(selector);
+        payload[key] = input?.value || themeDefaults[key];
+      });
       localStorage.setItem(THEME_KEY, JSON.stringify(payload));
       applyTheme(payload);
     });
 
     modal.querySelector('#resetNewUiThemeBtn').addEventListener('click', () => {
-      modal.querySelector('#newUiAccent').value = '#8f9cff';
-      modal.querySelector('#newUiAccentSoft').value = '#b2bcff';
+      Object.entries(colorInputMap).forEach(([key, selector]) => {
+        const input = modal.querySelector(selector);
+        if (input) input.value = themeDefaults[key];
+      });
       localStorage.removeItem(THEME_KEY);
       clearThemeOverrides();
     });
