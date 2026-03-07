@@ -403,7 +403,10 @@ const scriptsHubData = {
     }
   ],
   recentChanges: [
-    'Revamped the New UI with a modern visual refresh, modal-based Theme Customizer, and smoother AI Insight actions on executor cards'
+    'Revamped the New UI with a modern visual refresh and a modal-based Theme Customizer',
+    'Added route-aware navigation for /scripthub and /newui paths, including Script Hub subtabs and browser history support',
+    'Improved AI Insight reliability with retry and backoff handling, stronger timeout behavior, and cached successful responses',
+    'Added Official Discord links in the top navigation and executor modal, then refined the top navigation to a clean icon-only Discord logo'
   ]
 };
 
