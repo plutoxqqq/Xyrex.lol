@@ -360,6 +360,25 @@ const products = [
     status: 'Undetected',
     officialSite: 'https://volcano.wtf/'
   }
+  {
+    name: 'Wave',
+    featured: false,
+    platform: ['Windows'],
+    cheatType: 'Internal',
+    keySystem: 'Keyless',
+    tags: ['Internal, Warning'],
+    features: ['Decompiler', 'Multi-instance'],
+    sunc: 98,
+    description: 'Highly conflicted background history',
+    pros: ['Not usually down'],
+    cons: ['May be dangerous as dev team has split up'],
+    pricingOptions: ['Paid'],
+    freeOrPaid: 'paid',
+    stability: 'Stable',
+    trustLevel: 'Low',
+    status: 'Undetected',
+    officialSite: 'https://getwave.gg/'
+  }
 ];
 
 const scriptsHubData = {
