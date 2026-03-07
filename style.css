@@ -213,9 +213,10 @@ body.new-ui-enabled .theme-customizer-btn{
 .page-switch{ display:flex; gap:8px; }
 .page-switch-btn,.subtab-btn{ border:1px solid rgba(178,188,255,.28); background:rgba(17,24,46,.9); color:var(--muted); border-radius:999px; padding:8px 12px; font-weight:700; cursor:pointer; transition: all var(--motion-fast) var(--motion-ease); }
 .page-switch-btn.is-active,.subtab-btn.is-active{ color:#090d1d; border-color:transparent; background:linear-gradient(90deg,#8192ff,#adb8ff); }
-.discord-nav-link{ margin-left:6px; display:inline-flex; align-items:center; gap:8px; border:1px solid rgba(88,101,242,.6); background:rgba(88,101,242,.18); color:#cfd4ff; border-radius:999px; padding:8px 12px; font-weight:700; min-height:40px; white-space:nowrap; transition: all var(--motion-fast) var(--motion-ease); }
-.discord-nav-link svg{ width:18px; height:18px; flex:0 0 auto; }
-.discord-nav-link:hover{ border-color:rgba(88,101,242,.9); background:rgba(88,101,242,.3); color:#eef1ff; }
+.discord-nav-link{ margin-left:4px; display:inline-flex; align-items:center; justify-content:center; color:#cfd4ff; inline-size:34px; block-size:34px; transition: color var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease); }
+.discord-nav-link svg{ width:22px; height:22px; flex:0 0 auto; }
+.discord-nav-link:hover{ color:#eef1ff; transform:translateY(-1px); }
+.discord-nav-link:focus-visible{ outline:2px solid rgba(178,188,255,.55); outline-offset:4px; border-radius:8px; }
 .app-page{ display:none; flex-direction:column; gap:14px; width:100%; opacity:1; transform:translateY(0); transition:opacity var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease); }
 .app-page.is-active{ display:flex; }
 .app-page.animate-in-page{ animation:pageFadeIn var(--motion-med) var(--motion-ease); }
@@ -319,7 +320,6 @@ body.new-ui-enabled .theme-customizer-btn{
   .card-body{ padding:12px; gap:8px; }
   .info-btn{ min-height:40px; }
   .page-switch{ width:100%; order:5; justify-content:flex-start; flex-wrap:wrap; overflow-y:auto; overflow-x:hidden; }
-  .discord-nav-link span{ display:none; }
   .subtabs{ padding:8px; }
 }
 
