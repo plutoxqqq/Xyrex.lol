@@ -2,7 +2,37 @@
   const THEME_KEY = 'xyrex_new_ui_theme';
   const AI_ENDPOINT = 'https://text.pollinations.ai/';
   const THEME_MODAL_ID = 'newUiThemeModal';
-  const AI_REQUEST_TIMEOUT_MS = 9000;
+  const AI_REQUEST_TIMEOUT_MS = 14000;
+  const AI_MAX_ATTEMPTS = 4;
+  const AI_CACHE_KEY = 'xyrex_ai_insight_cache_v1';
+
+  const themeDefaults = {
+    bg: '#06070d',
+    bg2: '#0a0c14',
+    panel: '#111426',
+    panel2: '#12172b',
+    card: '#12162a',
+    text: '#eef1ff',
+    muted: '#aeb5d6',
+    accent: '#8f9cff',
+    accentSoft: '#b2bcff',
+    success: '#5dd39e',
+    warning: '#f0c36f'
+  };
+
+  const themeFields = [
+    ['bg', '--bg'],
+    ['bg2', '--bg-2'],
+    ['panel', '--panel'],
+    ['panel2', '--panel-2'],
+    ['card', '--card'],
+    ['text', '--text'],
+    ['muted', '--muted'],
+    ['accent', '--periwinkle'],
+    ['accentSoft', '--periwinkle-2'],
+    ['success', '--accent-success'],
+    ['warning', '--accent-warning']
+  ];
 
   let cssLoaded = false;
   let gridObserver = null;
@@ -15,7 +45,7 @@
 
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = './new-ui.css?v=2.1.0';
+    link.href = '/new-ui.css?v=2.1.0';
     link.dataset.newUiCss = 'true';
     document.head.appendChild(link);
     cssLoaded = true;
@@ -64,24 +94,19 @@
     if (!theme || typeof theme !== 'object') return;
     const root = document.documentElement;
 
-    const accentRgb = hexToRgb(theme.accent || '#8f9cff');
-    const accentSoftRgb = hexToRgb(theme.accentSoft || '#b2bcff');
-    if (!accentRgb || !accentSoftRgb) return;
-
-    root.style.setProperty('--periwinkle', theme.accent);
-    root.style.setProperty('--periwinkle-2', theme.accentSoft);
-    root.style.setProperty('--bg', mixRgb(accentRgb, { r: 3, g: 6, b: 14 }, 0.88));
-    root.style.setProperty('--bg-2', mixRgb(accentRgb, { r: 5, g: 10, b: 22 }, 0.9));
-    root.style.setProperty('--panel', mixRgb(accentRgb, { r: 18, g: 24, b: 45 }, 0.68));
-    root.style.setProperty('--panel-2', mixRgb(accentSoftRgb, { r: 15, g: 20, b: 38 }, 0.72));
-    root.style.setProperty('--card', mixRgb(accentSoftRgb, { r: 20, g: 26, b: 48 }, 0.76));
-    root.style.setProperty('--muted', shiftRgb(accentSoftRgb, 12));
+    const normalized = { ...themeDefaults, ...theme };
+    themeFields.forEach(([key, cssVar]) => {
+      const value = normalized[key];
+      if (typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value)) {
+        root.style.setProperty(cssVar, value);
+      }
+    });
   }
 
   function clearThemeOverrides() {
     const root = document.documentElement;
-    ['--periwinkle', '--periwinkle-2', '--bg', '--bg-2', '--panel', '--panel-2', '--card', '--muted'].forEach(prop => {
-      root.style.removeProperty(prop);
+    themeFields.forEach(([, cssVar]) => {
+      root.style.removeProperty(cssVar);
     });
   }
 
@@ -103,13 +128,22 @@
         <header class="new-ui-theme-head">
           <div>
             <h3>Theme Customizer</h3>
-            <p>Adjust the full New UI theme colors with live preview.</p>
+            <p>Adjust the full site palette and mood with live preview</p>
           </div>
           <button type="button" class="new-ui-theme-close" aria-label="Close Theme Customizer">✕</button>
         </header>
         <div class="new-ui-theme-grid">
-          <label>Primary Theme <input type="color" id="newUiAccent" value="#8f9cff" /></label>
-          <label>Secondary Theme <input type="color" id="newUiAccentSoft" value="#b2bcff" /></label>
+          <label>Background <input type="color" id="newUiBg" value="#06070d" /></label>
+          <label>Background 2 <input type="color" id="newUiBg2" value="#0a0c14" /></label>
+          <label>Panel <input type="color" id="newUiPanel" value="#111426" /></label>
+          <label>Panel 2 <input type="color" id="newUiPanel2" value="#12172b" /></label>
+          <label>Card <input type="color" id="newUiCard" value="#12162a" /></label>
+          <label>Text <input type="color" id="newUiText" value="#eef1ff" /></label>
+          <label>Muted Text <input type="color" id="newUiMuted" value="#aeb5d6" /></label>
+          <label>Primary Accent <input type="color" id="newUiAccent" value="#8f9cff" /></label>
+          <label>Secondary Accent <input type="color" id="newUiAccentSoft" value="#b2bcff" /></label>
+          <label>Success Accent <input type="color" id="newUiSuccess" value="#5dd39e" /></label>
+          <label>Warning Accent <input type="color" id="newUiWarning" value="#f0c36f" /></label>
         </div>
         <div class="new-ui-theme-actions">
           <button type="button" class="btn-primary" id="saveNewUiThemeBtn">Apply Theme</button>
@@ -120,21 +154,42 @@
 
     document.body.appendChild(modal);
 
-    const saved = getThemeFromStorage();
-    if (saved?.accent) modal.querySelector('#newUiAccent').value = saved.accent;
-    if (saved?.accentSoft) modal.querySelector('#newUiAccentSoft').value = saved.accentSoft;
+    const colorInputMap = {
+      bg: '#newUiBg',
+      bg2: '#newUiBg2',
+      panel: '#newUiPanel',
+      panel2: '#newUiPanel2',
+      card: '#newUiCard',
+      text: '#newUiText',
+      muted: '#newUiMuted',
+      accent: '#newUiAccent',
+      accentSoft: '#newUiAccentSoft',
+      success: '#newUiSuccess',
+      warning: '#newUiWarning'
+    };
+
+    const saved = { ...themeDefaults, ...(getThemeFromStorage() || {}) };
+    Object.entries(colorInputMap).forEach(([key, selector]) => {
+      const input = modal.querySelector(selector);
+      if (!input) return;
+      input.value = saved[key] || themeDefaults[key];
+    });
 
     modal.querySelector('#saveNewUiThemeBtn').addEventListener('click', () => {
-      const accent = modal.querySelector('#newUiAccent').value;
-      const accentSoft = modal.querySelector('#newUiAccentSoft').value;
-      const payload = { accent, accentSoft };
+      const payload = {};
+      Object.entries(colorInputMap).forEach(([key, selector]) => {
+        const input = modal.querySelector(selector);
+        payload[key] = input?.value || themeDefaults[key];
+      });
       localStorage.setItem(THEME_KEY, JSON.stringify(payload));
       applyTheme(payload);
     });
 
     modal.querySelector('#resetNewUiThemeBtn').addEventListener('click', () => {
-      modal.querySelector('#newUiAccent').value = '#8f9cff';
-      modal.querySelector('#newUiAccentSoft').value = '#b2bcff';
+      Object.entries(colorInputMap).forEach(([key, selector]) => {
+        const input = modal.querySelector(selector);
+        if (input) input.value = themeDefaults[key];
+      });
       localStorage.removeItem(THEME_KEY);
       clearThemeOverrides();
     });
@@ -165,7 +220,7 @@
         <h3>Executor Insights</h3>
         <span class="new-ui-chip no-text-select">AI Powered</span>
       </div>
-      <p class="modal-headline">Select <strong>AI Insight</strong> on any executor card to generate a focused recommendation and caution summary.</p>
+      <p class="modal-headline">Select <strong>AI Insight</strong> on any executor card to generate a focused recommendation and caution summary</p>
       <div id="executorInsightResult" class="ai-result" hidden></div>
     `;
 
@@ -176,7 +231,7 @@
   function productFromCard(card) {
     return {
       name: card.querySelector('.product-name')?.textContent?.trim() || 'Unknown Executor',
-      description: card.querySelector('.summary')?.textContent?.trim() || 'No description available.',
+      description: card.querySelector('.summary')?.textContent?.trim() || 'No description available',
       price: card.querySelector('.price')?.textContent?.trim() || 'Unknown',
       sunc: card.querySelector('.sunc')?.textContent?.trim() || 'Unknown'
     };
@@ -191,7 +246,7 @@
 
   function renderMarkdown(markdownText) {
     const source = String(markdownText || '').replace(/\r\n/g, '\n').trim();
-    if (!source) return '<p>No insight available.</p>';
+    if (!source) return '<p>No insight available</p>';
 
     const lines = source.split('\n');
     const htmlParts = [];
@@ -249,17 +304,54 @@
     ].join('\n\n');
   }
 
-  async function requestInsight(prompt) {
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
-
+  function getInsightCache() {
     try {
-      const response = await fetch(`${AI_ENDPOINT}${encodeURIComponent(prompt)}`, { signal: controller.signal });
-      if (!response.ok) throw new Error(`AI request failed (${response.status})`);
-      return (await response.text()).trim();
-    } finally {
-      window.clearTimeout(timeoutId);
+      const parsed = JSON.parse(localStorage.getItem(AI_CACHE_KEY) || '{}');
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
     }
+  }
+
+  function writeInsightCache(cache) {
+    try {
+      localStorage.setItem(AI_CACHE_KEY, JSON.stringify(cache));
+    } catch {
+      // no-op
+    }
+  }
+
+  function getInsightCacheKey(product) {
+    return [product.name, product.price, product.sunc, product.description].join('|').toLowerCase();
+  }
+
+  function pause(ms) {
+    return new Promise(resolve => window.setTimeout(resolve, ms));
+  }
+
+  async function requestInsight(prompt) {
+    let lastError = null;
+
+    for (let attempt = 0; attempt < AI_MAX_ATTEMPTS; attempt += 1) {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
+
+      try {
+        const response = await fetch(`${AI_ENDPOINT}${encodeURIComponent(prompt)}`, { signal: controller.signal });
+        if (!response.ok) throw new Error(`AI request failed (${response.status})`);
+        const text = (await response.text()).trim();
+        if (!text) throw new Error('AI request returned an empty response');
+        return text;
+      } catch (error) {
+        lastError = error;
+        const backoffMs = 350 * (2 ** attempt);
+        if (attempt < AI_MAX_ATTEMPTS - 1) await pause(backoffMs);
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
+    }
+
+    throw lastError || new Error('AI request failed');
   }
 
   async function generateInsight(product) {
@@ -310,10 +402,23 @@
       `sUNC: ${product.sunc}`
     ].join('\n');
 
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      const rawText = await requestInsight(prompt);
-      const cleaned = cleanInsightText(rawText);
-      if (cleaned) return cleaned;
+    const cache = getInsightCache();
+    const cacheKey = getInsightCacheKey(product);
+    const cachedInsight = cache[cacheKey];
+    if (typeof cachedInsight === 'string' && cachedInsight.trim()) return cachedInsight;
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        const rawText = await requestInsight(prompt);
+        const cleaned = cleanInsightText(rawText);
+        if (cleaned) {
+          cache[cacheKey] = cleaned;
+          writeInsightCache(cache);
+          return cleaned;
+        }
+      } catch (error) {
+        if (attempt >= 2) throw error;
+      }
     }
 
     return buildFallbackInsight(product);

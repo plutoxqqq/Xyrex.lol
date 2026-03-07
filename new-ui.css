@@ -187,7 +187,7 @@ body.new-ui-enabled .price {
 }
 
 .new-ui-theme-panel {
-  width: min(92vw, 560px);
+  width: min(94vw, 760px);
   border-radius: 16px;
   border: 1px solid var(--newui-border);
   background: linear-gradient(170deg, rgba(13, 20, 40, 0.95), rgba(8, 13, 26, 0.95));
@@ -224,7 +224,7 @@ body.new-ui-enabled .price {
 
 .new-ui-theme-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
