@@ -245,11 +245,7 @@
 
   function buildFallbackInsight(product) {
     return [
-      `${product.name} appears best suited for users who prioritize ${product.price.toLowerCase()} options and straightforward execution behavior. Based on the listed description, it should be assessed first for stability in your own setup before daily use.`,
-      `A practical approach is to test with low-risk scripts first and monitor performance consistency. Keep your workflow conservative if your environment changes frequently.`,
-      `- Recommended for users who value predictable setup and maintenance.`,
-      `- Validate reliability after updates before long sessions.`,
-      `- Use caution with scripts you have not reviewed.`
+      `AI Insight failed, please report this bug to https://discord.gg/VsfrtZxT`
     ].join('\n\n');
   }
 
