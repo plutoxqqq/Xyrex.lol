@@ -3,15 +3,19 @@ body.new-ui-enabled {
   --newui-surface-2: color-mix(in srgb, var(--panel-2) 82%, #0b1328 18%);
   --newui-border: color-mix(in srgb, var(--periwinkle-2) 30%, transparent);
   --newui-border-strong: color-mix(in srgb, var(--periwinkle-2) 52%, transparent);
+  --newui-panel-strong: color-mix(in srgb, var(--panel) 82%, var(--bg-2) 18%);
+  --newui-panel-soft: color-mix(in srgb, var(--panel-2) 74%, var(--bg) 26%);
+  --newui-chip-bg: color-mix(in srgb, var(--panel) 70%, var(--bg) 30%);
+  --newui-surface-low: color-mix(in srgb, var(--card) 64%, var(--bg) 36%);
   --newui-glow: 0 18px 44px rgba(0, 0, 0, 0.44);
   background-image:
     radial-gradient(1200px 600px at 92% -8%, color-mix(in srgb, var(--periwinkle) 33%, transparent), transparent 60%),
     radial-gradient(900px 520px at -12% 12%, color-mix(in srgb, var(--periwinkle-2) 20%, transparent), transparent 62%),
-    linear-gradient(180deg, #05070f 0%, #070b17 100%);
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
 }
 
 body.new-ui-enabled .topnav {
-  background: rgba(7, 10, 20, 0.72);
+  background: color-mix(in srgb, var(--bg) 74%, transparent);
   border-bottom-color: var(--newui-border);
   backdrop-filter: blur(18px);
 }
@@ -31,23 +35,23 @@ body.new-ui-enabled .script-card {
 
 body.new-ui-enabled .sidebar,
 body.new-ui-enabled .main-content {
-  background: linear-gradient(160deg, rgba(12, 18, 35, 0.9), rgba(10, 15, 29, 0.82));
+  background: linear-gradient(160deg, var(--newui-panel-strong), var(--newui-panel-soft));
 }
 
 body.new-ui-enabled .legend {
-  background: linear-gradient(135deg, rgba(20, 27, 53, 0.72), rgba(12, 17, 34, 0.62));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--panel) 78%, transparent), color-mix(in srgb, var(--panel-2) 72%, transparent));
   border-color: var(--newui-border);
   padding: 12px;
 }
 
 body.new-ui-enabled .legend-item {
-  background: rgba(11, 16, 32, 0.62);
+  background: color-mix(in srgb, var(--panel) 64%, transparent);
   border: 1px solid color-mix(in srgb, var(--periwinkle-2) 24%, transparent);
   border-radius: 999px;
 }
 
 body.new-ui-enabled .card {
-  background: linear-gradient(175deg, rgba(20, 27, 50, 0.86), rgba(13, 18, 36, 0.8));
+  background: linear-gradient(175deg, color-mix(in srgb, var(--card) 88%, var(--panel) 12%), color-mix(in srgb, var(--panel-2) 82%, var(--bg) 18%));
   border-color: var(--newui-border);
   overflow: hidden;
 }
@@ -66,7 +70,7 @@ body.new-ui-enabled .summary {
 }
 
 body.new-ui-enabled .price {
-  background: rgba(10, 16, 32, 0.68);
+  background: color-mix(in srgb, var(--newui-surface-low) 84%, transparent);
   border: 1px solid color-mix(in srgb, var(--periwinkle-2) 22%, transparent);
   border-radius: 999px;
   width: fit-content;
@@ -84,7 +88,7 @@ body.new-ui-enabled .price {
   letter-spacing: 0.02em;
   font-weight: 700;
   color: var(--periwinkle-2);
-  background: rgba(10, 16, 30, 0.74);
+  background: color-mix(in srgb, var(--newui-surface-low) 88%, transparent);
   border: 1px solid var(--newui-border);
 }
 
@@ -93,7 +97,7 @@ body.new-ui-enabled .price {
   padding: 14px;
   border-radius: 14px;
   border: 1px solid var(--newui-border);
-  background: linear-gradient(160deg, rgba(16, 22, 43, 0.82), rgba(10, 15, 30, 0.72));
+  background: linear-gradient(160deg, color-mix(in srgb, var(--panel) 84%, transparent), color-mix(in srgb, var(--panel-2) 76%, transparent));
 }
 
 .insights-head {
@@ -113,7 +117,7 @@ body.new-ui-enabled .price {
   padding: 5px 10px;
   font-size: 0.78rem;
   color: var(--periwinkle-2);
-  background: rgba(10, 16, 34, 0.72);
+  background: color-mix(in srgb, var(--newui-chip-bg) 90%, transparent);
   border: 1px solid color-mix(in srgb, var(--periwinkle-2) 26%, transparent);
 }
 
@@ -121,7 +125,7 @@ body.new-ui-enabled .price {
   margin-top: 10px;
   border-radius: 12px;
   border: 1px solid color-mix(in srgb, var(--periwinkle-2) 24%, transparent);
-  background: rgba(8, 13, 26, 0.72);
+  background: color-mix(in srgb, var(--panel) 74%, transparent);
   padding: 12px;
 }
 
@@ -149,7 +153,7 @@ body.new-ui-enabled .price {
   min-height: 42px;
   border-radius: 10px;
   border: 1px solid color-mix(in srgb, var(--periwinkle-2) 24%, transparent);
-  background: rgba(9, 15, 31, 0.7);
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
   color: var(--text);
   font-weight: 700;
   cursor: pointer;
@@ -158,7 +162,7 @@ body.new-ui-enabled .price {
 
 .new-ui-info-btn:hover,
 .new-ui-ai-btn:hover {
-  background: rgba(22, 30, 59, 0.9);
+  background: color-mix(in srgb, var(--panel-2) 88%, var(--card) 12%);
   border-color: var(--newui-border-strong);
   transform: translateY(-1px);
 }
@@ -187,10 +191,10 @@ body.new-ui-enabled .price {
 }
 
 .new-ui-theme-panel {
-  width: min(92vw, 560px);
+  width: min(94vw, 760px);
   border-radius: 16px;
   border: 1px solid var(--newui-border);
-  background: linear-gradient(170deg, rgba(13, 20, 40, 0.95), rgba(8, 13, 26, 0.95));
+  background: linear-gradient(170deg, color-mix(in srgb, var(--panel) 90%, var(--bg) 10%), color-mix(in srgb, var(--panel-2) 90%, var(--bg-2) 10%));
   box-shadow: var(--newui-glow);
   padding: 16px;
 }
@@ -214,7 +218,7 @@ body.new-ui-enabled .price {
 
 .new-ui-theme-close {
   border: 1px solid var(--newui-border);
-  background: rgba(11, 17, 34, 0.9);
+  background: color-mix(in srgb, var(--panel) 78%, var(--bg) 22%);
   color: var(--text);
   width: 32px;
   height: 32px;
@@ -224,8 +228,59 @@ body.new-ui-enabled .price {
 
 .new-ui-theme-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
+}
+
+.new-ui-theme-tabs {
+  display: inline-flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.new-ui-theme-tab {
+  border: 1px solid var(--newui-border);
+  background: color-mix(in srgb, var(--panel) 78%, var(--bg) 22%);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.new-ui-theme-tab.is-active {
+  color: #091020;
+  border-color: transparent;
+  background: linear-gradient(90deg, var(--periwinkle), var(--periwinkle-2));
+}
+
+.new-ui-theme-panel-block {
+  margin-top: 4px;
+}
+
+.new-ui-theme-note {
+  margin: 0 0 10px;
+  color: var(--muted);
+}
+
+.new-ui-preset-swatches {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.new-ui-preset-swatch {
+  inline-size: 42px;
+  block-size: 42px;
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--periwinkle-2) 34%, transparent);
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+}
+
+.new-ui-preset-swatch:hover {
+  transform: translateY(-1px);
 }
 
 .new-ui-theme-grid label {
@@ -236,7 +291,7 @@ body.new-ui-enabled .price {
   padding: 10px;
   border-radius: 10px;
   border: 1px solid var(--newui-border);
-  background: rgba(12, 18, 35, 0.86);
+  background: color-mix(in srgb, var(--panel-2) 84%, var(--bg) 16%);
 }
 
 .new-ui-theme-grid input[type="color"] {
