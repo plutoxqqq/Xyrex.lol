@@ -8,7 +8,7 @@ const products = [
     tags: ['Trending', 'Internal'],
     features: [],
     sunc: 100,
-    description: 'Pluton Executor is a next-gen Roblox executor built for raw performance and stealth, featuring a custom Lua VM, instant injection, and adaptive hot-patching to stay resilient against modern anti-cheat updates.',
+    description: 'Pluton Executor is a next-gen Roblox executor built for raw performance and stealth, featuring a custom Lua VM, instant injection, and adaptive hot-patching to stay resilient against modern anti-cheat updates',
     pros: ['High sUNC', 'AntiCheat Bypass', 'Instant Injection', 'High stability'],
     cons: ['Can conflict with antivirus software', 'Setup complexity is higher than average'],
     pricingOptions: ['Free plan available', '1 Week — $4.99', '1 Month — $13.99'],
@@ -27,7 +27,7 @@ const products = [
     tags: ['Verified', 'Internal'],
     features: ['Decompiler', 'Kernel', 'Multi-instance'],
     sunc: 98,
-    description: 'Internal executor with full sUNC support and advanced feature coverage.',
+    description: 'Internal executor with full sUNC support and advanced feature coverage',
     pros: ['sUNC 100%'],
     cons: ['Unknown developers', 'Frequent ban waves', 'Stability issues'],
     pricingOptions: ['$22.99 lifetime'],
@@ -46,7 +46,7 @@ const products = [
     tags: ['Internal'],
     features: ['Decompiler'],
     sunc: 40,
-    description: 'Simple internal executor with script buttons and broad accessibility.',
+    description: 'Simple internal executor with script buttons and broad accessibility',
     pros: ['Simple interface with script buttons'],
     cons: ['Very simplified'],
     pricingOptions: ['Free'],
@@ -65,7 +65,7 @@ const products = [
     tags: ['Verified', 'Internal'],
     features: ['Decompiler', 'Multi-instance'],
     sunc: 94,
-    description: 'Keyless internal executor with extensive customization options.',
+    description: 'Keyless internal executor with extensive customization options',
     pros: ['Keyless', 'Lots of customizations'],
     cons: ['Stability issues'],
     pricingOptions: ['Free'],
@@ -84,7 +84,7 @@ const products = [
     tags: ['Internal'],
     features: ['Decompiler', 'Multi-instance'],
     sunc: 33,
-    description: 'Stable internal executor with script saves and multi-instance support.',
+    description: 'Stable internal executor with script saves and multi-instance support',
     pros: ['Stable', 'Script saves'],
     cons: ['Low sUNC', 'Level 3 execution'],
     pricingOptions: ['Free'],
@@ -103,7 +103,7 @@ const products = [
     tags: ['Internal'],
     features: ['Decompiler', 'Multi-instance'],
     sunc: 38,
-    description: 'Free internal executor known for solid performance.',
+    description: 'Free internal executor known for solid performance',
     pros: ['Solid performance', 'Free'],
     cons: ['Very low sUNC'],
     pricingOptions: ['Free'],
@@ -122,7 +122,7 @@ const products = [
     tags: ['Internal'],
     features: [],
     sunc: null,
-    description: 'Android internal executor with short key duration options.',
+    description: 'Android internal executor with short key duration options',
     pros: ['2-day keys'],
     cons: ['Fails sUNC'],
     pricingOptions: ['Free', 'From $4.99 for 30 days'],
@@ -141,7 +141,7 @@ const products = [
     tags: ['Internal'],
     features: ['Decompiler', 'Multi-instance'],
     sunc: 100,
-    description: 'macOS internal executor with decompiler and multi-instance support.',
+    description: 'macOS internal executor with decompiler and multi-instance support',
     pros: ['Multi-instance', 'Decompiler', 'Source leak'],
     cons: ['None listed'],
     pricingOptions: ['From $4.99 for 30 days'],
@@ -160,7 +160,7 @@ const products = [
     tags: ['Verified', 'Internal'],
     features: ['Decompiler', 'Multi-instance'],
     sunc: 98,
-    description: 'Windows internal executor focused on smooth injection and execution.',
+    description: 'Windows internal executor focused on smooth injection and execution',
     pros: ['Smooth injection and execution'],
     cons: ['Frequent detection issues'],
     pricingOptions: ['From $3.99 for 7 days'],
@@ -179,7 +179,7 @@ const products = [
     tags: ['External'],
     features: ['Kernel'],
     sunc: null,
-    description: 'External executor with kernel capabilities and many features.',
+    description: 'External executor with kernel capabilities and many features',
     pros: ['Kernel', 'Feature-rich'],
     cons: ['None listed'],
     pricingOptions: ['From $8.47 for 30 days'],
@@ -198,7 +198,7 @@ const products = [
     tags: ['External'],
     features: ['Decompiler'],
     sunc: null,
-    description: 'External tool with decompiler and code explorer functionality.',
+    description: 'External tool with decompiler and code explorer functionality',
     pros: ['Decompiler', 'Code explorer'],
     cons: ['Password reset costs extra'],
     pricingOptions: ['$20 lifetime'],
@@ -217,7 +217,7 @@ const products = [
     tags: ['Internal'],
     features: ['Supports VNG'],
     sunc: null,
-    description: 'Internal mobile executor with VNG support.',
+    description: 'Internal mobile executor with VNG support',
     pros: ['Supports VNG'],
     cons: ['Fails sUNC'],
     pricingOptions: ['From $7.47 for 30 days'],
@@ -236,7 +236,7 @@ const products = [
     tags: ['Internal'],
     features: ['Decompiler'],
     sunc: 100,
-    description: 'Internal Windows executor with decompiler and high sUNC.',
+    description: 'Internal Windows executor with decompiler and high sUNC',
     pros: ['Decompiler', 'High sUNC'],
     cons: ['Lag/slowness reports'],
     pricingOptions: ['Free', 'Paid from $1.99'],
@@ -255,7 +255,7 @@ const products = [
     tags: ['Internal'],
     features: ['Decompiler'],
     sunc: 97,
-    description: 'Mobile internal executor with decompiler and high sUNC.',
+    description: 'Mobile internal executor with decompiler and high sUNC',
     pros: ['Decompiler', 'High sUNC'],
     cons: ['Keyed'],
     pricingOptions: ['Free', 'From $8 for 30 days'],
@@ -274,7 +274,7 @@ const products = [
     tags: ['Internal'],
     features: ['Decompiler'],
     sunc: 96,
-    description: 'Fast and customizable internal macOS executor with Luarmor support.',
+    description: 'Fast and customizable internal macOS executor with Luarmor support',
     pros: ['Fast', 'Customizable', 'Luarmor support'],
     cons: ['None listed'],
     pricingOptions: ['Free', 'Paid from $4'],
@@ -293,7 +293,7 @@ const products = [
     tags: ['External'],
     features: ['Kernel', 'Decompiler'],
     sunc: null,
-    description: 'Feature-rich external executor with kernel and decompiler support.',
+    description: 'Feature-rich external executor with kernel and decompiler support',
     pros: ['Lots of features'],
     cons: ['Registration process very complex'],
     pricingOptions: ['$9.99 lifetime'],
@@ -312,7 +312,7 @@ const products = [
     tags: ['Internal'],
     features: ['Multi-instance'],
     sunc: 98,
-    description: 'Internal Windows executor with Hyperion emulation and easy UI.',
+    description: 'Internal Windows executor with Hyperion emulation and easy UI',
     pros: ['Hyperion emulation', 'Easy UI'],
     cons: ['Exit scams'],
     pricingOptions: ['From $5.99 for 7 days'],
@@ -331,7 +331,7 @@ const products = [
     tags: ['External'],
     features: ['AI'],
     sunc: null,
-    description: 'AI-based external tool with no key system.',
+    description: 'AI-based external tool with no key system',
     pros: ['AI-based', 'No key system'],
     cons: ['Requires powerful hardware'],
     pricingOptions: ['Free'],
@@ -350,7 +350,7 @@ const products = [
     tags: ['Internal'],
     features: ['Decompiler', 'Multi-instance'],
     sunc: 98,
-    description: 'Internal Windows executor known for long history and safety.',
+    description: 'Internal Windows executor known for long history and safety',
     pros: ['Safe', 'Long history'],
     cons: ['Expensive'],
     pricingOptions: ['Paid'],
@@ -359,7 +359,7 @@ const products = [
     trustLevel: 'High',
     status: 'Undetected',
     officialSite: 'https://volcano.wtf/'
-  }
+  },
   {
     name: 'Wave',
     featured: false,
@@ -383,16 +383,16 @@ const products = [
 
 const scriptsHubData = {
   tierListPaid: [
-    { tier: 'S', executor: 'Pluton', notes: 'Top paid pick for balanced performance, consistency, and support coverage.' },
-    { tier: 'A', executor: 'Potassium', notes: 'Strong feature depth with excellent sUNC support, but trust concerns remain.' },
-    { tier: 'A', executor: 'Seliware', notes: 'Smooth execution and polished UX, with occasional detection instability.' },
-    { tier: 'B', executor: 'Volcano', notes: 'Stable long-term option with reliable execution, but comparatively expensive.' }
+    { tier: 'S', executor: 'Pluton', notes: 'Top paid pick for balanced performance, consistency, and support coverage' },
+    { tier: 'A', executor: 'Potassium', notes: 'Strong feature depth with excellent sUNC support, but trust concerns remain' },
+    { tier: 'A', executor: 'Seliware', notes: 'Smooth execution and polished UX, with occasional detection instability' },
+    { tier: 'B', executor: 'Volcano', notes: 'Stable long-term option with reliable execution, but comparatively expensive' }
   ],
   tierListFree: [
-    { tier: 'S', executor: 'Pluton', notes: 'Best free overall package right now with broad platform support.' },
-    { tier: 'A', executor: 'Velocity', notes: 'Fast keyless free option with modern tooling and customization.' },
-    { tier: 'A', executor: 'Solara', notes: 'Reliable free Windows option with steady day-to-day stability.' },
-    { tier: 'B', executor: 'JJSploit', notes: 'Beginner-friendly choice with a simplified workflow.' }
+    { tier: 'S', executor: 'Pluton', notes: 'Best free overall package right now with broad platform support' },
+    { tier: 'A', executor: 'Velocity', notes: 'Fast keyless free option with modern tooling and customization' },
+    { tier: 'A', executor: 'Solara', notes: 'Reliable free Windows option with steady day-to-day stability' },
+    { tier: 'B', executor: 'JJSploit', notes: 'Beginner-friendly choice with a simplified workflow' }
   ],
   popularScripts: [
     {
@@ -403,9 +403,22 @@ const scriptsHubData = {
     }
   ],
   recentChanges: [
-    'Revamped the New UI with a modern visual refresh, modal-based Theme Customizer, and smoother AI Insight actions on executor cards.'
+    'Revamped the New UI with a modern visual refresh and a modal-based Theme Customizer',
+    'Added route-aware navigation for /scripthub and /newui paths, including Script Hub subtabs and browser history support',
+    'Improved AI Insight reliability with retry and backoff handling, stronger timeout behavior, and cached successful responses',
+    'Added Official Discord links in the top navigation and executor modal, then refined the top navigation to a clean icon-only Discord logo',
+    'Fixed refresh behavior for subpage routes by funneling all route entrypoints to the latest root build',
+    'Reworked Theme Customizer to control the full site mood with complete palette overrides',
+    'Redesigned Theme Customizer with Basic and Advanced subtabs and added five pastel preset circles for one-click themes',
+    'Fixed pink theme mood mapping so New UI surfaces, panels, cards, and overlays now fully follow the selected palette',
+    'Expanded New UI theme application so all blue UI surfaces now follow the selected palette, including buttons, search, Script Hub controls, and form elements',
+    'Hardened route bootstrap parsing so refreshing any tab reliably restores executors and New UI state'
   ]
 };
+
+const XYREX_OFFICIAL_DISCORD_URL = 'https://discord.gg/4Vykhpvh';
+
+const discordWordmarkSvg = '<svg viewBox="0 0 127.14 96.36" aria-hidden="true" focusable="false"><path fill="currentColor" d="M107.7 8.07A105.15 105.15 0 0081.47 0a72.06 72.06 0 00-3.36 6.83 97.68 97.68 0 00-29.94 0A72.37 72.37 0 0044.8 0 105.89 105.89 0 0018.57 8.08C1.03 34.37-3.72 60 1.39 85.28A105.73 105.73 0 0033.32 96a77.7 77.7 0 006.84-11.16 68.42 68.42 0 01-10.78-5.15c.91-.67 1.8-1.37 2.66-2.09a75.57 75.57 0 0063.48 0c.87.72 1.76 1.42 2.67 2.09a68.68 68.68 0 01-10.8 5.16A77.53 77.53 0 0094.24 96a105.25 105.25 0 0031.91-10.72c6-29.3-1-54.68-18.45-77.21zM42.45 65.69c-6.23 0-11.33-5.69-11.33-12.69s5-12.7 11.33-12.7S53.78 46 53.78 53s-5.03 12.69-11.33 12.69zm42.24 0c-6.23 0-11.33-5.69-11.33-12.69s5-12.7 11.33-12.7S96.02 46 96.02 53s-5.03 12.69-11.33 12.69z"/></svg>';
 
 const qs = sel => document.querySelector(sel);
 const qsa = sel => Array.from(document.querySelectorAll(sel));
@@ -653,6 +666,17 @@ function openModal(product) {
     ? `https://www.google.com/s2/favicons?sz=64&domain_url=${encodeURIComponent(officialSite)}`
     : '';
 
+  const officialDiscord = product.officialDiscord || XYREX_OFFICIAL_DISCORD_URL;
+  const officialDiscordHost = officialDiscord
+    ? (() => {
+        try {
+          return new URL(officialDiscord).hostname;
+        } catch {
+          return officialDiscord;
+        }
+      })()
+    : 'Not provided';
+
   content.innerHTML = `
     <h2>${escapeHtml(product.name)}</h2>
     <p class="modal-headline">${escapeHtml(product.description)}</p>
@@ -672,9 +696,20 @@ function openModal(product) {
           <span>Official Site</span>
           ${
             officialSite
-              ? `<a class="official-site-btn" href="${escapeHtml(officialSite)}" target="_blank" rel="noopener noreferrer">
+              ? `<a class="official-link-btn" href="${escapeHtml(officialSite)}" target="_blank" rel="noopener noreferrer">
                    ${faviconUrl ? `<img src="${escapeHtml(faviconUrl)}" alt="Site icon" />` : ''}
                    <span>${escapeHtml(officialSiteHost)}</span>
+                 </a>`
+              : `<span class="no-site">Not provided</span>`
+          }
+        </div>
+        <div class="status-item status-site">
+          <span>Official Discord</span>
+          ${
+            officialDiscord
+              ? `<a class="official-link-btn" href="${escapeHtml(officialDiscord)}" target="_blank" rel="noopener noreferrer" aria-label="Official Discord server">
+                   ${discordWordmarkSvg}
+                   <span>${escapeHtml(officialDiscordHost)}</span>
                  </a>`
               : `<span class="no-site">Not provided</span>`
           }
@@ -745,7 +780,7 @@ function renderSavedScriptsList() {
 
   const items = getSavedScripts();
   if (!items.length) {
-    wrap.innerHTML = '<p class="saved-empty">No saved scripts yet.</p>';
+    wrap.innerHTML = '<p class="saved-empty">No saved scripts yet</p>';
     return;
   }
 
@@ -826,7 +861,7 @@ function loadNewUiModule() {
 
   return new Promise(resolve => {
     const script = document.createElement('script');
-    script.src = './new-ui.js?v=2.1.0';
+    script.src = '/new-ui.js?v=2.1.0';
     script.defer = true;
     script.onload = () => resolve(Boolean(window.XyrexNewUI));
     script.onerror = () => resolve(false);
@@ -876,6 +911,123 @@ async function applyUiMode() {
 
 let activePageId = null;
 let activeSubtabId = 'tierPaidPanel';
+let suppressRouteSync = false;
+
+const subtabPathSlugMap = {
+  tierPaidPanel: 'executortierlistpaid',
+  tierFreePanel: 'executortierlistfree',
+  popularScriptsPanel: 'popularscripts',
+  savedScriptsPanel: 'savedscripts',
+  recentChangesPanel: 'recentchanges'
+};
+
+const subtabPathToIdMap = Object.fromEntries(
+  Object.entries(subtabPathSlugMap).map(([key, value]) => [value, key])
+);
+
+function normalisePath(pathname) {
+  const clean = String(pathname || '/').replace(/\/+$/, '');
+  return clean || '/';
+}
+
+function getRouteStateFromPath(pathname) {
+  const segments = normalisePath(pathname).split('/').filter(Boolean).map(item => item.toLowerCase());
+  let isRouteNewUi = false;
+  let cursor = 0;
+
+  if (segments[0] === 'newui') {
+    isRouteNewUi = true;
+    cursor = 1;
+  }
+
+  let pageId = 'executorsPage';
+  let subtabId = 'tierPaidPanel';
+
+  if (segments[cursor] === 'scripthub') {
+    pageId = 'scriptsPage';
+    const slug = segments[cursor + 1] || '';
+    if (slug && subtabPathToIdMap[slug]) {
+      subtabId = subtabPathToIdMap[slug];
+    }
+  }
+
+  return {
+    isRouteNewUi,
+    pageId,
+    subtabId
+  };
+}
+
+function buildPathFromState() {
+  const base = isNewUiMode ? '/newui' : '';
+  if (activePageId === 'scriptsPage') {
+    const subtabSegment = subtabPathSlugMap[activeSubtabId];
+    if (subtabSegment && activeSubtabId !== 'tierPaidPanel') return `${base}/scripthub/${subtabSegment}`;
+    return `${base}/scripthub`;
+  }
+
+  return base || '/';
+}
+
+function syncRouteWithState(replace = false) {
+  if (suppressRouteSync) return;
+  const nextPath = buildPathFromState();
+  if (normalisePath(window.location.pathname) === normalisePath(nextPath)) return;
+  const method = replace ? 'replaceState' : 'pushState';
+  window.history[method]({}, '', nextPath);
+}
+
+function syncNavButtonsWithPage(targetPageId) {
+  qsa('.page-switch-btn').forEach(item => {
+    item.classList.toggle('is-active', item.getAttribute('data-page-target') === targetPageId);
+  });
+}
+
+function syncSubtabButtons(targetSubtabId) {
+  qsa('.subtab-btn').forEach(item => {
+    const active = item.getAttribute('data-subtab-target') === targetSubtabId;
+    item.classList.toggle('is-active', active);
+    item.setAttribute('aria-selected', String(active));
+  });
+}
+
+
+function normalizeIncomingRoute(routeValue) {
+  const route = String(routeValue || '').trim();
+  if (!route) return '/';
+
+  try {
+    const parsed = new URL(route, window.location.origin);
+    return parsed.pathname || '/';
+  } catch {
+    const pathOnly = route.split(/[?#]/)[0];
+    return pathOnly.startsWith('/') ? pathOnly : '/';
+  }
+}
+
+function getInitialRoutePath() {
+  const params = new URLSearchParams(window.location.search);
+  const routeParam = params.get('route');
+  if (!routeParam) return window.location.pathname;
+  return normalizeIncomingRoute(routeParam);
+}
+
+async function applyRoute(pathname, replace = false) {
+  const routeState = getRouteStateFromPath(pathname);
+  suppressRouteSync = true;
+
+  isNewUiMode = routeState.isRouteNewUi;
+  localStorage.setItem(uiModeStorageKey, isNewUiMode ? 'new' : 'default');
+
+  syncNavButtonsWithPage(routeState.pageId);
+  syncSubtabButtons(routeState.subtabId);
+  setActiveSubtab(routeState.subtabId);
+  setActivePage(routeState.pageId);
+  await applyUiMode();
+
+  suppressRouteSync = false;
+  syncRouteWithState(replace);
+}
 
 function restartAnimationClass(element, animationClass) {
   if (!element) return;
@@ -910,6 +1062,7 @@ function setActivePage(targetPageId) {
   qs('#searchInput').disabled = onScriptsPage;
   qs('#clearSearchBtn').disabled = onScriptsPage;
   qs('.page-layout').classList.toggle('scripts-mode', onScriptsPage || onEasterPage);
+  syncRouteWithState();
 }
 
 function setActiveSubtab(targetSubtabId) {
@@ -925,6 +1078,7 @@ function setActiveSubtab(targetSubtabId) {
   animateMainContentTransition();
   restartAnimationClass(nextPanel, 'animate-in-subtab');
   activeSubtabId = targetSubtabId;
+  syncRouteWithState();
 }
 
 function injectLegendIcons() {
@@ -957,7 +1111,7 @@ function initScriptsHub() {
   qsa('.page-switch-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const target = btn.getAttribute('data-page-target');
-      qsa('.page-switch-btn').forEach(item => item.classList.toggle('is-active', item === btn));
+      syncNavButtonsWithPage(target);
       setActivePage(target);
     });
   });
@@ -994,7 +1148,7 @@ function init() {
   });
 
   qs('#brandHomeBtn').addEventListener('click', () => {
-    qsa('.page-switch-btn').forEach(item => item.classList.toggle('is-active', item.getAttribute('data-page-target') === 'executorsPage'));
+    syncNavButtonsWithPage('executorsPage');
     setActivePage('executorsPage');
   });
 
@@ -1002,6 +1156,7 @@ function init() {
     isNewUiMode = !isNewUiMode;
     localStorage.setItem(uiModeStorageKey, isNewUiMode ? 'new' : 'default');
     await applyUiMode();
+    syncRouteWithState();
   });
 
   qs('#themeCustomizerBtn').addEventListener('click', () => {
@@ -1027,8 +1182,11 @@ function init() {
     if (e.key === 'Escape') closeModal();
   });
 
-  setActivePage('executorsPage');
-  applyUiMode();
+  window.addEventListener('popstate', () => {
+    applyRoute(getInitialRoutePath(), true);
+  });
+
+  applyRoute(getInitialRoutePath(), true);
 }
 
 document.addEventListener('DOMContentLoaded', init);
