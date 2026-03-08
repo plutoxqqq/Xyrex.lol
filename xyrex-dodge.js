@@ -169,12 +169,26 @@
 
       this.applyResponsiveCanvas = () => {
         const wrap = this.canvas.parentElement;
-        const maxW = wrap.clientWidth - 8;
+        const gameMain = this.mount.querySelector('.xy-game-main');
+        const sidePanel = this.mount.querySelector('.xy-sidepanel');
         const aspect = 960 / 620;
-        const w = Math.max(640, Math.min(960, maxW));
-        const h = Math.round(w / aspect);
-        this.canvas.style.width = `${w}px`;
-        this.canvas.style.height = `${h}px`;
+
+        const availableWidth = Math.max(280, wrap.clientWidth - 8);
+        const reservedPanelHeight = gameMain && sidePanel && getComputedStyle(gameMain).gridTemplateColumns.split(' ').length === 1
+          ? sidePanel.offsetHeight + 8
+          : 0;
+        const availableHeight = Math.max(220, wrap.clientHeight - reservedPanelHeight - 8);
+
+        let width = Math.min(960, availableWidth);
+        let height = width / aspect;
+
+        if (height > availableHeight) {
+          height = availableHeight;
+          width = Math.max(280, height * aspect);
+        }
+
+        this.canvas.style.width = `${Math.round(width)}px`;
+        this.canvas.style.height = `${Math.round(height)}px`;
       };
 
       this.syncUi();
@@ -243,6 +257,7 @@
       document.addEventListener('keyup', this.handleKeyUp);
       this.lastTs = performance.now();
       this.canvas.focus({ preventScroll: true });
+      requestAnimationFrame(() => this.applyResponsiveCanvas());
       this.rafId = requestAnimationFrame(this.loop);
     }
 
