@@ -25,14 +25,13 @@
     'Rich Run': { price: 160, desc: 'More coins with higher pressure', playerSpeed: 1.0, coinBonus: 1.5, pressure: 1.2 },
     Swift: { price: 100, desc: 'Faster movement with light pressure', playerSpeed: 1.25, coinBonus: 1.0, pressure: 1.05 },
     Zen: { price: 140, desc: 'Calm pace and lighter rewards', playerSpeed: 1.0, coinBonus: 0.5, pressure: 0.5 },
-    Challenger: { price: 120, desc: 'For those who want a challenge...', playerSpeed: 0.8, coinBonus: 2, pressure: 1.7 },
   };
 
   const POWERUPS = {
     None: { price: 0, desc: 'No active powerup effects' },
     Quickstep: { price: 220, desc: 'Removes lane movement animation for instant repositioning' },
     'Block Slowdown': { price: 260, desc: 'Slows difficulty ramping by 50% to reduce pressure spikes' },
-    'Shield Matrix': { price: 300, desc: 'Adds one extra life. The first collision consumes the shield' },
+    'Shield Matrix': { price: 300, desc: 'Adds one extra life and consumes shield on first collision' },
     'Lucky Drift': { price: 180, desc: 'Increases run coin gains by 20% on all modifiers' },
   };
 
@@ -117,11 +116,11 @@
           <header class="xy-game-top">
             <div>
               <h2>Xyrex Dodge</h2>
-              <p>Dodge the waves, earn coins, and unlock modifiers.</p>
+              <p>Dodge waves, earn coins, and unlock modifiers</p>
             </div>
             <div class="xy-game-stats">
-              <span id="xyBest">Best: 0</span>
-              <span id="xyBank">Coins: 0</span>
+              <span id="xyBest" class="no-text-select">Best: 0</span>
+              <span id="xyBank" class="no-text-select">Coins: 0</span>
             </div>
           </header>
           <div class="xy-game-main">
@@ -309,7 +308,7 @@
       const mod = MODIFIERS[name];
       if (!mod || this.data.ownedModifiers.includes(name)) return;
       if (this.data.coins < mod.price) {
-        this.flashStatus('Not enough coins.', 'warning');
+        this.flashStatus('Not enough coins', 'warning');
         return;
       }
       this.data.coins -= mod.price;
@@ -327,7 +326,7 @@
       if (name === 'None') return;
       if (!powerup || this.data.ownedPowerups.includes(name)) return;
       if (this.data.coins < powerup.price) {
-        this.flashStatus('Not enough coins.', 'warning');
+        this.flashStatus('Not enough coins', 'warning');
         return;
       }
       this.data.coins -= powerup.price;
@@ -343,8 +342,8 @@
       if (!Number.isFinite(amount) || !Number.isFinite(cost) || amount <= 0 || cost <= 0) return;
       if (!window.confirm(`Buy ${amount} AI token${amount > 1 ? 's' : ''} for ${cost} coins?`)) return;
       if (this.data.coins < cost) {
-        window.alert('You do not have enough coins for that token pack.');
-        this.flashStatus('Not enough coins.', 'warning');
+        window.alert('You do not have enough coins for that token pack');
+        this.flashStatus('Not enough coins', 'warning');
         return;
       }
       this.data.coins -= cost;
@@ -447,14 +446,16 @@
 
     currentSpeed(elapsed) {
       const rampFactor = this.powerups.has('Block Slowdown') ? 0.5 : 1;
-      const base = 3 + elapsed * 0.06 * rampFactor + this.score * 0.012 * rampFactor;
-      return clamp(base * this.mod.pressure, 0, 9);
+      const rampStretch = 0.5;
+      const base = 3 + elapsed * 0.06 * rampFactor * rampStretch + this.score * 0.012 * rampFactor * rampStretch;
+      return clamp(base * this.mod.pressure, 0, 18);
     }
 
     currentSpawnInterval(elapsed) {
       const rampFactor = this.powerups.has('Block Slowdown') ? 0.5 : 1;
-      const interval = (1.05 - elapsed * 0.0026 * rampFactor - this.score * 0.0009 * rampFactor) / this.mod.pressure;
-      return clamp(interval, 0.42, 1.8);
+      const rampStretch = 0.5;
+      const interval = (1.05 - elapsed * 0.0026 * rampFactor * rampStretch - this.score * 0.0009 * rampFactor * rampStretch) / this.mod.pressure;
+      return clamp(interval, 0.21, 1.8);
     }
 
     lanePressure() {
@@ -553,7 +554,7 @@
       if (this.lives > 1) {
         this.lives -= 1;
         this.blocks = this.blocks.filter(b => b.y < this.player.y - 60 || b.y > this.player.y + 60);
-        this.flashStatus('Shield consumed. One life remaining.', 'warning');
+        this.flashStatus('Shield consumed one life remaining', 'warning');
         return;
       }
       this.gameOver = true;
@@ -565,7 +566,7 @@
       this.statusEl.className = 'xy-status danger';
       this.overlay.hidden = false;
       this.overlay.style.display = 'flex';
-      this.overlay.innerHTML = `<div class="xy-overlay-card"><h3>Game Over</h3><p>Score: <strong>${this.score}</strong></p><p>Coins earned: <strong>${this.runCoins}</strong></p><p>Press R or click Restart.</p></div>`;
+      this.overlay.innerHTML = `<div class="xy-overlay-card"><h3>Game Over</h3><p>Score: <strong>${this.score}</strong></p><p>Coins earned: <strong>${this.runCoins}</strong></p><p>Press R or click Restart</p></div>`;
     }
 
     updateBlocks(dt) {

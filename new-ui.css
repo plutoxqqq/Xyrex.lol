@@ -433,8 +433,7 @@ body.new-ui-enabled .modal::-webkit-scrollbar-track {
 }
 
 body.new-ui-enabled .official-link-btn,
-body.new-ui-enabled .official-site-btn,
-body.new-ui-enabled .discord-nav-link {
+body.new-ui-enabled .official-site-btn {
   background: color-mix(in srgb, var(--panel) 78%, var(--bg) 22%);
   border-color: color-mix(in srgb, var(--periwinkle-2) 34%, transparent);
   color: var(--text);
@@ -472,4 +471,10 @@ body.new-ui-enabled .modal-headline {
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+body.new-ui-enabled .discord-nav-link {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
 }
