@@ -107,10 +107,9 @@ body.new-ui-enabled .theme-customizer-btn{
 .page-layout{ height: calc(100vh - 68px); margin-top:68px; width:min(100%, var(--max-width)); margin-inline:auto; padding:16px; display:grid; grid-template-columns:280px 1fr; gap:var(--layout-gap); }
 .page-layout.scripts-mode{ grid-template-columns:minmax(0,1fr); }
 
-body.easter-game-mode .topnav{ display:none; }
-body.easter-game-mode .page-layout{ margin-top:0; height:100vh; }
+body.easter-game-mode .page-layout{ margin-top:68px; height:calc(100vh - 68px); }
 @media (max-width: 720px){
-  body.easter-game-mode .page-layout{ margin-top:0; min-height:100dvh; }
+  body.easter-game-mode .page-layout{ margin-top:68px; min-height:calc(100dvh - 68px); }
 }
 .sidebar,.main-content{ min-height:0; }
 .sidebar{ background:linear-gradient(180deg,var(--panel),#0d1020); border-radius:var(--radius); border:1px solid rgba(178,188,255,.16); box-shadow:var(--soft-shadow); padding:16px 16px 22px; overflow-y:auto; overflow-x:hidden; scrollbar-width:thin; scrollbar-color:rgba(178,188,255,0.45) transparent; }
@@ -172,7 +171,7 @@ body.easter-game-mode .page-layout{ margin-top:0; height:100vh; }
 .platform-chip{ display:inline-flex; align-items:center; gap:8px; border:1px solid rgba(178,188,255,.25); border-radius:999px; padding:5px 11px; color:var(--muted); background:rgba(14,18,35,.65); font-size:.85rem; }
 .platform-logo{ width:16px; height:16px; display:inline-flex; justify-content:center; align-items:center; }
 .platform-logo .icon-svg{ width:14px; height:14px; display:flex; }
-.platform-logo svg{ width:100%; height:100%; fill: currentColor; color: #b8c4ff; }
+.platform-logo svg{ width:100%; height:100%; fill: currentColor; color: var(--periwinkle-2); }
 
 .info-btn{ width:100%; border:0; border-top:1px solid rgba(178,188,255,.26); border-radius:0 0 12px 12px; min-height:44px; padding:10px 14px; background:linear-gradient(90deg,#7689ff,#9da9ff); color:#080b18; font-weight:800; letter-spacing:.2px; cursor:pointer; }
 .info-btn:hover{ filter:brightness(1.06); }
@@ -286,6 +285,8 @@ body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 210px; 
 .xy-sidecard button{ cursor:pointer; }
 .xy-sidecard button:disabled{ opacity:.6; cursor:not-allowed; }
 .xy-help{ color:var(--muted); font-size:.84rem; margin:0; }
+.xy-token-count{ color:#c2d2ef; font-size:.84rem; line-height:1.35; margin-bottom:8px; }
+.xy-token-actions{ display:grid; gap:6px; }
 .xy-overlay{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(8,11,24,.64); backdrop-filter: blur(2px); }
 .xy-overlay-card{ width:min(92%,360px); border:1px solid rgba(255,100,141,.55); border-radius:10px; background:rgba(17,24,42,.95); color:#eef4ff; text-align:center; padding:14px; }
 .xy-overlay-card h3{ margin:0 0 10px; color:#ff648d; }
