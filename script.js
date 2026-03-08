@@ -446,6 +446,10 @@ function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
 
+function stripTrailingPeriod(value) {
+  return String(value ?? '').replace(/\.+$/g, '').trim();
+}
+
 function createTagSymbols(product) {
   const wrap = document.createElement('div');
   wrap.className = 'tag-symbols no-text-select';
@@ -524,7 +528,7 @@ function createProductCard(product, index) {
 
   const summary = document.createElement('p');
   summary.className = 'summary';
-  summary.textContent = product.description;
+  summary.textContent = stripTrailingPeriod(product.description);
 
   const price = document.createElement('div');
   price.className = 'price no-text-select';
@@ -680,7 +684,7 @@ function openModal(product) {
 
   content.innerHTML = `
     <h2>${escapeHtml(product.name)}</h2>
-    <p class="modal-headline">${escapeHtml(product.description)}</p>
+    <p class="modal-headline">${escapeHtml(stripTrailingPeriod(product.description))}</p>
     <div class="modal-layout">
       <div>
         <div class="modal-section"><strong>Pros</strong><ul>${product.pros.map(f => `<li>${escapeHtml(f)}</li>`).join('')}</ul></div>
@@ -750,7 +754,7 @@ function renderPopularScripts() {
   const wrap = qs('#popularScriptsList');
   if (!wrap) return;
   wrap.innerHTML = scriptsHubData.popularScripts.map(item => `
-    <article class="script-card"><div class="script-card-head"><h4>${escapeHtml(item.name)}</h4><span>${escapeHtml(item.game)}</span></div><p>${escapeHtml(item.description)}</p><pre>${escapeHtml(item.script)}</pre></article>`).join('');
+    <article class="script-card"><div class="script-card-head"><h4>${escapeHtml(item.name)}</h4><span>${escapeHtml(stripTrailingPeriod(item.game))}</span></div><p>${escapeHtml(stripTrailingPeriod(item.description))}</p><pre>${escapeHtml(item.script)}</pre></article>`).join('');
 }
 
 function renderRecentChanges() {
@@ -1145,7 +1149,7 @@ function init() {
 
   qs('#searchInput').addEventListener('input', applyAllFilters);
   qs('#searchInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter' && qs('#searchInput').value.trim().toUpperCase() === 'XYREX') {
+    if (e.key === 'Enter' && qs('#searchInput').value.trim() === 'XYREX') {
       qsa('.page-switch-btn').forEach(item => item.classList.remove('is-active'));
       setActivePage('easterEggPage');
     }

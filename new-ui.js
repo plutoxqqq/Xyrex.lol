@@ -5,6 +5,8 @@
   const AI_REQUEST_TIMEOUT_MS = 14000;
   const AI_MAX_ATTEMPTS = 4;
   const AI_CACHE_KEY = 'xyrex_ai_insight_cache_v1';
+  const DODGE_STORAGE_KEY = 'xyrex_dodge_save_v1';
+  const FREE_DAILY_AI_TOKENS = 5;
 
   const themeDefaults = {
     bg: '#06070d',
@@ -335,6 +337,60 @@
     if (grid) executorsPage.insertBefore(panel, grid);
   }
 
+
+  function getDodgeData() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(DODGE_STORAGE_KEY) || '{}');
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function writeDodgeData(payload) {
+    localStorage.setItem(DODGE_STORAGE_KEY, JSON.stringify(payload));
+  }
+
+  function getDayKey() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function normalizeTokenState(data) {
+    const next = { ...data };
+    const today = getDayKey();
+    if (next.aiTokenDate !== today) {
+      next.aiTokenDate = today;
+      next.aiTokensUsedToday = 0;
+    }
+    if (!Number.isFinite(next.aiTokensUsedToday) || next.aiTokensUsedToday < 0) next.aiTokensUsedToday = 0;
+    if (!Number.isFinite(next.aiPurchasedTokens) || next.aiPurchasedTokens < 0) next.aiPurchasedTokens = 0;
+    if (!Array.isArray(next.ownedModifiers)) next.ownedModifiers = ['Balanced'];
+    if (typeof next.selectedModifier !== 'string') next.selectedModifier = 'Balanced';
+    if (!Array.isArray(next.ownedPowerups)) next.ownedPowerups = [];
+    if (!Number.isFinite(next.coins) || next.coins < 0) next.coins = 0;
+    if (!Number.isFinite(next.bestScore) || next.bestScore < 0) next.bestScore = 0;
+    return next;
+  }
+
+  function availableAiTokensFromState(data) {
+    const freeRemaining = Math.max(0, FREE_DAILY_AI_TOKENS - data.aiTokensUsedToday);
+    return freeRemaining + Math.max(0, data.aiPurchasedTokens);
+  }
+
+  function tryConsumeAiToken() {
+    const raw = getDodgeData();
+    const data = normalizeTokenState(raw);
+    const available = availableAiTokensFromState(data);
+    if (available <= 0) return false;
+
+    const freeRemaining = Math.max(0, FREE_DAILY_AI_TOKENS - data.aiTokensUsedToday);
+    if (freeRemaining > 0) data.aiTokensUsedToday += 1;
+    else data.aiPurchasedTokens = Math.max(0, data.aiPurchasedTokens - 1);
+
+    writeDodgeData(data);
+    return true;
+  }
+
   function productFromCard(card) {
     return {
       name: card.querySelector('.product-name')?.textContent?.trim() || 'Unknown Executor',
@@ -348,6 +404,9 @@
     return String(text || '')
       .replace(/⚠️\s*\*\*IMPORTANT NOTICE\*\*[\s\S]*?continue to work normally\./gi, '')
       .replace(/pollinations legacy text api[\s\S]*?models\./gi, '')
+      .split('\n')
+      .map(line => line.replace(/([A-Za-z0-9])\.(\s*)$/g, '$1$2'))
+      .join('\n')
       .trim();
   }
 
@@ -461,212 +520,39 @@
     throw lastError || new Error('AI request failed');
   }
 
-  function getInsightCacheKey(product) {
-    return [product.name, product.price, product.sunc, product.description].join('|').toLowerCase();
-  }
-
-  function pause(ms) {
-    return new Promise(resolve => window.setTimeout(resolve, ms));
-  }
-
-  async function requestInsight(prompt) {
-    let lastError = null;
-
-    for (let attempt = 0; attempt < AI_MAX_ATTEMPTS; attempt += 1) {
-      const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
-
-      try {
-        const response = await fetch(`${AI_ENDPOINT}${encodeURIComponent(prompt)}`, { signal: controller.signal });
-        if (!response.ok) throw new Error(`AI request failed (${response.status})`);
-        const text = (await response.text()).trim();
-        if (!text) throw new Error('AI request returned an empty response');
-        return text;
-      } catch (error) {
-        lastError = error;
-        const backoffMs = 350 * (2 ** attempt);
-        if (attempt < AI_MAX_ATTEMPTS - 1) await pause(backoffMs);
-      } finally {
-        window.clearTimeout(timeoutId);
-      }
-    }
-
-    throw lastError || new Error('AI request failed');
-  }
-
-  function getInsightCacheKey(product) {
-    return [product.name, product.price, product.sunc, product.description].join('|').toLowerCase();
-  }
-
-  function pause(ms) {
-    return new Promise(resolve => window.setTimeout(resolve, ms));
-  }
-
-  async function requestInsight(prompt) {
-    let lastError = null;
-
-    for (let attempt = 0; attempt < AI_MAX_ATTEMPTS; attempt += 1) {
-      const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
-
-      try {
-        const response = await fetch(`${AI_ENDPOINT}${encodeURIComponent(prompt)}`, { signal: controller.signal });
-        if (!response.ok) throw new Error(`AI request failed (${response.status})`);
-        const text = (await response.text()).trim();
-        if (!text) throw new Error('AI request returned an empty response');
-        return text;
-      } catch (error) {
-        lastError = error;
-        const backoffMs = 350 * (2 ** attempt);
-        if (attempt < AI_MAX_ATTEMPTS - 1) await pause(backoffMs);
-      } finally {
-        window.clearTimeout(timeoutId);
-      }
-    }
-
-    throw lastError || new Error('AI request failed');
-  }
-
-  function getInsightCacheKey(product) {
-    return [product.name, product.price, product.sunc, product.description].join('|').toLowerCase();
-  }
-
-  function pause(ms) {
-    return new Promise(resolve => window.setTimeout(resolve, ms));
-  }
-
-  async function requestInsight(prompt) {
-    let lastError = null;
-
-    for (let attempt = 0; attempt < AI_MAX_ATTEMPTS; attempt += 1) {
-      const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
-
-      try {
-        const response = await fetch(`${AI_ENDPOINT}${encodeURIComponent(prompt)}`, { signal: controller.signal });
-        if (!response.ok) throw new Error(`AI request failed (${response.status})`);
-        const text = (await response.text()).trim();
-        if (!text) throw new Error('AI request returned an empty response');
-        return text;
-      } catch (error) {
-        lastError = error;
-        const backoffMs = 350 * (2 ** attempt);
-        if (attempt < AI_MAX_ATTEMPTS - 1) await pause(backoffMs);
-      } finally {
-        window.clearTimeout(timeoutId);
-      }
-    }
-
-    throw lastError || new Error('AI request failed');
-  }
-
-  function getInsightCacheKey(product) {
-    return [product.name, product.price, product.sunc, product.description].join('|').toLowerCase();
-  }
-
-  function pause(ms) {
-    return new Promise(resolve => window.setTimeout(resolve, ms));
-  }
-
-  async function requestInsight(prompt) {
-    let lastError = null;
-
-    for (let attempt = 0; attempt < AI_MAX_ATTEMPTS; attempt += 1) {
-      const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
-
-      try {
-        const response = await fetch(`${AI_ENDPOINT}${encodeURIComponent(prompt)}`, { signal: controller.signal });
-        if (!response.ok) throw new Error(`AI request failed (${response.status})`);
-        const text = (await response.text()).trim();
-        if (!text) throw new Error('AI request returned an empty response');
-        return text;
-      } catch (error) {
-        lastError = error;
-        const backoffMs = 350 * (2 ** attempt);
-        if (attempt < AI_MAX_ATTEMPTS - 1) await pause(backoffMs);
-      } finally {
-        window.clearTimeout(timeoutId);
-      }
-    }
-
-    throw lastError || new Error('AI request failed');
-  }
-
-  function getInsightCacheKey(product) {
-    return [product.name, product.price, product.sunc, product.description].join('|').toLowerCase();
-  }
-
-  function pause(ms) {
-    return new Promise(resolve => window.setTimeout(resolve, ms));
-  }
-
-  async function requestInsight(prompt) {
-    let lastError = null;
-
-    for (let attempt = 0; attempt < AI_MAX_ATTEMPTS; attempt += 1) {
-      const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
-
-      try {
-        const response = await fetch(`${AI_ENDPOINT}${encodeURIComponent(prompt)}`, { signal: controller.signal });
-        if (!response.ok) throw new Error(`AI request failed (${response.status})`);
-        const text = (await response.text()).trim();
-        if (!text) throw new Error('AI request returned an empty response');
-        return text;
-      } catch (error) {
-        lastError = error;
-        const backoffMs = 350 * (2 ** attempt);
-        if (attempt < AI_MAX_ATTEMPTS - 1) await pause(backoffMs);
-      } finally {
-        window.clearTimeout(timeoutId);
-      }
-    }
-
-    throw lastError || new Error('AI request failed');
-  }
-
   async function generateInsight(product) {
     const prompt = [
-      'You are an AI insight analyst specializing in Roblox script executors.',
+      'You are an expert Roblox executor risk and reliability analyst',
       '',
-      'Your task is to research and analyse the executor using the provided data and reliable public information.',
-      'Provide only accurate, useful, and relevant insights.',
+      'Mission',
+      '- Produce a high quality practical insight for one executor',
+      '- Use site data first and only add external knowledge when highly likely',
+      '- If uncertain, explicitly say data is limited',
       '',
-      'Strict rules:',
-      '- Prioritize accuracy over completeness.',
-      '- Do not invent features, claims, or statistics.',
-      '- If information cannot be verified, state that limited information is available.',
-      '- Avoid filler phrases, speculation, or generic statements.',
-      '- Write in clear, concise sentences.',
-      '- No typos. No emojis. No marketing language.',
-      '- Do research about the executor in question and combine the research knowledge with the information on the site.',
+      'Hard rules',
+      '- No hype no fluff no emojis',
+      '- No invented facts no fake metrics no fake incidents',
+      '- No trailing periods at line ends',
+      '- Keep output concise and specific',
       '',
-      'Focus on:',
-      '- sUNC compatibility and what it indicates about function support',
-      '- Stability and expected reliability',
-      '- Trustworthiness and safety considerations',
-      '- Reputation or community feedback if available',
-      '- Usability and target user type',
+      'Output format exactly',
+      'Reliability snapshot',
+      '- Stability assessment in 1 line',
+      '- sUNC interpretation in 1 line',
       '',
-      'Output format:',
+      'Risk profile',
+      '- Trust and safety risk in 1 line',
+      '- Likely user fit in 1 line',
       '',
-      'Reliability and Compatibility',
-      'Provide a short paragraph analyzing stability and sUNC compatibility.',
-      '',
-      'Trust and Reputation',
-      'Provide a short paragraph evaluating trustworthiness, safety considerations, and likely user audience.',
-      '',
-      'Key Points',
-      '- One realistic caution or risk',
-      '- One practical recommendation',
-      '- One notable limitation or characteristic',
+      'Actionable guidance',
+      '- Main caution',
+      '- Main recommendation',
+      '- Most notable limitation',
       '',
       'Verdict',
-      'Provide one clear sentence stating whether the executor appears to be a good option and who it is best suited for.',
+      '- One clear line saying who should or should not use it',
       '',
-      'Maximum total length: 120 words.',
-      'Ensure it is not only specific executors that get this format, apply this to ALL executors requesting AI Insight.',
+      'Word budget 90 to 150 words',
       '',
       `Executor: ${product.name}`,
       `Description: ${product.description}`,
@@ -704,6 +590,11 @@
     const mainContent = document.querySelector('.main-content');
     if (mainContent) mainContent.scrollTo({ top: 0, behavior: 'smooth' });
     window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    if (!tryConsumeAiToken()) {
+      window.alert('You have no AI Insight tokens remaining. Daily tokens reset at midnight, or you can buy more in the Token Shop.');
+      return;
+    }
 
     button.disabled = true;
     button.textContent = 'Generating...';
@@ -798,7 +689,6 @@
   function enable() {
     loadCss();
     document.body.classList.add('new-ui-enabled');
-    injectBadge();
     ensureThemeModal();
     ensureInsightsPanel();
     enhanceCardsForNewUi();

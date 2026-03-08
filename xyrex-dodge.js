@@ -1,5 +1,6 @@
 (() => {
   const STORAGE_KEY = 'xyrex_dodge_save_v1';
+  const FREE_DAILY_AI_TOKENS = 5;
   const THEME = {
     bg: '#0b1020',
     panel: '#11182a',
@@ -20,10 +21,18 @@
   };
 
   const MODIFIERS = {
-    Balanced: { price: 0, desc: 'Fair pacing. Best all-round pick.', playerSpeed: 1.0, coinBonus: 1.0, spawnBias: 1.0 },
-    Swift: { price: 100, desc: 'Move faster. Still fairly safe.', playerSpeed: 1.25, coinBonus: 1.0, spawnBias: 1.03 },
-    'Rich Run': { price: 160, desc: 'More coins per run. Slightly spicier.', playerSpeed: 1.0, coinBonus: 1.6, spawnBias: 1.08 },
-    Zen: { price: 140, desc: 'Slower, calmer gameplay.', playerSpeed: 1.0, coinBonus: 0.9, spawnBias: 0.82 },
+    Balanced: { price: 0, desc: 'Steady all-round setup', playerSpeed: 1.0, coinBonus: 1.0, pressure: 1.0 },
+    'Rich Run': { price: 160, desc: 'More coins with higher pressure', playerSpeed: 1.0, coinBonus: 1.5, pressure: 1.2 },
+    Swift: { price: 100, desc: 'Faster movement with light pressure', playerSpeed: 1.25, coinBonus: 1.0, pressure: 1.05 },
+    Zen: { price: 140, desc: 'Calm pace and lighter rewards', playerSpeed: 1.0, coinBonus: 0.5, pressure: 0.5 },
+  };
+
+  const POWERUPS = {
+    None: { price: 0, desc: 'No active powerup effects' },
+    Quickstep: { price: 220, desc: 'Removes lane movement animation for instant repositioning' },
+    'Block Slowdown': { price: 260, desc: 'Slows difficulty ramping by 50% to reduce pressure spikes' },
+    'Shield Matrix': { price: 300, desc: 'Adds one extra life and consumes shield on first collision' },
+    'Lucky Drift': { price: 180, desc: 'Increases run coin gains by 20% on all modifiers' },
   };
 
   const DEFAULT_DATA = {
@@ -31,6 +40,11 @@
     bestScore: 0,
     ownedModifiers: ['Balanced'],
     selectedModifier: 'Balanced',
+    ownedPowerups: [],
+    selectedPowerup: 'None',
+    aiTokenDate: '',
+    aiTokensUsedToday: 0,
+    aiPurchasedTokens: 0,
   };
 
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
@@ -52,6 +66,7 @@
       this.startTs = 0;
       this.keys = { left: false, right: false };
       this.particles = [];
+      this.ensureTokenState();
       this.buildUi();
     }
 
@@ -64,7 +79,9 @@
           ...DEFAULT_DATA,
           ...parsed,
           ownedModifiers: Array.isArray(parsed.ownedModifiers) && parsed.ownedModifiers.length ? parsed.ownedModifiers : ['Balanced'],
+          ownedPowerups: Array.isArray(parsed.ownedPowerups) ? parsed.ownedPowerups.filter(name => POWERUPS[name]) : [],
           selectedModifier: MODIFIERS[parsed.selectedModifier] ? parsed.selectedModifier : 'Balanced',
+          selectedPowerup: POWERUPS[parsed.selectedPowerup] ? parsed.selectedPowerup : 'None',
         };
       } catch {
         return { ...DEFAULT_DATA };
@@ -75,17 +92,35 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
     }
 
+    dayKey() {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    ensureTokenState() {
+      const today = this.dayKey();
+      if (this.data.aiTokenDate !== today) {
+        this.data.aiTokenDate = today;
+        this.data.aiTokensUsedToday = 0;
+        this.saveData();
+      }
+    }
+
+    availableAiTokens() {
+      this.ensureTokenState();
+      return Math.max(0, FREE_DAILY_AI_TOKENS - this.data.aiTokensUsedToday) + Math.max(0, this.data.aiPurchasedTokens);
+    }
+
     buildUi() {
       this.mount.innerHTML = `
         <section class="xy-game-shell" aria-label="Xyrex Dodge game">
           <header class="xy-game-top">
             <div>
               <h2>Xyrex Dodge</h2>
-              <p>Dodge the waves, earn coins, and unlock modifiers.</p>
+              <p>Dodge waves, earn coins, and unlock modifiers</p>
             </div>
             <div class="xy-game-stats">
-              <span id="xyBest">Best: 0</span>
-              <span id="xyBank">Coins: 0</span>
+              <span id="xyBest" class="no-text-select">Best: 0</span>
+              <span id="xyBank" class="no-text-select">Coins: 0</span>
             </div>
           </header>
           <div class="xy-game-main">
@@ -110,7 +145,21 @@
                 <p id="xyModifierDesc"></p>
                 <button id="xyBuyBtn" type="button">Buy selected</button>
               </div>
-              <p class="xy-help">Controls: A/D or ←/→ to move. Press P to pause and R to restart.</p>
+              <div class="xy-sidecard">
+                <h3>Powerups</h3>
+                <select id="xyPowerupSelect"></select>
+                <p id="xyPowerupDesc"></p>
+                <button id="xyBuyPowerupBtn" type="button">Buy selected</button>
+              </div>
+              <div class="xy-sidecard">
+                <h3>Token Shop</h3>
+                <div id="xyTokenCount" class="xy-token-count"></div>
+                <div class="xy-token-actions">
+                  <button type="button" data-token-pack="1" data-token-cost="30">30 coins → 1 token</button>
+                  <button type="button" data-token-pack="2" data-token-cost="50">50 coins → 2 tokens</button>
+                  <button type="button" data-token-pack="5" data-token-cost="100">100 coins → 5 tokens</button>
+                </div>
+              </div>
             </aside>
           </div>
         </section>
@@ -129,8 +178,15 @@
       this.modSelect = this.mount.querySelector('#xyModifierSelect');
       this.modDesc = this.mount.querySelector('#xyModifierDesc');
       this.buyBtn = this.mount.querySelector('#xyBuyBtn');
+      this.powerupSelect = this.mount.querySelector('#xyPowerupSelect');
+      this.powerupDesc = this.mount.querySelector('#xyPowerupDesc');
+      this.buyPowerupBtn = this.mount.querySelector('#xyBuyPowerupBtn');
+      this.tokenCountEl = this.mount.querySelector('#xyTokenCount');
 
       this.modSelect.innerHTML = Object.keys(MODIFIERS)
+        .map(name => `<option value="${name}">${name}</option>`)
+        .join('');
+      this.powerupSelect.innerHTML = Object.keys(POWERUPS)
         .map(name => `<option value="${name}">${name}</option>`)
         .join('');
 
@@ -141,13 +197,30 @@
       });
 
       this.buyBtn.addEventListener('click', () => this.buySelectedModifier());
+      this.powerupSelect.addEventListener('change', () => {
+        this.data.selectedPowerup = this.powerupSelect.value;
+        this.updatePowerupUi();
+        this.saveData();
+      });
+      this.buyPowerupBtn.addEventListener('click', () => this.buySelectedPowerup());
+      this.mount.querySelectorAll('[data-token-pack]').forEach(button => {
+        button.addEventListener('click', () => {
+          const amount = Number(button.getAttribute('data-token-pack'));
+          const cost = Number(button.getAttribute('data-token-cost'));
+          this.buyTokenPack(amount, cost);
+        });
+      });
       this.pauseBtn.addEventListener('click', () => this.togglePause());
       this.restartBtn.addEventListener('click', () => this.restart());
 
       this.handleKeyDown = e => {
         const k = e.key.toLowerCase();
-        const isFormField = ['input', 'textarea', 'select', 'button'].includes((e.target?.tagName || '').toLowerCase());
+        const targetTag = (e.target?.tagName || '').toLowerCase();
+        const isTextField = ['input', 'textarea'].includes(targetTag) || e.target?.isContentEditable;
+        const isFormField = ['input', 'textarea', 'select', 'button'].includes(targetTag);
         const shouldCaptureMoveKey = k === 'arrowleft' || k === 'arrowright' || k === 'a' || k === 'd';
+
+        if (shouldCaptureMoveKey && e.repeat) return;
 
         if (shouldCaptureMoveKey && !isFormField) {
           e.preventDefault();
@@ -155,7 +228,7 @@
           if (k === 'arrowright' || k === 'd') this.keys.right = true;
         }
 
-        if ((k === 'p' || k === 'r') && !isFormField) {
+        if ((k === 'p' || k === 'r') && !isTextField) {
           e.preventDefault();
           if (k === 'p') this.togglePause();
           if (k === 'r') this.restart();
@@ -184,6 +257,8 @@
 
       this.syncUi();
       this.updateModifierUi();
+      this.updatePowerupUi();
+      this.updateTokenShopUi();
       this.applyResponsiveCanvas();
       window.addEventListener('resize', this.applyResponsiveCanvas);
     }
@@ -200,9 +275,32 @@
       const mod = MODIFIERS[selected] ?? MODIFIERS.Balanced;
       const owned = this.data.ownedModifiers.includes(selected);
       this.modSelect.value = selected;
-      this.modDesc.textContent = `${mod.desc} · Speed x${mod.playerSpeed.toFixed(2)} · Coins x${mod.coinBonus.toFixed(2)} · Pressure x${mod.spawnBias.toFixed(2)}`;
+      this.modDesc.innerHTML = `${mod.desc}<br>Coin multiplier: x${mod.coinBonus.toFixed(2)}<br>Speed multiplier: x${mod.playerSpeed.toFixed(2)}<br>Pressure multiplier: x${mod.pressure.toFixed(2)}`;
       this.buyBtn.disabled = owned;
       this.buyBtn.textContent = owned ? 'Owned' : `Buy (${mod.price} coins)`;
+    }
+
+    updatePowerupUi() {
+      const selected = this.data.selectedPowerup && POWERUPS[this.data.selectedPowerup] ? this.data.selectedPowerup : 'None';
+      const powerup = POWERUPS[selected];
+      const owned = selected === 'None' || this.data.ownedPowerups.includes(selected);
+      this.data.selectedPowerup = selected;
+      this.powerupSelect.value = selected;
+      this.powerupDesc.textContent = powerup?.desc || '';
+      if (selected === 'None') {
+        this.buyPowerupBtn.disabled = true;
+        this.buyPowerupBtn.textContent = 'Equipped';
+      } else {
+        this.buyPowerupBtn.disabled = owned;
+        this.buyPowerupBtn.textContent = owned ? 'Owned' : `Buy (${powerup.price} coins)`;
+      }
+    }
+
+    updateTokenShopUi() {
+      this.ensureTokenState();
+      const freeRemaining = Math.max(0, FREE_DAILY_AI_TOKENS - this.data.aiTokensUsedToday);
+      const purchased = Math.max(0, this.data.aiPurchasedTokens);
+      this.tokenCountEl.textContent = `Available AI tokens: ${this.availableAiTokens()} (Daily: ${freeRemaining}, Purchased: ${purchased})`;
     }
 
     buySelectedModifier() {
@@ -210,7 +308,7 @@
       const mod = MODIFIERS[name];
       if (!mod || this.data.ownedModifiers.includes(name)) return;
       if (this.data.coins < mod.price) {
-        this.flashStatus('Not enough coins.', 'warning');
+        this.flashStatus('Not enough coins', 'warning');
         return;
       }
       this.data.coins -= mod.price;
@@ -220,6 +318,40 @@
       this.updateModifierUi();
       this.syncUi();
       this.flashStatus(`${name} unlocked.`, 'running');
+    }
+
+    buySelectedPowerup() {
+      const name = this.powerupSelect.value;
+      const powerup = POWERUPS[name];
+      if (name === 'None') return;
+      if (!powerup || this.data.ownedPowerups.includes(name)) return;
+      if (this.data.coins < powerup.price) {
+        this.flashStatus('Not enough coins', 'warning');
+        return;
+      }
+      this.data.coins -= powerup.price;
+      this.data.ownedPowerups.push(name);
+      this.data.selectedPowerup = name;
+      this.saveData();
+      this.updatePowerupUi();
+      this.syncUi();
+      this.flashStatus(`${name} unlocked.`, 'running');
+    }
+
+    buyTokenPack(amount, cost) {
+      if (!Number.isFinite(amount) || !Number.isFinite(cost) || amount <= 0 || cost <= 0) return;
+      if (!window.confirm(`Buy ${amount} AI token${amount > 1 ? 's' : ''} for ${cost} coins?`)) return;
+      if (this.data.coins < cost) {
+        window.alert('You do not have enough coins for that token pack');
+        this.flashStatus('Not enough coins', 'warning');
+        return;
+      }
+      this.data.coins -= cost;
+      this.data.aiPurchasedTokens += amount;
+      this.saveData();
+      this.syncUi();
+      this.updateTokenShopUi();
+      this.flashStatus(`Purchased ${amount} AI token${amount > 1 ? 's' : ''}.`, 'running');
     }
 
     flashStatus(text, type) {
@@ -267,6 +399,10 @@
 
     resetState() {
       this.mod = MODIFIERS[this.data.selectedModifier] ?? MODIFIERS.Balanced;
+      const selectedPowerup = this.data.selectedPowerup && POWERUPS[this.data.selectedPowerup] ? this.data.selectedPowerup : 'None';
+      this.data.selectedPowerup = selectedPowerup;
+      this.powerups = selectedPowerup === 'None' ? new Set() : new Set(this.data.ownedPowerups.includes(selectedPowerup) ? [selectedPowerup] : []);
+      this.lives = this.powerups.has('Shield Matrix') ? 2 : 1;
       this.paused = false;
       this.gameOver = false;
       this.pauseBtn.textContent = 'Pause';
@@ -291,6 +427,8 @@
       this.statusEl.textContent = 'Running';
       this.statusEl.className = 'xy-status running';
       this.updateModifierUi();
+      this.updatePowerupUi();
+      this.updateTokenShopUi();
       this.syncUi();
     }
 
@@ -307,13 +445,17 @@
     }
 
     currentSpeed(elapsed) {
-      const base = 3 + elapsed * 0.06 + this.score * 0.012;
-      return clamp(base * this.mod.spawnBias, 0, 9);
+      const rampFactor = this.powerups.has('Block Slowdown') ? 0.5 : 1;
+      const rampStretch = 0.5;
+      const base = 3 + elapsed * 0.06 * rampFactor * rampStretch + this.score * 0.012 * rampFactor * rampStretch;
+      return clamp(base * this.mod.pressure, 0, 18);
     }
 
     currentSpawnInterval(elapsed) {
-      const interval = (1.05 - elapsed * 0.0026 - this.score * 0.0009) / this.mod.spawnBias;
-      return clamp(interval, 0.42, 1.8);
+      const rampFactor = this.powerups.has('Block Slowdown') ? 0.5 : 1;
+      const rampStretch = 0.5;
+      const interval = (1.05 - elapsed * 0.0026 * rampFactor * rampStretch - this.score * 0.0009 * rampFactor * rampStretch) / this.mod.pressure;
+      return clamp(interval, 0.21, 1.8);
     }
 
     lanePressure() {
@@ -388,7 +530,11 @@
       this.keys.right = false;
       const laneW = 960 / 6;
       const targetX = this.player.targetLane * laneW + laneW / 2;
-      this.player.x += (targetX - this.player.x) * (0.24 * this.mod.playerSpeed);
+      if (this.powerups.has('Quickstep')) {
+        this.player.x = targetX;
+      } else {
+        this.player.x += (targetX - this.player.x) * (0.16 * this.mod.playerSpeed);
+      }
     }
 
     hitBlock(b) {
@@ -405,6 +551,12 @@
 
     endRun() {
       if (this.gameOver) return;
+      if (this.lives > 1) {
+        this.lives -= 1;
+        this.blocks = this.blocks.filter(b => b.y < this.player.y - 60 || b.y > this.player.y + 60);
+        this.flashStatus('Shield consumed one life remaining', 'warning');
+        return;
+      }
       this.gameOver = true;
       this.data.coins += this.runCoins;
       this.data.bestScore = Math.max(this.data.bestScore, this.score);
@@ -414,11 +566,13 @@
       this.statusEl.className = 'xy-status danger';
       this.overlay.hidden = false;
       this.overlay.style.display = 'flex';
-      this.overlay.innerHTML = `<div class="xy-overlay-card"><h3>Game Over</h3><p>Score: <strong>${this.score}</strong></p><p>Coins earned: <strong>${this.runCoins}</strong></p><p>Press R or click Restart.</p></div>`;
+      this.overlay.innerHTML = `<div class="xy-overlay-card"><h3>Game Over</h3><p>Score: <strong>${this.score}</strong></p><p>Coins earned: <strong>${this.runCoins}</strong></p><p>Press R or click Restart</p></div>`;
     }
 
     updateBlocks(dt) {
       const alive = [];
+      const beforeCollisionBlocks = [...this.blocks];
+      let collided = false;
       for (const b of this.blocks) {
         b.y += b.speed * (dt * 60);
         if (this.hitBlock(b)) {
@@ -431,16 +585,23 @@
             color: pick([THEME.danger, THEME.accent, THEME.accent2]),
           })));
           this.endRun();
+          collided = true;
           break;
         }
         if (b.y > 620) {
           this.score += 1;
-          this.runCoins += Math.max(1, Math.round(this.mod.coinBonus));
+          const baseCoins = Math.max(1, Math.round(this.mod.coinBonus));
+          const coinBoost = this.powerups.has('Lucky Drift') ? 1.2 : 1;
+          this.runCoins += Math.max(1, Math.round(baseCoins * coinBoost));
         } else {
           alive.push(b);
         }
       }
-      this.blocks = alive;
+      if (collided && this.gameOver) {
+        this.blocks = beforeCollisionBlocks;
+      } else if (!collided) {
+        this.blocks = alive;
+      }
     }
 
     updateParticles(dt) {
@@ -449,13 +610,42 @@
         .filter(p => p.life > 0);
     }
 
+
+    drawRoundedRect(ctx, x, y, w, h, r, fill, stroke = null, lineWidth = 0) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+      if (fill) {
+        ctx.fillStyle = fill;
+        ctx.fill();
+      }
+      if (stroke) {
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = lineWidth || 1;
+        ctx.stroke();
+      }
+    }
+
     draw() {
       const ctx = this.ctx;
       ctx.clearRect(0, 0, 960, 620);
+      const bgGradient = ctx.createLinearGradient(0, 0, 0, 620);
+      bgGradient.addColorStop(0, '#081028');
+      bgGradient.addColorStop(1, '#050915');
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, 960, 620);
 
       for (let i = 0; i <= 6; i += 1) {
         const x = i * (960 / 6);
-        ctx.strokeStyle = THEME.grid1;
+        ctx.strokeStyle = 'rgba(84, 122, 196, 0.3)';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(x, 0);
@@ -463,7 +653,7 @@
         ctx.stroke();
       }
       for (let y = 40; y < 620; y += 80) {
-        ctx.strokeStyle = THEME.grid2;
+        ctx.strokeStyle = 'rgba(62, 96, 160, 0.18)';
         ctx.setLineDash([4, 7]);
         ctx.beginPath();
         ctx.moveTo(0, y);
@@ -473,25 +663,16 @@
       ctx.setLineDash([]);
 
       for (const b of this.blocks) {
-        ctx.fillStyle = THEME.shadow;
-        ctx.fillRect(b.x - 4, b.y - 4, b.w + 8, b.h + 8);
-        ctx.fillStyle = b.color;
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.fillRect(b.x, b.y, b.w, b.h);
-        ctx.strokeRect(b.x, b.y, b.w, b.h);
+        const shadowColor = 'rgba(8, 12, 28, 0.55)';
+        this.drawRoundedRect(ctx, b.x - 2, b.y - 2, b.w + 4, b.h + 4, 8, shadowColor);
+        this.drawRoundedRect(ctx, b.x, b.y, b.w, b.h, 7, 'rgba(255, 112, 164, 0.9)', 'rgba(255, 214, 235, 0.85)', 1.6);
       }
 
       const p = this.player;
       const x1 = p.x - p.w / 2;
       const y1 = p.y - p.h / 2;
-      ctx.fillStyle = THEME.accent2;
-      ctx.fillRect(x1 - 6, y1 - 5, p.w + 12, p.h + 10);
-      ctx.fillStyle = THEME.accent;
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 2;
-      ctx.fillRect(x1, y1, p.w, p.h);
-      ctx.strokeRect(x1, y1, p.w, p.h);
+      this.drawRoundedRect(ctx, x1 - 2, y1 - 2, p.w + 4, p.h + 4, 8, 'rgba(10, 16, 36, 0.62)');
+      this.drawRoundedRect(ctx, x1, y1, p.w, p.h, 7, 'rgba(102, 230, 255, 0.95)', 'rgba(215, 249, 255, 0.95)', 1.6);
 
       for (const particle of this.particles) {
         ctx.globalAlpha = particle.life;
@@ -522,6 +703,7 @@
       this.updateParticles(dt);
       this.draw();
       this.syncUi();
+      this.updateTokenShopUi();
       this.rafId = requestAnimationFrame(this.loop);
     };
   }
