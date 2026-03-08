@@ -90,7 +90,7 @@
           </header>
           <div class="xy-game-main">
             <div class="xy-canvas-wrap">
-              <canvas id="xyGameCanvas" width="960" height="620" aria-label="Game canvas"></canvas>
+              <canvas id="xyGameCanvas" width="960" height="620" aria-label="Game canvas" tabindex="0"></canvas>
               <div id="xyOverlay" class="xy-overlay" hidden></div>
             </div>
             <aside class="xy-sidepanel">
@@ -146,10 +146,20 @@
 
       this.handleKeyDown = e => {
         const k = e.key.toLowerCase();
-        if (k === 'arrowleft' || k === 'a') this.keys.left = true;
-        if (k === 'arrowright' || k === 'd') this.keys.right = true;
-        if (k === 'p') this.togglePause();
-        if (k === 'r') this.restart();
+        const isFormField = ['input', 'textarea', 'select', 'button'].includes((e.target?.tagName || '').toLowerCase());
+        const shouldCaptureMoveKey = k === 'arrowleft' || k === 'arrowright' || k === 'a' || k === 'd';
+
+        if (shouldCaptureMoveKey && !isFormField) {
+          e.preventDefault();
+          if (k === 'arrowleft' || k === 'a') this.keys.left = true;
+          if (k === 'arrowright' || k === 'd') this.keys.right = true;
+        }
+
+        if ((k === 'p' || k === 'r') && !isFormField) {
+          e.preventDefault();
+          if (k === 'p') this.togglePause();
+          if (k === 'r') this.restart();
+        }
       };
       this.handleKeyUp = e => {
         const k = e.key.toLowerCase();
@@ -229,16 +239,17 @@
       if (this.running) return;
       this.running = true;
       this.resetState();
-      document.addEventListener('keydown', this.handleKeyDown);
+      document.addEventListener('keydown', this.handleKeyDown, { capture: true });
       document.addEventListener('keyup', this.handleKeyUp);
       this.lastTs = performance.now();
+      this.canvas.focus({ preventScroll: true });
       this.rafId = requestAnimationFrame(this.loop);
     }
 
     stop() {
       this.running = false;
       cancelAnimationFrame(this.rafId);
-      document.removeEventListener('keydown', this.handleKeyDown);
+      document.removeEventListener('keydown', this.handleKeyDown, { capture: true });
       document.removeEventListener('keyup', this.handleKeyUp);
     }
 

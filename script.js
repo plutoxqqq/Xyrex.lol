@@ -1063,6 +1063,7 @@ function setActivePage(targetPageId) {
   qs('#searchInput').disabled = onScriptsPage;
   qs('#clearSearchBtn').disabled = onScriptsPage;
   qs('.page-layout').classList.toggle('scripts-mode', onScriptsPage || onEasterPage);
+  document.body.classList.toggle('easter-game-mode', onEasterPage);
 
   if (onEasterPage) {
     window.XyrexDodge?.start?.();
