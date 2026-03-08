@@ -5,6 +5,8 @@
   const AI_REQUEST_TIMEOUT_MS = 14000;
   const AI_MAX_ATTEMPTS = 4;
   const AI_CACHE_KEY = 'xyrex_ai_insight_cache_v1';
+  const DODGE_STORAGE_KEY = 'xyrex_dodge_save_v1';
+  const FREE_DAILY_AI_TOKENS = 5;
 
   const themeDefaults = {
     bg: '#06070d',
@@ -333,6 +335,60 @@
 
     const grid = executorsPage.querySelector('#productGrid');
     if (grid) executorsPage.insertBefore(panel, grid);
+  }
+
+
+  function getDodgeData() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(DODGE_STORAGE_KEY) || '{}');
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function writeDodgeData(payload) {
+    localStorage.setItem(DODGE_STORAGE_KEY, JSON.stringify(payload));
+  }
+
+  function getDayKey() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function normalizeTokenState(data) {
+    const next = { ...data };
+    const today = getDayKey();
+    if (next.aiTokenDate !== today) {
+      next.aiTokenDate = today;
+      next.aiTokensUsedToday = 0;
+    }
+    if (!Number.isFinite(next.aiTokensUsedToday) || next.aiTokensUsedToday < 0) next.aiTokensUsedToday = 0;
+    if (!Number.isFinite(next.aiPurchasedTokens) || next.aiPurchasedTokens < 0) next.aiPurchasedTokens = 0;
+    if (!Array.isArray(next.ownedModifiers)) next.ownedModifiers = ['Balanced'];
+    if (typeof next.selectedModifier !== 'string') next.selectedModifier = 'Balanced';
+    if (!Array.isArray(next.ownedPowerups)) next.ownedPowerups = [];
+    if (!Number.isFinite(next.coins) || next.coins < 0) next.coins = 0;
+    if (!Number.isFinite(next.bestScore) || next.bestScore < 0) next.bestScore = 0;
+    return next;
+  }
+
+  function availableAiTokensFromState(data) {
+    const freeRemaining = Math.max(0, FREE_DAILY_AI_TOKENS - data.aiTokensUsedToday);
+    return freeRemaining + Math.max(0, data.aiPurchasedTokens);
+  }
+
+  function tryConsumeAiToken() {
+    const raw = getDodgeData();
+    const data = normalizeTokenState(raw);
+    const available = availableAiTokensFromState(data);
+    if (available <= 0) return false;
+
+    const freeRemaining = Math.max(0, FREE_DAILY_AI_TOKENS - data.aiTokensUsedToday);
+    if (freeRemaining > 0) data.aiTokensUsedToday += 1;
+    else data.aiPurchasedTokens = Math.max(0, data.aiPurchasedTokens - 1);
+
+    writeDodgeData(data);
+    return true;
   }
 
   function productFromCard(card) {
@@ -704,6 +760,11 @@
     const mainContent = document.querySelector('.main-content');
     if (mainContent) mainContent.scrollTo({ top: 0, behavior: 'smooth' });
     window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    if (!tryConsumeAiToken()) {
+      window.alert('You have no AI Insight tokens remaining. Daily tokens reset at midnight, or you can buy more in the Token Shop.');
+      return;
+    }
 
     button.disabled = true;
     button.textContent = 'Generating...';
