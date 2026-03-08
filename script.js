@@ -1063,6 +1063,13 @@ function setActivePage(targetPageId) {
   qs('#searchInput').disabled = onScriptsPage;
   qs('#clearSearchBtn').disabled = onScriptsPage;
   qs('.page-layout').classList.toggle('scripts-mode', onScriptsPage || onEasterPage);
+
+  if (onEasterPage) {
+    window.XyrexDodge?.start?.();
+  } else {
+    window.XyrexDodge?.stop?.();
+  }
+
   syncRouteWithState();
 }
 
@@ -1137,7 +1144,7 @@ function init() {
 
   qs('#searchInput').addEventListener('input', applyAllFilters);
   qs('#searchInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter' && qs('#searchInput').value.trim() === 'XYREX') {
+    if (e.key === 'Enter' && qs('#searchInput').value.trim().toUpperCase() === 'XYREX') {
       qsa('.page-switch-btn').forEach(item => item.classList.remove('is-active'));
       setActivePage('easterEggPage');
     }
