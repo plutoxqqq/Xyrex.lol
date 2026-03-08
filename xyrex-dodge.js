@@ -28,6 +28,7 @@
   };
 
   const POWERUPS = {
+    None: { price: 0, desc: 'No active powerup effects.' },
     Quickstep: { price: 220, desc: 'Removes lane movement animation for instant repositioning.' },
     'Block Slowdown': { price: 260, desc: 'Slows difficulty ramping by 50% to reduce pressure spikes.' },
     'Shield Matrix': { price: 300, desc: 'Adds one extra life. The first collision consumes the shield.' },
@@ -40,6 +41,7 @@
     ownedModifiers: ['Balanced'],
     selectedModifier: 'Balanced',
     ownedPowerups: [],
+    selectedPowerup: 'None',
     aiTokenDate: '',
     aiTokensUsedToday: 0,
     aiPurchasedTokens: 0,
@@ -79,6 +81,7 @@
           ownedModifiers: Array.isArray(parsed.ownedModifiers) && parsed.ownedModifiers.length ? parsed.ownedModifiers : ['Balanced'],
           ownedPowerups: Array.isArray(parsed.ownedPowerups) ? parsed.ownedPowerups.filter(name => POWERUPS[name]) : [],
           selectedModifier: MODIFIERS[parsed.selectedModifier] ? parsed.selectedModifier : 'Balanced',
+          selectedPowerup: POWERUPS[parsed.selectedPowerup] ? parsed.selectedPowerup : 'None',
         };
       } catch {
         return { ...DEFAULT_DATA };
@@ -194,7 +197,11 @@
       });
 
       this.buyBtn.addEventListener('click', () => this.buySelectedModifier());
-      this.powerupSelect.addEventListener('change', () => this.updatePowerupUi());
+      this.powerupSelect.addEventListener('change', () => {
+        this.data.selectedPowerup = this.powerupSelect.value;
+        this.updatePowerupUi();
+        this.saveData();
+      });
       this.buyPowerupBtn.addEventListener('click', () => this.buySelectedPowerup());
       this.mount.querySelectorAll('[data-token-pack]').forEach(button => {
         button.addEventListener('click', () => {
@@ -274,13 +281,19 @@
     }
 
     updatePowerupUi() {
-      const selected = this.powerupSelect.value || Object.keys(POWERUPS)[0];
+      const selected = this.data.selectedPowerup && POWERUPS[this.data.selectedPowerup] ? this.data.selectedPowerup : 'None';
       const powerup = POWERUPS[selected];
-      const owned = this.data.ownedPowerups.includes(selected);
+      const owned = selected === 'None' || this.data.ownedPowerups.includes(selected);
+      this.data.selectedPowerup = selected;
       this.powerupSelect.value = selected;
       this.powerupDesc.textContent = powerup?.desc || '';
-      this.buyPowerupBtn.disabled = owned;
-      this.buyPowerupBtn.textContent = owned ? 'Owned' : `Buy (${powerup.price} coins)`;
+      if (selected === 'None') {
+        this.buyPowerupBtn.disabled = true;
+        this.buyPowerupBtn.textContent = 'Equipped';
+      } else {
+        this.buyPowerupBtn.disabled = owned;
+        this.buyPowerupBtn.textContent = owned ? 'Owned' : `Buy (${powerup.price} coins)`;
+      }
     }
 
     updateTokenShopUi() {
@@ -310,6 +323,7 @@
     buySelectedPowerup() {
       const name = this.powerupSelect.value;
       const powerup = POWERUPS[name];
+      if (name === 'None') return;
       if (!powerup || this.data.ownedPowerups.includes(name)) return;
       if (this.data.coins < powerup.price) {
         this.flashStatus('Not enough coins.', 'warning');
@@ -317,6 +331,7 @@
       }
       this.data.coins -= powerup.price;
       this.data.ownedPowerups.push(name);
+      this.data.selectedPowerup = name;
       this.saveData();
       this.updatePowerupUi();
       this.syncUi();
@@ -384,7 +399,9 @@
 
     resetState() {
       this.mod = MODIFIERS[this.data.selectedModifier] ?? MODIFIERS.Balanced;
-      this.powerups = new Set(this.data.ownedPowerups);
+      const selectedPowerup = this.data.selectedPowerup && POWERUPS[this.data.selectedPowerup] ? this.data.selectedPowerup : 'None';
+      this.data.selectedPowerup = selectedPowerup;
+      this.powerups = selectedPowerup === 'None' ? new Set() : new Set(this.data.ownedPowerups.includes(selectedPowerup) ? [selectedPowerup] : []);
       this.lives = this.powerups.has('Shield Matrix') ? 2 : 1;
       this.paused = false;
       this.gameOver = false;
@@ -514,7 +531,7 @@
       if (this.powerups.has('Quickstep')) {
         this.player.x = targetX;
       } else {
-        this.player.x += (targetX - this.player.x) * (0.24 * this.mod.playerSpeed);
+        this.player.x += (targetX - this.player.x) * (0.16 * this.mod.playerSpeed);
       }
     }
 
