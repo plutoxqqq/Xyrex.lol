@@ -25,6 +25,7 @@
     'Rich Run': { price: 160, desc: 'More coins with higher pressure', playerSpeed: 1.0, coinBonus: 1.5, pressure: 1.2 },
     Swift: { price: 100, desc: 'Faster movement with light pressure', playerSpeed: 1.25, coinBonus: 1.0, pressure: 1.05 },
     Zen: { price: 140, desc: 'Calm pace and lighter rewards', playerSpeed: 1.0, coinBonus: 0.5, pressure: 0.5 },
+    Challenger: { price: 120, desc: 'For those who want a challenge...', playerSpeed: 0.5, coinBonus: 2, pressure: 1.85 },
   };
 
   const POWERUPS = {
