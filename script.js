@@ -410,6 +410,8 @@ const scriptsHubData = {
     'Fixed refresh behavior for subpage routes by funneling all route entrypoints to the latest root build',
     'Reworked Theme Customizer to control the full site mood with complete palette overrides',
     'Redesigned Theme Customizer with Basic and Advanced subtabs and added five pastel preset circles for one-click themes',
+    'Fixed pink theme mood mapping so New UI surfaces, panels, cards, and overlays now fully follow the selected palette',
+    'Expanded New UI theme application so all blue UI surfaces now follow the selected palette, including buttons, search, Script Hub controls, and form elements'
     'Fixed pink theme mood mapping so New UI surfaces, panels, cards, and overlays now fully follow the selected palette'
   ]
 };
