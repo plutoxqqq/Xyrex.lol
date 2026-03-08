@@ -560,6 +560,39 @@
     throw lastError || new Error('AI request failed');
   }
 
+  function getInsightCacheKey(product) {
+    return [product.name, product.price, product.sunc, product.description].join('|').toLowerCase();
+  }
+
+  function pause(ms) {
+    return new Promise(resolve => window.setTimeout(resolve, ms));
+  }
+
+  async function requestInsight(prompt) {
+    let lastError = null;
+
+    for (let attempt = 0; attempt < AI_MAX_ATTEMPTS; attempt += 1) {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
+
+      try {
+        const response = await fetch(`${AI_ENDPOINT}${encodeURIComponent(prompt)}`, { signal: controller.signal });
+        if (!response.ok) throw new Error(`AI request failed (${response.status})`);
+        const text = (await response.text()).trim();
+        if (!text) throw new Error('AI request returned an empty response');
+        return text;
+      } catch (error) {
+        lastError = error;
+        const backoffMs = 350 * (2 ** attempt);
+        if (attempt < AI_MAX_ATTEMPTS - 1) await pause(backoffMs);
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
+    }
+
+    throw lastError || new Error('AI request failed');
+  }
+
   async function generateInsight(product) {
     const prompt = [
       'You are an AI insight analyst specializing in Roblox script executors.',

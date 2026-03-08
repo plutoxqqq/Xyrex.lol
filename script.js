@@ -411,8 +411,8 @@ const scriptsHubData = {
     'Reworked Theme Customizer to control the full site mood with complete palette overrides',
     'Redesigned Theme Customizer with Basic and Advanced subtabs and added five pastel preset circles for one-click themes',
     'Fixed pink theme mood mapping so New UI surfaces, panels, cards, and overlays now fully follow the selected palette',
-    'Expanded New UI theme application so all blue UI surfaces now follow the selected palette, including buttons, search, Script Hub controls, and form elements'
-    'Fixed pink theme mood mapping so New UI surfaces, panels, cards, and overlays now fully follow the selected palette'
+    'Expanded New UI theme application so all blue UI surfaces now follow the selected palette, including buttons, search, Script Hub controls, and form elements',
+    'Hardened route bootstrap parsing so refreshing any tab reliably restores executors and New UI state'
   ]
 };
 
@@ -992,11 +992,24 @@ function syncSubtabButtons(targetSubtabId) {
 }
 
 
+function normalizeIncomingRoute(routeValue) {
+  const route = String(routeValue || '').trim();
+  if (!route) return '/';
+
+  try {
+    const parsed = new URL(route, window.location.origin);
+    return parsed.pathname || '/';
+  } catch {
+    const pathOnly = route.split(/[?#]/)[0];
+    return pathOnly.startsWith('/') ? pathOnly : '/';
+  }
+}
+
 function getInitialRoutePath() {
   const params = new URLSearchParams(window.location.search);
-  const route = (params.get('route') || '').trim();
-  if (!route.startsWith('/')) return window.location.pathname;
-  return route;
+  const routeParam = params.get('route');
+  if (!routeParam) return window.location.pathname;
+  return normalizeIncomingRoute(routeParam);
 }
 
 async function applyRoute(pathname, replace = false) {
