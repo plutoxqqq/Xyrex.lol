@@ -213,6 +213,8 @@
         const isFormField = ['input', 'textarea', 'select', 'button'].includes(targetTag);
         const shouldCaptureMoveKey = k === 'arrowleft' || k === 'arrowright' || k === 'a' || k === 'd';
 
+        if (shouldCaptureMoveKey && e.repeat) return;
+
         if (shouldCaptureMoveKey && !isFormField) {
           e.preventDefault();
           if (k === 'arrowleft' || k === 'a') this.keys.left = true;
@@ -589,13 +591,42 @@
         .filter(p => p.life > 0);
     }
 
+
+    drawRoundedRect(ctx, x, y, w, h, r, fill, stroke = null, lineWidth = 0) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+      if (fill) {
+        ctx.fillStyle = fill;
+        ctx.fill();
+      }
+      if (stroke) {
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = lineWidth || 1;
+        ctx.stroke();
+      }
+    }
+
     draw() {
       const ctx = this.ctx;
       ctx.clearRect(0, 0, 960, 620);
+      const bgGradient = ctx.createLinearGradient(0, 0, 0, 620);
+      bgGradient.addColorStop(0, '#081028');
+      bgGradient.addColorStop(1, '#050915');
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, 960, 620);
 
       for (let i = 0; i <= 6; i += 1) {
         const x = i * (960 / 6);
-        ctx.strokeStyle = THEME.grid1;
+        ctx.strokeStyle = 'rgba(84, 122, 196, 0.3)';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(x, 0);
@@ -603,7 +634,7 @@
         ctx.stroke();
       }
       for (let y = 40; y < 620; y += 80) {
-        ctx.strokeStyle = THEME.grid2;
+        ctx.strokeStyle = 'rgba(62, 96, 160, 0.18)';
         ctx.setLineDash([4, 7]);
         ctx.beginPath();
         ctx.moveTo(0, y);
@@ -613,25 +644,16 @@
       ctx.setLineDash([]);
 
       for (const b of this.blocks) {
-        ctx.fillStyle = THEME.shadow;
-        ctx.fillRect(b.x - 4, b.y - 4, b.w + 8, b.h + 8);
-        ctx.fillStyle = b.color;
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.fillRect(b.x, b.y, b.w, b.h);
-        ctx.strokeRect(b.x, b.y, b.w, b.h);
+        const shadowColor = 'rgba(8, 12, 28, 0.55)';
+        this.drawRoundedRect(ctx, b.x - 2, b.y - 2, b.w + 4, b.h + 4, 8, shadowColor);
+        this.drawRoundedRect(ctx, b.x, b.y, b.w, b.h, 7, 'rgba(255, 112, 164, 0.9)', 'rgba(255, 214, 235, 0.85)', 1.6);
       }
 
       const p = this.player;
       const x1 = p.x - p.w / 2;
       const y1 = p.y - p.h / 2;
-      ctx.fillStyle = THEME.accent2;
-      ctx.fillRect(x1 - 6, y1 - 5, p.w + 12, p.h + 10);
-      ctx.fillStyle = THEME.accent;
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 2;
-      ctx.fillRect(x1, y1, p.w, p.h);
-      ctx.strokeRect(x1, y1, p.w, p.h);
+      this.drawRoundedRect(ctx, x1 - 2, y1 - 2, p.w + 4, p.h + 4, 8, 'rgba(10, 16, 36, 0.62)');
+      this.drawRoundedRect(ctx, x1, y1, p.w, p.h, 7, 'rgba(102, 230, 255, 0.95)', 'rgba(215, 249, 255, 0.95)', 1.6);
 
       for (const particle of this.particles) {
         ctx.globalAlpha = particle.life;
