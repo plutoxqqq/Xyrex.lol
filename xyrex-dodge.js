@@ -171,24 +171,15 @@
         const wrap = this.canvas.parentElement;
         const gameMain = this.mount.querySelector('.xy-game-main');
         const sidePanel = this.mount.querySelector('.xy-sidepanel');
-        const aspect = 960 / 620;
 
-        const availableWidth = Math.max(280, wrap.clientWidth - 8);
+        const availableWidth = Math.max(280, wrap.clientWidth);
         const reservedPanelHeight = gameMain && sidePanel && getComputedStyle(gameMain).gridTemplateColumns.split(' ').length === 1
           ? sidePanel.offsetHeight + 8
           : 0;
-        const availableHeight = Math.max(220, wrap.clientHeight - reservedPanelHeight - 8);
+        const availableHeight = Math.max(220, wrap.clientHeight - reservedPanelHeight);
 
-        let width = Math.min(960, availableWidth);
-        let height = width / aspect;
-
-        if (height > availableHeight) {
-          height = availableHeight;
-          width = Math.max(280, height * aspect);
-        }
-
-        this.canvas.style.width = `${Math.round(width)}px`;
-        this.canvas.style.height = `${Math.round(height)}px`;
+        this.canvas.style.width = `${Math.round(availableWidth)}px`;
+        this.canvas.style.height = `${Math.round(availableHeight)}px`;
       };
 
       this.syncUi();
@@ -280,6 +271,8 @@
       this.gameOver = false;
       this.pauseBtn.textContent = 'Pause';
       this.overlay.hidden = true;
+      this.overlay.style.display = 'none';
+      this.overlay.innerHTML = '';
       this.score = 0;
       this.runCoins = 0;
       this.level = 1;
@@ -420,6 +413,7 @@
       this.statusEl.textContent = 'Game over';
       this.statusEl.className = 'xy-status danger';
       this.overlay.hidden = false;
+      this.overlay.style.display = 'flex';
       this.overlay.innerHTML = `<div class="xy-overlay-card"><h3>Game Over</h3><p>Score: <strong>${this.score}</strong></p><p>Coins earned: <strong>${this.runCoins}</strong></p><p>Press R or click Restart.</p></div>`;
     }
 

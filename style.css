@@ -271,8 +271,8 @@ body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 210px; 
 .xy-game-top p{ margin:5px 0 0; color:#c2d2ef; font-size:.9rem; }
 .xy-game-stats{ display:flex; gap:8px; flex-wrap:wrap; }
 .xy-game-stats span{ padding:8px 10px; border-radius:8px; border:1px solid rgba(178,188,255,.2); background:rgba(17,24,42,.85); color:#ffde7a; font-weight:700; }
-.xy-canvas-wrap{ position:relative; border:1px solid rgba(178,188,255,.2); border-radius:10px; background:#0b1020; min-height:240px; overflow:hidden; display:flex; justify-content:center; align-items:center; }
-#xyGameCanvas{ display:block; width:100%; max-width:960px; height:auto; background:#0b1020; }
+.xy-canvas-wrap{ position:relative; border:1px solid rgba(178,188,255,.2); border-radius:10px; background:#0b1020; min-height:240px; overflow:hidden; display:flex; justify-content:stretch; align-items:stretch; }
+#xyGameCanvas{ display:block; width:100%; height:100%; max-width:none; background:#0b1020; }
 .xy-sidepanel{ display:flex; flex-direction:column; gap:8px; min-height:0; }
 .xy-sidecard{ border:1px solid rgba(178,188,255,.2); border-radius:10px; background:rgba(17,24,42,.9); padding:8px; }
 .xy-sidecard h3{ margin:0 0 8px; color:#eef4ff; }
