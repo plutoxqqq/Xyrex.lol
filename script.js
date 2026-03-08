@@ -412,6 +412,7 @@ const scriptsHubData = {
     'Redesigned Theme Customizer with Basic and Advanced subtabs and added five pastel preset circles for one-click themes',
     'Fixed pink theme mood mapping so New UI surfaces, panels, cards, and overlays now fully follow the selected palette',
     'Expanded New UI theme application so all blue UI surfaces now follow the selected palette, including buttons, search, Script Hub controls, and form elements'
+    'Fixed pink theme mood mapping so New UI surfaces, panels, cards, and overlays now fully follow the selected palette'
   ]
 };
 
