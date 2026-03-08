@@ -3,15 +3,19 @@ body.new-ui-enabled {
   --newui-surface-2: color-mix(in srgb, var(--panel-2) 82%, #0b1328 18%);
   --newui-border: color-mix(in srgb, var(--periwinkle-2) 30%, transparent);
   --newui-border-strong: color-mix(in srgb, var(--periwinkle-2) 52%, transparent);
+  --newui-panel-strong: color-mix(in srgb, var(--panel) 82%, var(--bg-2) 18%);
+  --newui-panel-soft: color-mix(in srgb, var(--panel-2) 74%, var(--bg) 26%);
+  --newui-chip-bg: color-mix(in srgb, var(--panel) 70%, var(--bg) 30%);
+  --newui-surface-low: color-mix(in srgb, var(--card) 64%, var(--bg) 36%);
   --newui-glow: 0 18px 44px rgba(0, 0, 0, 0.44);
   background-image:
     radial-gradient(1200px 600px at 92% -8%, color-mix(in srgb, var(--periwinkle) 33%, transparent), transparent 60%),
     radial-gradient(900px 520px at -12% 12%, color-mix(in srgb, var(--periwinkle-2) 20%, transparent), transparent 62%),
-    linear-gradient(180deg, #05070f 0%, #070b17 100%);
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
 }
 
 body.new-ui-enabled .topnav {
-  background: rgba(7, 10, 20, 0.72);
+  background: color-mix(in srgb, var(--bg) 74%, transparent);
   border-bottom-color: var(--newui-border);
   backdrop-filter: blur(18px);
 }
@@ -29,27 +33,51 @@ body.new-ui-enabled .script-card {
   box-shadow: var(--newui-glow);
 }
 
+body.new-ui-enabled .subtab-panel,
+body.new-ui-enabled .rank-item,
+body.new-ui-enabled .script-card,
+body.new-ui-enabled .saved-script-item,
+body.new-ui-enabled .status-panel,
+body.new-ui-enabled .info-stat {
+  background: color-mix(in srgb, var(--panel-2) 82%, var(--bg) 18%);
+}
+
 body.new-ui-enabled .sidebar,
 body.new-ui-enabled .main-content {
-  background: linear-gradient(160deg, rgba(12, 18, 35, 0.9), rgba(10, 15, 29, 0.82));
+  background: linear-gradient(160deg, var(--newui-panel-strong), var(--newui-panel-soft));
 }
 
 body.new-ui-enabled .legend {
-  background: linear-gradient(135deg, rgba(20, 27, 53, 0.72), rgba(12, 17, 34, 0.62));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--panel) 78%, transparent), color-mix(in srgb, var(--panel-2) 72%, transparent));
   border-color: var(--newui-border);
   padding: 12px;
 }
 
 body.new-ui-enabled .legend-item {
-  background: rgba(11, 16, 32, 0.62);
+  background: color-mix(in srgb, var(--panel) 64%, transparent);
   border: 1px solid color-mix(in srgb, var(--periwinkle-2) 24%, transparent);
   border-radius: 999px;
 }
 
+body.new-ui-enabled .legend-icon.warning,
+body.new-ui-enabled .legend-icon.trending,
+body.new-ui-enabled .legend-icon.internal,
+body.new-ui-enabled .legend-icon.external,
+body.new-ui-enabled .legend-icon.sunc,
+body.new-ui-enabled .legend-icon.verified {
+  background: color-mix(in srgb, var(--periwinkle) 24%, var(--panel) 76%);
+  color: var(--periwinkle-2);
+}
+
 body.new-ui-enabled .card {
-  background: linear-gradient(175deg, rgba(20, 27, 50, 0.86), rgba(13, 18, 36, 0.8));
+  background: linear-gradient(175deg, color-mix(in srgb, var(--card) 88%, var(--panel) 12%), color-mix(in srgb, var(--panel-2) 82%, var(--bg) 18%));
   border-color: var(--newui-border);
   overflow: hidden;
+}
+
+body.new-ui-enabled .card.featured-card::before {
+  background: linear-gradient(90deg, var(--periwinkle) 0%, var(--periwinkle-2) 55%, color-mix(in srgb, var(--periwinkle-2) 60%, #ffffff 40%) 100%);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--periwinkle) 40%, transparent);
 }
 
 body.new-ui-enabled .card:hover {
@@ -66,7 +94,7 @@ body.new-ui-enabled .summary {
 }
 
 body.new-ui-enabled .price {
-  background: rgba(10, 16, 32, 0.68);
+  background: color-mix(in srgb, var(--newui-surface-low) 84%, transparent);
   border: 1px solid color-mix(in srgb, var(--periwinkle-2) 22%, transparent);
   border-radius: 999px;
   width: fit-content;
@@ -84,7 +112,7 @@ body.new-ui-enabled .price {
   letter-spacing: 0.02em;
   font-weight: 700;
   color: var(--periwinkle-2);
-  background: rgba(10, 16, 30, 0.74);
+  background: color-mix(in srgb, var(--newui-surface-low) 88%, transparent);
   border: 1px solid var(--newui-border);
 }
 
@@ -93,7 +121,7 @@ body.new-ui-enabled .price {
   padding: 14px;
   border-radius: 14px;
   border: 1px solid var(--newui-border);
-  background: linear-gradient(160deg, rgba(16, 22, 43, 0.82), rgba(10, 15, 30, 0.72));
+  background: linear-gradient(160deg, color-mix(in srgb, var(--panel) 84%, transparent), color-mix(in srgb, var(--panel-2) 76%, transparent));
 }
 
 .insights-head {
@@ -113,7 +141,7 @@ body.new-ui-enabled .price {
   padding: 5px 10px;
   font-size: 0.78rem;
   color: var(--periwinkle-2);
-  background: rgba(10, 16, 34, 0.72);
+  background: color-mix(in srgb, var(--newui-chip-bg) 90%, transparent);
   border: 1px solid color-mix(in srgb, var(--periwinkle-2) 26%, transparent);
 }
 
@@ -121,7 +149,7 @@ body.new-ui-enabled .price {
   margin-top: 10px;
   border-radius: 12px;
   border: 1px solid color-mix(in srgb, var(--periwinkle-2) 24%, transparent);
-  background: rgba(8, 13, 26, 0.72);
+  background: color-mix(in srgb, var(--panel) 74%, transparent);
   padding: 12px;
 }
 
@@ -149,7 +177,7 @@ body.new-ui-enabled .price {
   min-height: 42px;
   border-radius: 10px;
   border: 1px solid color-mix(in srgb, var(--periwinkle-2) 24%, transparent);
-  background: rgba(9, 15, 31, 0.7);
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
   color: var(--text);
   font-weight: 700;
   cursor: pointer;
@@ -158,7 +186,7 @@ body.new-ui-enabled .price {
 
 .new-ui-info-btn:hover,
 .new-ui-ai-btn:hover {
-  background: rgba(22, 30, 59, 0.9);
+  background: color-mix(in srgb, var(--panel-2) 88%, var(--card) 12%);
   border-color: var(--newui-border-strong);
   transform: translateY(-1px);
 }
@@ -187,10 +215,10 @@ body.new-ui-enabled .price {
 }
 
 .new-ui-theme-panel {
-  width: min(92vw, 560px);
+  width: min(94vw, 760px);
   border-radius: 16px;
   border: 1px solid var(--newui-border);
-  background: linear-gradient(170deg, rgba(13, 20, 40, 0.95), rgba(8, 13, 26, 0.95));
+  background: linear-gradient(170deg, color-mix(in srgb, var(--panel) 90%, var(--bg) 10%), color-mix(in srgb, var(--panel-2) 90%, var(--bg-2) 10%));
   box-shadow: var(--newui-glow);
   padding: 16px;
 }
@@ -214,7 +242,7 @@ body.new-ui-enabled .price {
 
 .new-ui-theme-close {
   border: 1px solid var(--newui-border);
-  background: rgba(11, 17, 34, 0.9);
+  background: color-mix(in srgb, var(--panel) 78%, var(--bg) 22%);
   color: var(--text);
   width: 32px;
   height: 32px;
@@ -224,8 +252,59 @@ body.new-ui-enabled .price {
 
 .new-ui-theme-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
+}
+
+.new-ui-theme-tabs {
+  display: inline-flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.new-ui-theme-tab {
+  border: 1px solid var(--newui-border);
+  background: color-mix(in srgb, var(--panel) 78%, var(--bg) 22%);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.new-ui-theme-tab.is-active {
+  color: #091020;
+  border-color: transparent;
+  background: linear-gradient(90deg, var(--periwinkle), var(--periwinkle-2));
+}
+
+.new-ui-theme-panel-block {
+  margin-top: 4px;
+}
+
+.new-ui-theme-note {
+  margin: 0 0 10px;
+  color: var(--muted);
+}
+
+.new-ui-preset-swatches {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.new-ui-preset-swatch {
+  inline-size: 42px;
+  block-size: 42px;
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--periwinkle-2) 34%, transparent);
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+}
+
+.new-ui-preset-swatch:hover {
+  transform: translateY(-1px);
 }
 
 .new-ui-theme-grid label {
@@ -236,7 +315,7 @@ body.new-ui-enabled .price {
   padding: 10px;
   border-radius: 10px;
   border: 1px solid var(--newui-border);
-  background: rgba(12, 18, 35, 0.86);
+  background: color-mix(in srgb, var(--panel-2) 84%, var(--bg) 16%);
 }
 
 .new-ui-theme-grid input[type="color"] {
@@ -251,6 +330,130 @@ body.new-ui-enabled .price {
   justify-content: flex-end;
   gap: 8px;
   margin-top: 12px;
+}
+
+
+
+/* Full theme takeover for all previously blue surfaces in New UI mode */
+body.new-ui-enabled .search-input {
+  border-color: color-mix(in srgb, var(--periwinkle-2) 34%, transparent);
+  background: color-mix(in srgb, var(--panel) 74%, var(--bg) 26%);
+  color: var(--text);
+}
+
+body.new-ui-enabled .search-input:focus {
+  border-color: var(--periwinkle-2);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--periwinkle) 28%, transparent);
+}
+
+body.new-ui-enabled .ui-toggle-btn,
+body.new-ui-enabled .page-switch-btn,
+body.new-ui-enabled .subtab-btn,
+body.new-ui-enabled .btn-primary,
+body.new-ui-enabled .btn-danger {
+  border-color: color-mix(in srgb, var(--periwinkle-2) 34%, transparent);
+  background: color-mix(in srgb, var(--panel) 76%, var(--bg) 24%);
+  color: var(--text);
+}
+
+body.new-ui-enabled .page-switch-btn.is-active,
+body.new-ui-enabled .subtab-btn.is-active,
+body.new-ui-enabled .btn-primary,
+body.new-ui-enabled .ui-toggle-btn.is-active {
+  background: linear-gradient(90deg, var(--periwinkle), var(--periwinkle-2));
+  color: color-mix(in srgb, var(--bg) 74%, #05070f 26%);
+  border-color: transparent;
+}
+
+body.new-ui-enabled .btn-danger {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent-warning) 68%, #9d2d63 32%), color-mix(in srgb, var(--periwinkle) 35%, #a5377d 65%));
+  color: var(--text);
+}
+
+body.new-ui-enabled .filter-checkbox,
+body.new-ui-enabled .price-checkbox {
+  border-color: color-mix(in srgb, var(--periwinkle-2) 58%, transparent);
+  background: color-mix(in srgb, var(--panel-2) 70%, var(--bg) 30%);
+}
+
+body.new-ui-enabled .filter-checkbox:checked,
+body.new-ui-enabled .price-checkbox:checked {
+  background: var(--periwinkle);
+  border-color: var(--periwinkle-2);
+}
+
+body.new-ui-enabled .platform-chip,
+body.new-ui-enabled .sunc,
+body.new-ui-enabled .price,
+body.new-ui-enabled .tag,
+body.new-ui-enabled .info-chip,
+body.new-ui-enabled .rank-badge {
+  background: color-mix(in srgb, var(--panel-2) 74%, var(--bg) 26%);
+  border-color: color-mix(in srgb, var(--periwinkle-2) 30%, transparent);
+  color: var(--periwinkle-2);
+}
+
+body.new-ui-enabled .subtabs,
+body.new-ui-enabled .saved-script-item,
+body.new-ui-enabled .script-input,
+body.new-ui-enabled .script-textarea,
+body.new-ui-enabled .status-panel,
+body.new-ui-enabled .info-stat,
+body.new-ui-enabled .script-card pre {
+  background: color-mix(in srgb, var(--panel-2) 80%, var(--bg) 20%);
+  border-color: color-mix(in srgb, var(--periwinkle-2) 26%, transparent);
+  color: var(--text);
+}
+
+body.new-ui-enabled .saved-script-item.is-active {
+  background: color-mix(in srgb, var(--card) 82%, var(--panel) 18%);
+  border-color: color-mix(in srgb, var(--periwinkle-2) 46%, transparent);
+}
+
+body.new-ui-enabled .sidebar,
+body.new-ui-enabled .main-content,
+body.new-ui-enabled .script-textarea {
+  scrollbar-color: color-mix(in srgb, var(--periwinkle-2) 42%, transparent) transparent;
+}
+
+body.new-ui-enabled .sidebar::-webkit-scrollbar-thumb,
+body.new-ui-enabled .main-content::-webkit-scrollbar-thumb,
+body.new-ui-enabled .script-textarea::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--periwinkle-2) 42%, transparent);
+  border-radius: 999px;
+}
+
+body.new-ui-enabled .sidebar::-webkit-scrollbar-track,
+body.new-ui-enabled .main-content::-webkit-scrollbar-track,
+body.new-ui-enabled .script-textarea::-webkit-scrollbar-track {
+  background: color-mix(in srgb, var(--panel) 55%, transparent);
+}
+
+body.new-ui-enabled .official-link-btn,
+body.new-ui-enabled .official-site-btn,
+body.new-ui-enabled .discord-nav-link {
+  background: color-mix(in srgb, var(--panel) 78%, var(--bg) 22%);
+  border-color: color-mix(in srgb, var(--periwinkle-2) 34%, transparent);
+  color: var(--text);
+}
+
+body.new-ui-enabled .sidebar-title,
+body.new-ui-enabled .subpage-header h2,
+body.new-ui-enabled .price,
+body.new-ui-enabled .rank-badge,
+body.new-ui-enabled .brand {
+  color: var(--periwinkle-2);
+}
+
+body.new-ui-enabled .summary,
+body.new-ui-enabled .rank-item p,
+body.new-ui-enabled .script-card p,
+body.new-ui-enabled .filter-group label,
+body.new-ui-enabled .input-label,
+body.new-ui-enabled .dev-list,
+body.new-ui-enabled .saved-empty,
+body.new-ui-enabled .modal-headline {
+  color: var(--muted);
 }
 
 @media (max-width: 780px) {
