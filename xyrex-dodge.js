@@ -46,7 +46,7 @@
     aiTokenDate: '',
     aiTokensUsedToday: 0,
     aiPurchasedTokens: 0,
-    activeCheats: ['none'],
+    activeCheats: [],
   };
 
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
@@ -85,7 +85,7 @@
           ownedPowerups: Array.isArray(parsed.ownedPowerups) ? parsed.ownedPowerups.filter(name => POWERUPS[name]) : [],
           selectedModifier: MODIFIERS[parsed.selectedModifier] ? parsed.selectedModifier : 'Balanced',
           selectedPowerup: POWERUPS[parsed.selectedPowerup] ? parsed.selectedPowerup : 'None',
-          activeCheats: Array.isArray(parsed.activeCheats) && parsed.activeCheats.length ? parsed.activeCheats.map(item => String(item).toLowerCase()) : ['none'],
+          activeCheats: Array.isArray(parsed.activeCheats) ? parsed.activeCheats.map(item => String(item).toLowerCase()).filter(Boolean) : [],
         };
       } catch {
         return { ...DEFAULT_DATA };
@@ -176,12 +176,11 @@
               <div id="xyCheatCard" class="xy-sidecard" hidden>
                 <h3>Cheat Menu</h3>
                 <div class="xy-cheat-grid">
-                  <label class="xy-cheat-item"><input type="checkbox" data-cheat="none" checked /> None</label>
                   <label class="xy-cheat-item"><input type="checkbox" data-cheat="autoplay" /> Auto Play</label>
                   <label class="xy-cheat-item"><input type="checkbox" data-cheat="nodeath" /> No Death</label>
                   <label class="xy-cheat-item"><input type="checkbox" data-cheat="insane" /> Insane Completion</label>
                   <label class="xy-cheat-item"><input type="checkbox" data-cheat="slowtime" /> Slow Time</label>
-                  <label class="xy-cheat-item"><input type="checkbox" data-cheat="ghost" /> Ghost Drift</label>
+                  <label class="xy-cheat-item"><input type="checkbox" data-cheat="ghost" /> Ghost Trail</label>
                 </div>
                 <p class="xy-cheat-note">Coins are disabled while cheats are active</p>
               </div>
@@ -245,18 +244,15 @@
         input.addEventListener('change', () => {
           const cheat = input.getAttribute('data-cheat');
           if (!cheat) return;
-          const selected = new Set((this.data.activeCheats || ['none']).map(item => String(item).toLowerCase()));
+          const selected = new Set((this.data.activeCheats || []).map(item => String(item).toLowerCase()));
 
-          if (cheat === 'none') {
-            this.data.activeCheats = ['none'];
-          } else if (input.checked) {
-            selected.delete('none');
+          if (input.checked) {
             selected.add(cheat);
-            this.data.activeCheats = [...selected];
           } else {
             selected.delete(cheat);
-            this.data.activeCheats = selected.size ? [...selected] : ['none'];
           }
+
+          this.data.activeCheats = [...selected];
 
           this.saveData();
           this.updateCheatUi();
@@ -408,14 +404,12 @@
     }
 
     activeCheatSet() {
-      const active = Array.isArray(this.data.activeCheats) ? this.data.activeCheats.map(item => String(item).toLowerCase()) : ['none'];
-      if (!active.length) return new Set(['none']);
+      const active = Array.isArray(this.data.activeCheats) ? this.data.activeCheats.map(item => String(item).toLowerCase()).filter(Boolean) : [];
       return new Set(active);
     }
 
     hasEnabledCheat() {
-      const cheats = this.activeCheatSet();
-      return !(cheats.size === 1 && cheats.has('none'));
+      return this.activeCheatSet().size > 0;
     }
 
     updateCheatUi() {
@@ -428,7 +422,7 @@
         if (!cheat) return;
 
         if (!betaEnabled) {
-          input.checked = cheat === 'none';
+          input.checked = false;
           input.disabled = true;
           return;
         }
@@ -574,6 +568,8 @@
       };
       this.blocks = [];
       this.particles = [];
+      this.playerLaneHistory = [];
+      this.ghostDirection = 1;
       this.statusEl.textContent = 'Running';
       this.statusEl.className = 'xy-status running';
       this.updateModifierUi();
@@ -638,7 +634,7 @@
     }
 
     patternCandidates() {
-      return [[0],[1],[2],[3],[4],[5],[1,2],[2,3],[3,4],[0,2],[1,3],[2,4],[3,5],[0,1],[4,5],[1,3,5],[0,2,4]];
+      return [[0],[1],[2],[3],[4],[5],[0,1],[1,2],[2,3],[3,4],[4,5],[0,2],[1,3],[2,4],[3,5],[0,3],[1,4],[2,5],[0,1,3],[1,2,4],[2,3,5],[0,2,4],[1,3,5]];
     }
 
     scorePattern(pattern) {
@@ -658,6 +654,17 @@
       const nearestEscape = Math.min(...futureOpen.map(lane => Math.abs(lane - p)));
       score += nearestEscape === 0 ? 3.5 : nearestEscape === 1 ? 2.0 : nearestEscape >= 3 ? -1.6 : 0;
       score += pattern.length * (0.6 + Math.min(this.level, 8) * 0.1);
+
+      const lastLanes = (this.playerLaneHistory || []).slice(-12);
+      if (lastLanes.length >= 6) {
+        const uniqueLanes = new Set(lastLanes);
+        if (uniqueLanes.size <= 2) {
+          const oscillationSet = new Set(lastLanes);
+          const blocksOscillation = [...oscillationSet].every(lane => pattern.includes(lane));
+          if (!blocksOscillation) score -= 2.8;
+        }
+      }
+
       score += Math.random() * 0.8 - 0.4;
       return score;
     }
@@ -688,13 +695,34 @@
         const safeLanes = this.safeLanes();
         if (safeLanes.length) {
           if (insane) {
-            const riskyLanes = [...Array(6).keys()].filter(lane => !safeLanes.includes(lane));
-            const lanePool = riskyLanes.length ? riskyLanes : safeLanes;
-            this.player.targetLane = lanePool[Math.floor(Math.random() * lanePool.length)];
+            const laneW = 960 / 6;
+            const currentLane = Math.max(0, Math.min(5, Math.round((this.player.x - laneW / 2) / laneW)));
+            if (!safeLanes.includes(currentLane)) {
+              this.player.targetLane = safeLanes.reduce((best, lane) => (Math.abs(lane - currentLane) < Math.abs(best - currentLane) ? lane : best), safeLanes[0]);
+              this.player.x = this.player.targetLane * laneW + laneW / 2;
+            } else {
+              this.player.targetLane = currentLane;
+            }
           } else if (ghost) {
-            this.player.targetLane = (this.player.targetLane + 1 + Math.floor(Math.random() * 2)) % 6;
+            const safeSorted = [...safeLanes].sort((a, b) => a - b);
+            const current = this.player.targetLane;
+            const nearestSafe = safeSorted.reduce((best, lane) => (Math.abs(lane - current) < Math.abs(best - current) ? lane : best), safeSorted[0]);
+            let nextLane = nearestSafe + this.ghostDirection;
+            if (!safeSorted.includes(nextLane)) {
+              this.ghostDirection *= -1;
+              nextLane = nearestSafe + this.ghostDirection;
+            }
+            this.player.targetLane = safeSorted.includes(nextLane) ? nextLane : nearestSafe;
           } else {
-            this.player.targetLane = safeLanes.reduce((best, lane) => (Math.abs(lane - this.player.targetLane) < Math.abs(best - this.player.targetLane) ? lane : best), safeLanes[0]);
+            const preferredLane = safeLanes.reduce((best, lane) => {
+              const laneVisits = (this.playerLaneHistory || []).filter(item => item === lane).length;
+              const bestVisits = (this.playerLaneHistory || []).filter(item => item === best).length;
+              const distScore = Math.abs(lane - this.player.targetLane);
+              const bestDistScore = Math.abs(best - this.player.targetLane);
+              if (laneVisits !== bestVisits) return laneVisits < bestVisits ? lane : best;
+              return distScore < bestDistScore ? lane : best;
+            }, safeLanes[0]);
+            this.player.targetLane = preferredLane;
           }
         }
       }
@@ -705,11 +733,15 @@
       this.keys.right = false;
       const laneW = 960 / 6;
       const targetX = this.player.targetLane * laneW + laneW / 2;
-      if (this.powerups.has('Quickstep') || autoPlay) {
+      if (this.powerups.has('Quickstep') || autoPlay || insane) {
         this.player.x = targetX;
       } else {
         this.player.x += (targetX - this.player.x) * (0.16 * this.mod.playerSpeed);
       }
+
+      const settledLane = Math.max(0, Math.min(5, Math.round((this.player.x - laneW / 2) / laneW)));
+      this.playerLaneHistory.push(settledLane);
+      if (this.playerLaneHistory.length > 20) this.playerLaneHistory.shift();
     }
 
     hitBlock(b) {
@@ -726,7 +758,6 @@
 
     endRun() {
       if (this.gameOver) return;
-      if (this.activeCheatSet().has('nodeath')) return;
       if (this.lives > 1) {
         this.lives -= 1;
         this.blocks = this.blocks.filter(b => b.y < this.player.y - 60 || b.y > this.player.y + 60);
@@ -752,6 +783,10 @@
       for (const b of this.blocks) {
         b.y += b.speed * (dt * 60);
         if (this.hitBlock(b)) {
+          if (this.activeCheatSet().has('nodeath')) {
+            this.flashStatus('No Death prevented a collision.', 'running');
+            continue;
+          }
           this.particles.push(...Array.from({ length: 18 }, () => ({
             x: this.player.x,
             y: this.player.y,
@@ -769,7 +804,7 @@
           if (!this.hasEnabledCheat()) {
             const baseCoins = Math.max(1, Math.round(this.mod.coinBonus));
             const coinBoost = this.powerups.has('Lucky Drift') ? 1.2 : 1;
-            this.runCoins += Math.max(1, Math.round(baseCoins * coinBoost));
+            this.runCoins += Math.max(1, Math.ceil(baseCoins * coinBoost));
           }
         } else {
           alive.push(b);
@@ -851,27 +886,6 @@
       const y1 = p.y - p.h / 2;
       this.drawRoundedRect(ctx, x1 - 2, y1 - 2, p.w + 4, p.h + 4, 8, 'rgba(10, 16, 36, 0.62)');
       this.drawRoundedRect(ctx, x1, y1, p.w, p.h, 7, 'rgba(102, 230, 255, 0.95)', 'rgba(215, 249, 255, 0.95)', 1.6);
-
-      if (betaFeaturesEnabled()) {
-        const safe = this.safeLanes();
-        if (safe.length) {
-          const laneW = 960 / 6;
-          const target = safe.reduce((best, lane) => (Math.abs(lane - this.player.targetLane) < Math.abs(best - this.player.targetLane) ? lane : best), safe[0]);
-          const hintX = target * laneW + laneW / 2;
-          ctx.strokeStyle = 'rgba(132, 255, 177, 0.85)';
-          ctx.lineWidth = 3;
-          ctx.setLineDash([10, 8]);
-          ctx.beginPath();
-          ctx.moveTo(hintX, 80);
-          ctx.lineTo(hintX, 600);
-          ctx.stroke();
-          ctx.setLineDash([]);
-          ctx.fillStyle = 'rgba(132, 255, 177, 0.95)';
-          ctx.font = 'bold 16px Inter, system-ui, sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText('BETA Safe Lane Assist', hintX, 62);
-        }
-      }
 
       for (const particle of this.particles) {
         ctx.globalAlpha = particle.life;
