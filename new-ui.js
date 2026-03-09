@@ -378,6 +378,10 @@
   }
 
   function tryConsumeAiToken() {
+    if (typeof window.XyrexDodge?.consumeAiToken === 'function') {
+      return Boolean(window.XyrexDodge.consumeAiToken());
+    }
+
     const raw = getDodgeData();
     const data = normalizeTokenState(raw);
     const available = availableAiTokensFromState(data);
