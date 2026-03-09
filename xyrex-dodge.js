@@ -46,6 +46,7 @@
     aiTokenDate: '',
     aiTokensUsedToday: 0,
     aiPurchasedTokens: 0,
+    activeCheats: ['none'],
   };
 
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
@@ -84,6 +85,7 @@
           ownedPowerups: Array.isArray(parsed.ownedPowerups) ? parsed.ownedPowerups.filter(name => POWERUPS[name]) : [],
           selectedModifier: MODIFIERS[parsed.selectedModifier] ? parsed.selectedModifier : 'Balanced',
           selectedPowerup: POWERUPS[parsed.selectedPowerup] ? parsed.selectedPowerup : 'None',
+          activeCheats: Array.isArray(parsed.activeCheats) && parsed.activeCheats.length ? parsed.activeCheats.map(item => String(item).toLowerCase()) : ['none'],
         };
       } catch {
         return { ...DEFAULT_DATA };
@@ -171,6 +173,18 @@
                   <button type="button" data-token-pack="5" data-token-cost="200">200 coins → 5 tokens</button>
                 </div>
               </div>
+              <div id="xyCheatCard" class="xy-sidecard" hidden>
+                <h3>Cheat Menu</h3>
+                <div class="xy-cheat-grid">
+                  <label class="xy-cheat-item"><input type="checkbox" data-cheat="none" checked /> None</label>
+                  <label class="xy-cheat-item"><input type="checkbox" data-cheat="autoplay" /> Auto Play</label>
+                  <label class="xy-cheat-item"><input type="checkbox" data-cheat="nodeath" /> No Death</label>
+                  <label class="xy-cheat-item"><input type="checkbox" data-cheat="insane" /> Insane Completion</label>
+                  <label class="xy-cheat-item"><input type="checkbox" data-cheat="slowtime" /> Slow Time</label>
+                  <label class="xy-cheat-item"><input type="checkbox" data-cheat="ghost" /> Ghost Drift</label>
+                </div>
+                <p class="xy-cheat-note">Coins are disabled while cheats are active</p>
+              </div>
             </aside>
           </div>
         </section>
@@ -196,6 +210,8 @@
       this.mobileGameplayNotice = this.mount.querySelector('#xyMobileGameplayNotice');
       this.modifierMobileNotice = this.mount.querySelector('[data-mobile-shop-notice="modifier"]');
       this.powerupMobileNotice = this.mount.querySelector('[data-mobile-shop-notice="powerup"]');
+      this.cheatCard = this.mount.querySelector('#xyCheatCard');
+      this.cheatInputs = Array.from(this.mount.querySelectorAll('[data-cheat]'));
 
       this.modSelect.innerHTML = Object.keys(MODIFIERS)
         .map(name => `<option value="${name}">${name}</option>`)
@@ -224,6 +240,29 @@
           this.buyTokenPack(amount, cost);
         });
       });
+
+      this.cheatInputs.forEach(input => {
+        input.addEventListener('change', () => {
+          const cheat = input.getAttribute('data-cheat');
+          if (!cheat) return;
+          const selected = new Set((this.data.activeCheats || ['none']).map(item => String(item).toLowerCase()));
+
+          if (cheat === 'none') {
+            this.data.activeCheats = ['none'];
+          } else if (input.checked) {
+            selected.delete('none');
+            selected.add(cheat);
+            this.data.activeCheats = [...selected];
+          } else {
+            selected.delete(cheat);
+            this.data.activeCheats = selected.size ? [...selected] : ['none'];
+          }
+
+          this.saveData();
+          this.updateCheatUi();
+        });
+      });
+
       this.pauseBtn.addEventListener('click', () => this.togglePause());
       this.restartBtn.addEventListener('click', () => this.restart());
 
@@ -368,6 +407,37 @@
       this.applyMobileShopState?.();
     }
 
+    activeCheatSet() {
+      const active = Array.isArray(this.data.activeCheats) ? this.data.activeCheats.map(item => String(item).toLowerCase()) : ['none'];
+      if (!active.length) return new Set(['none']);
+      return new Set(active);
+    }
+
+    hasEnabledCheat() {
+      const cheats = this.activeCheatSet();
+      return !(cheats.size === 1 && cheats.has('none'));
+    }
+
+    updateCheatUi() {
+      const betaEnabled = betaFeaturesEnabled();
+      if (this.cheatCard) this.cheatCard.hidden = !betaEnabled;
+
+      const set = this.activeCheatSet();
+      this.cheatInputs.forEach(input => {
+        const cheat = input.getAttribute('data-cheat');
+        if (!cheat) return;
+
+        if (!betaEnabled) {
+          input.checked = cheat === 'none';
+          input.disabled = true;
+          return;
+        }
+
+        input.disabled = false;
+        input.checked = set.has(cheat);
+      });
+    }
+
     updateTokenShopUi() {
       this.ensureTokenState();
       const freeRemaining = Math.max(0, FREE_DAILY_AI_TOKENS - this.data.aiTokensUsedToday);
@@ -446,6 +516,7 @@
 
     start() {
       this.applyMobileGameplayState?.();
+      this.updateCheatUi();
       if (this.isMobileViewport?.()) {
         this.stop();
         return;
@@ -507,6 +578,7 @@
       this.statusEl.className = 'xy-status running';
       this.updateModifierUi();
       this.updatePowerupUi();
+      this.updateCheatUi();
       this.updateTokenShopUi();
       this.syncUi();
     }
@@ -527,14 +599,18 @@
       const rampFactor = this.powerups.has('Block Slowdown') ? 0.5 : 1;
       const rampStretch = 0.5;
       const base = 3 + elapsed * 0.06 * rampFactor * rampStretch + this.score * 0.012 * rampFactor * rampStretch;
-      return clamp(base * this.mod.pressure, 0, 18);
+      const cheats = this.activeCheatSet();
+      const cheatScale = cheats.has('slowtime') ? 0.55 : 1;
+      return clamp(base * this.mod.pressure * cheatScale, 0, 18);
     }
 
     currentSpawnInterval(elapsed) {
       const rampFactor = this.powerups.has('Block Slowdown') ? 0.5 : 1;
       const rampStretch = 0.5;
       const interval = (1.05 - elapsed * 0.0026 * rampFactor * rampStretch - this.score * 0.0009 * rampFactor * rampStretch) / this.mod.pressure;
-      return clamp(interval, 0.21, 1.8);
+      const cheats = this.activeCheatSet();
+      const cheatScale = cheats.has('slowtime') ? 1.35 : 1;
+      return clamp(interval * cheatScale, 0.21, 2.2);
     }
 
     lanePressure() {
@@ -603,13 +679,33 @@
     }
 
     updatePlayer() {
+      const cheats = this.activeCheatSet();
+      const autoPlay = cheats.has('autoplay');
+      const insane = cheats.has('insane');
+      const ghost = cheats.has('ghost');
+
+      if (autoPlay || insane || ghost) {
+        const safeLanes = this.safeLanes();
+        if (safeLanes.length) {
+          if (insane) {
+            const riskyLanes = [...Array(6).keys()].filter(lane => !safeLanes.includes(lane));
+            const lanePool = riskyLanes.length ? riskyLanes : safeLanes;
+            this.player.targetLane = lanePool[Math.floor(Math.random() * lanePool.length)];
+          } else if (ghost) {
+            this.player.targetLane = (this.player.targetLane + 1 + Math.floor(Math.random() * 2)) % 6;
+          } else {
+            this.player.targetLane = safeLanes.reduce((best, lane) => (Math.abs(lane - this.player.targetLane) < Math.abs(best - this.player.targetLane) ? lane : best), safeLanes[0]);
+          }
+        }
+      }
+
       if (this.keys.left) this.player.targetLane = Math.max(0, this.player.targetLane - 1);
       if (this.keys.right) this.player.targetLane = Math.min(5, this.player.targetLane + 1);
       this.keys.left = false;
       this.keys.right = false;
       const laneW = 960 / 6;
       const targetX = this.player.targetLane * laneW + laneW / 2;
-      if (this.powerups.has('Quickstep')) {
+      if (this.powerups.has('Quickstep') || autoPlay) {
         this.player.x = targetX;
       } else {
         this.player.x += (targetX - this.player.x) * (0.16 * this.mod.playerSpeed);
@@ -630,6 +726,7 @@
 
     endRun() {
       if (this.gameOver) return;
+      if (this.activeCheatSet().has('nodeath')) return;
       if (this.lives > 1) {
         this.lives -= 1;
         this.blocks = this.blocks.filter(b => b.y < this.player.y - 60 || b.y > this.player.y + 60);
@@ -669,9 +766,11 @@
         }
         if (b.y > 620) {
           this.score += 1;
-          const baseCoins = Math.max(1, Math.round(this.mod.coinBonus));
-          const coinBoost = this.powerups.has('Lucky Drift') ? 1.2 : 1;
-          this.runCoins += Math.max(1, Math.round(baseCoins * coinBoost));
+          if (!this.hasEnabledCheat()) {
+            const baseCoins = Math.max(1, Math.round(this.mod.coinBonus));
+            const coinBoost = this.powerups.has('Lucky Drift') ? 1.2 : 1;
+            this.runCoins += Math.max(1, Math.round(baseCoins * coinBoost));
+          }
         } else {
           alive.push(b);
         }

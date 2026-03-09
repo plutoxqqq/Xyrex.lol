@@ -4,6 +4,54 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Xyrex.lol</title>
+  <script>
+    (function () {
+      const GLOBAL_PREFIX = '__xyrex_global__';
+      const CURRENT_ACCOUNT_KEY = `${GLOBAL_PREFIX}current_account`;
+      const listeners = new Set();
+      const originalGetItem = localStorage.getItem.bind(localStorage);
+      const originalSetItem = localStorage.setItem.bind(localStorage);
+      const originalRemoveItem = localStorage.removeItem.bind(localStorage);
+
+      let activeAccount = originalGetItem(CURRENT_ACCOUNT_KEY) || 'guest';
+
+      function scopedKey(key) {
+        const value = String(key || '');
+        if (value.startsWith(GLOBAL_PREFIX)) return value;
+        return `acct:${activeAccount}:${value}`;
+      }
+
+      localStorage.getItem = key => originalGetItem(scopedKey(key));
+      localStorage.setItem = (key, value) => originalSetItem(scopedKey(key), value);
+      localStorage.removeItem = key => originalRemoveItem(scopedKey(key));
+
+      window.XyrexAccountScope = {
+        getAccount() {
+          return activeAccount;
+        },
+        setAccount(nextAccount) {
+          const normalized = String(nextAccount || '').trim().toLowerCase() || 'guest';
+          activeAccount = normalized;
+          originalSetItem(CURRENT_ACCOUNT_KEY, normalized);
+          listeners.forEach(listener => {
+            try {
+              listener(normalized);
+            } catch {
+              // no-op
+            }
+          });
+        },
+        onAccountChange(callback) {
+          if (typeof callback !== 'function') return () => {};
+          listeners.add(callback);
+          return () => listeners.delete(callback);
+        },
+        clearAccount() {
+          this.setAccount('guest');
+        }
+      };
+    })();
+  </script>
   <link rel="icon" href="/favicon.ico" type="image/x-icon" />
   <link rel="stylesheet" href="/style.css?v=2.0.0" />
 </head>
@@ -174,6 +222,7 @@
   </div>
 
   <script src="/xyrex-dodge.js" defer></script>
+  <script src="/account-auth.js" defer></script>
   <script src="/script.js" defer></script>
 </body>
 </html>

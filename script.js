@@ -753,6 +753,11 @@ function setBetaFeaturesEnabled(enabled) {
   document.body.classList.toggle('beta-features-enabled', enabled);
 }
 
+function getCurrentAccountName() {
+  const account = window.XyrexAuth?.getCurrentAccount?.() || window.XyrexAccountScope?.getAccount?.() || 'guest';
+  return String(account || 'guest');
+}
+
 function openSettingsModal() {
   const overlay = qs('#modalOverlay');
   const content = qs('#modalContent');
@@ -767,25 +772,27 @@ function openSettingsModal() {
       <div class="settings-group">
         <h3>Interface</h3>
         <div class="settings-actions">
-          <button id="settingsUiModeBtn" class="btn-primary" type="button">${isNewUiMode ? 'Switch to Default UI' : 'Switch to New UI'}</button>
-          <button id="settingsThemeCustomizerBtn" class="btn-primary" type="button" ${isNewUiMode ? '' : 'disabled'}>Theme Customizer</button>
+          <button id="settingsUiModeBtn" class="btn-primary settings-action-btn" type="button">${isNewUiMode ? 'Switch to Default UI' : 'Switch to New UI'}</button>
+          <button id="settingsThemeCustomizerBtn" class="btn-primary settings-action-btn" type="button" ${isNewUiMode ? '' : 'disabled'}>Theme Customizer</button>
         </div>
         <p class="settings-note">Theme Customizer is available when New UI mode is active</p>
       </div>
       <div class="settings-group">
         <h3>Gameplay</h3>
         <div class="settings-actions">
-          <button id="settingsPlayDodgeBtn" class="btn-primary" type="button">Play Dodge</button>
-          <button id="settingsBetaFeaturesBtn" class="btn-primary" type="button">${getBetaFeaturesEnabled() ? 'Disable BETA Features' : 'Enable BETA Features'}</button>
+          <button id="settingsPlayDodgeBtn" class="btn-primary settings-action-btn" type="button">Play Dodge</button>
+          <button id="settingsBetaFeaturesBtn" class="btn-primary settings-action-btn" type="button">${getBetaFeaturesEnabled() ? 'Disable BETA Features' : 'Enable BETA Features'}</button>
         </div>
       </div>
       <div class="settings-group">
         <h3>Account</h3>
+        <p class="settings-note">Current account: <strong>${escapeHtml(getCurrentAccountName())}</strong></p>
         <div class="settings-actions">
-          <button id="settingsLoginBtn" class="btn-primary" type="button">Login</button>
-          <button id="settingsSignUpBtn" class="btn-primary" type="button">Sign Up</button>
+          <button id="settingsLoginBtn" class="btn-primary settings-action-btn" type="button">Login</button>
+          <button id="settingsSignUpBtn" class="btn-primary settings-action-btn" type="button">Sign Up</button>
+          <button id="settingsLogoutBtn" class="btn-primary settings-action-btn" type="button">Log Out</button>
         </div>
-        <p class="settings-note">Secure account storage requires a server-side backend and database, and this static build cannot safely store tamper-proof credentials</p>
+        <p class="settings-note">Account data is scoped to the active profile in this browser</p>
       </div>
       <div class="settings-group">
         <h3>AI Usage</h3>
@@ -826,12 +833,15 @@ function openSettingsModal() {
     openSettingsModal();
   });
 
-  const accountNotSupportedMessage = 'Secure account login and sign up require a server-side backend, and this static version cannot provide tamper-proof account storage';
   qs('#settingsLoginBtn')?.addEventListener('click', () => {
-    window.alert(accountNotSupportedMessage);
+    window.XyrexAuth?.openAuthModal?.('login');
   });
   qs('#settingsSignUpBtn')?.addEventListener('click', () => {
-    window.alert(accountNotSupportedMessage);
+    window.XyrexAuth?.openAuthModal?.('signup');
+  });
+  qs('#settingsLogoutBtn')?.addEventListener('click', () => {
+    window.XyrexAccountScope?.clearAccount?.();
+    window.location.reload();
   });
 
   qs('#modalCloseBtn').focus();

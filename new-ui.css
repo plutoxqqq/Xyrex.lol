@@ -488,3 +488,13 @@ body.new-ui-enabled .settings-tab-btn:hover,
 body.new-ui-enabled .discord-nav-link:hover {
   color: var(--text);
 }
+
+body.new-ui-enabled .settings-action-btn {
+  border: 1px solid var(--newui-border);
+  background: color-mix(in srgb, var(--panel) 82%, transparent);
+  color: var(--text);
+}
+
+body.new-ui-enabled .settings-action-btn:hover {
+  background: color-mix(in srgb, var(--panel-2) 86%, transparent);
+}
