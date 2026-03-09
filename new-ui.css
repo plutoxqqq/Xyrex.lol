@@ -473,8 +473,22 @@ body.new-ui-enabled .modal-headline {
   }
 }
 
-body.new-ui-enabled .discord-nav-link {
+body.new-ui-enabled {
+  --icon-color: var(--muted);
+  --icon-color-hover: var(--text);
+}
+
+body.new-ui-enabled .themed-icon-control {
   background: transparent;
-  border-color: transparent;
   box-shadow: none;
+}
+
+body.new-ui-enabled .settings-action-btn {
+  border: 1px solid var(--newui-border);
+  background: color-mix(in srgb, var(--panel) 82%, transparent);
+  color: var(--text);
+}
+
+body.new-ui-enabled .settings-action-btn:hover {
+  background: color-mix(in srgb, var(--panel-2) 86%, transparent);
 }
