@@ -158,6 +158,12 @@
   }
 
   function openAuthModal(mode = 'login') {
+    const currentAccount = ACCOUNT_SCOPE.getAccount?.() || 'guest';
+    if (mode === 'login' && currentAccount !== 'guest') {
+      window.alert('You are already logged into an account. Please log out first if you want to switch accounts.');
+      return;
+    }
+
     ensureModal();
     const modal = document.getElementById('xyAuthModal');
     if (!modal) return;

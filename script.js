@@ -758,6 +758,10 @@ function getCurrentAccountName() {
   return String(account || 'guest');
 }
 
+function isGuestAccount() {
+  return getCurrentAccountName() === 'guest';
+}
+
 function openSettingsModal() {
   const overlay = qs('#modalOverlay');
   const content = qs('#modalContent');
@@ -790,7 +794,7 @@ function openSettingsModal() {
         <div class="settings-actions">
           <button id="settingsLoginBtn" class="btn-primary settings-action-btn" type="button">Login</button>
           <button id="settingsSignUpBtn" class="btn-primary settings-action-btn" type="button">Sign Up</button>
-          <button id="settingsLogoutBtn" class="btn-primary settings-action-btn" type="button">Log Out</button>
+          ${isGuestAccount() ? '' : '<button id="settingsLogoutBtn" class="btn-primary settings-action-btn" type="button">Log Out</button>'}
         </div>
         <p class="settings-note">Account data is scoped to the active profile in this browser</p>
       </div>
@@ -834,6 +838,10 @@ function openSettingsModal() {
   });
 
   qs('#settingsLoginBtn')?.addEventListener('click', () => {
+    if (!isGuestAccount()) {
+      window.alert('You are already logged into an account. Please log out first if you want to switch accounts.');
+      return;
+    }
     window.XyrexAuth?.openAuthModal?.('login');
   });
   qs('#settingsSignUpBtn')?.addEventListener('click', () => {
