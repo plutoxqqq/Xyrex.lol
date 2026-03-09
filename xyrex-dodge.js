@@ -787,6 +787,52 @@
   }
 
   let gameInstance = null;
+  const readTokenSummary = () => {
+    let parsed = { ...DEFAULT_DATA };
+    try {
+      parsed = { ...DEFAULT_DATA, ...(JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') || {}) };
+    } catch {
+      parsed = { ...DEFAULT_DATA };
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const usedToday = parsed.aiTokenDate === today ? Math.max(0, Number(parsed.aiTokensUsedToday) || 0) : 0;
+    const freeRemaining = Math.max(0, FREE_DAILY_AI_TOKENS - usedToday);
+    const purchased = Math.max(0, Number(parsed.aiPurchasedTokens) || 0);
+    return {
+      available: freeRemaining + purchased,
+      freeRemaining,
+      purchased
+    };
+  };
+
+  const consumeAiToken = () => {
+    const data = (() => {
+      try {
+        return { ...DEFAULT_DATA, ...(JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') || {}) };
+      } catch {
+        return { ...DEFAULT_DATA };
+      }
+    })();
+
+    const today = new Date().toISOString().slice(0, 10);
+    if (data.aiTokenDate !== today) {
+      data.aiTokenDate = today;
+      data.aiTokensUsedToday = 0;
+    }
+
+    const purchased = Math.max(0, Number(data.aiPurchasedTokens) || 0);
+    const usedToday = Math.max(0, Number(data.aiTokensUsedToday) || 0);
+    const freeRemaining = Math.max(0, FREE_DAILY_AI_TOKENS - usedToday);
+    if (freeRemaining + purchased <= 0) return false;
+
+    if (freeRemaining > 0) data.aiTokensUsedToday = usedToday + 1;
+    else data.aiPurchasedTokens = purchased - 1;
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    return true;
+  };
+
   const ensureGame = () => {
     const mount = document.querySelector('#xyrexDodgeMount');
     if (!mount) return null;
@@ -807,5 +853,11 @@
       gameInstance?.destroy();
       gameInstance = null;
     },
+    getTokenSummary() {
+      return readTokenSummary();
+    },
+    consumeAiToken() {
+      return consumeAiToken();
+    }
   };
 })();

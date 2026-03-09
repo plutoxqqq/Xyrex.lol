@@ -727,6 +727,77 @@ function openModal(product) {
   qs('#modalCloseBtn').focus();
 }
 
+function getAiTokenSummary() {
+  const fallback = { available: 0, freeRemaining: 0, purchased: 0 };
+  const summary = window.XyrexDodge?.getTokenSummary?.();
+  if (!summary || typeof summary !== 'object') return fallback;
+  return {
+    available: Number.isFinite(summary.available) ? summary.available : 0,
+    freeRemaining: Number.isFinite(summary.freeRemaining) ? summary.freeRemaining : 0,
+    purchased: Number.isFinite(summary.purchased) ? summary.purchased : 0
+  };
+}
+
+function openSettingsModal() {
+  const overlay = qs('#modalOverlay');
+  const content = qs('#modalContent');
+  const tokenSummary = getAiTokenSummary();
+
+  content.innerHTML = `
+    <section class="settings-modal">
+      <header class="settings-modal-head">
+        <h2>Settings</h2>
+        <p class="modal-headline">Manage interface preferences, open the dodge game quickly, and review your AI token balance.</p>
+      </header>
+      <div class="settings-group">
+        <h3>Interface</h3>
+        <div class="settings-actions">
+          <button id="settingsUiModeBtn" class="btn-primary" type="button">${isNewUiMode ? 'Switch to Default UI' : 'Switch to New UI'}</button>
+          <button id="settingsThemeCustomizerBtn" class="btn-primary" type="button" ${isNewUiMode ? '' : 'disabled'}>Theme Customizer</button>
+        </div>
+        <p class="settings-note">Theme Customizer is available when New UI mode is active.</p>
+      </div>
+      <div class="settings-group">
+        <h3>Gameplay</h3>
+        <div class="settings-actions">
+          <button id="settingsPlayDodgeBtn" class="btn-primary" type="button">Play Dodge</button>
+        </div>
+      </div>
+      <div class="settings-group">
+        <h3>AI Usage</h3>
+        <p class="settings-token-count">Available AI tokens: <strong>${tokenSummary.available}</strong> (Daily: ${tokenSummary.freeRemaining}, Purchased: ${tokenSummary.purchased})</p>
+      </div>
+      <footer class="settings-credit">Made by Joseph (plutoxqq)</footer>
+    </section>`;
+
+  overlay.classList.remove('is-closing');
+  overlay.setAttribute('aria-hidden', 'false');
+
+  const uiModeBtn = qs('#settingsUiModeBtn');
+  uiModeBtn?.addEventListener('click', async () => {
+    isNewUiMode = !isNewUiMode;
+    localStorage.setItem(uiModeStorageKey, isNewUiMode ? 'new' : 'default');
+    await applyUiMode();
+    syncRouteWithState();
+    openSettingsModal();
+  });
+
+  const themeBtn = qs('#settingsThemeCustomizerBtn');
+  themeBtn?.addEventListener('click', () => {
+    if (!isNewUiMode || !window.XyrexNewUI?.toggleThemeCustomizer) return;
+    window.XyrexNewUI.toggleThemeCustomizer();
+  });
+
+  const dodgeBtn = qs('#settingsPlayDodgeBtn');
+  dodgeBtn?.addEventListener('click', () => {
+    syncNavButtonsWithPage('easterEggPage');
+    setActivePage('easterEggPage');
+    closeModal();
+  });
+
+  qs('#modalCloseBtn').focus();
+}
+
 function closeModal() {
   const overlay = qs('#modalOverlay');
   if (overlay.getAttribute('aria-hidden') === 'true') return;
@@ -874,24 +945,9 @@ function loadNewUiModule() {
   });
 }
 
-function updateUiToggleButton() {
-  const button = qs('#uiModeToggleBtn');
-  if (!button) return;
-  button.textContent = isNewUiMode ? 'Default UI' : 'New UI';
-  button.classList.toggle('is-active', isNewUiMode);
-  button.setAttribute('aria-pressed', String(isNewUiMode));
-}
-
 async function applyUiMode() {
-  updateUiToggleButton();
-  const themeBtn = qs('#themeCustomizerBtn');
-
   if (!isNewUiMode) {
     if (window.XyrexNewUI) window.XyrexNewUI.disable();
-    if (themeBtn) {
-      themeBtn.hidden = true;
-      themeBtn.setAttribute('aria-hidden', 'true');
-    }
     return;
   }
 
@@ -899,19 +955,10 @@ async function applyUiMode() {
   if (!loaded || !window.XyrexNewUI) {
     isNewUiMode = false;
     localStorage.setItem(uiModeStorageKey, 'default');
-    updateUiToggleButton();
-    if (themeBtn) {
-      themeBtn.hidden = true;
-      themeBtn.setAttribute('aria-hidden', 'true');
-    }
     return;
   }
 
   window.XyrexNewUI.enable();
-  if (themeBtn) {
-    themeBtn.hidden = false;
-    themeBtn.setAttribute('aria-hidden', 'false');
-  }
 }
 
 let activePageId = null;
@@ -948,6 +995,10 @@ function getRouteStateFromPath(pathname) {
   let pageId = 'executorsPage';
   let subtabId = 'tierPaidPanel';
 
+  if (segments[cursor] === 'dodge') {
+    pageId = 'easterEggPage';
+  }
+
   if (segments[cursor] === 'scripthub') {
     pageId = 'scriptsPage';
     const slug = segments[cursor + 1] || '';
@@ -970,6 +1021,8 @@ function buildPathFromState() {
     if (subtabSegment && activeSubtabId !== 'tierPaidPanel') return `${base}/scripthub/${subtabSegment}`;
     return `${base}/scripthub`;
   }
+
+  if (activePageId === 'easterEggPage') return `${base}/dodge`;
 
   return base || '/';
 }
@@ -1165,17 +1218,7 @@ function init() {
     setActivePage('executorsPage');
   });
 
-  qs('#uiModeToggleBtn').addEventListener('click', async () => {
-    isNewUiMode = !isNewUiMode;
-    localStorage.setItem(uiModeStorageKey, isNewUiMode ? 'new' : 'default');
-    await applyUiMode();
-    syncRouteWithState();
-  });
-
-  qs('#themeCustomizerBtn').addEventListener('click', () => {
-    if (!isNewUiMode || !window.XyrexNewUI?.toggleThemeCustomizer) return;
-    window.XyrexNewUI.toggleThemeCustomizer();
-  });
+  qs('#settingsTabBtn').addEventListener('click', openSettingsModal);
 
   qsa('.filter-checkbox').forEach(cb => cb.addEventListener('change', applyAllFilters));
   qsa('.price-checkbox').forEach(cb => cb.addEventListener('change', applyAllFilters));
