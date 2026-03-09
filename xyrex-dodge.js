@@ -142,12 +142,18 @@
               </div>
               <div class="xy-sidecard">
                 <h3>Modifier</h3>
+                <div class="xy-mobile-shop-notice" data-mobile-shop-notice="modifier" hidden>
+                  Modifier purchases are not supported on mobile yet. Please use desktop to buy and equip modifiers.
+                </div>
                 <select id="xyModifierSelect"></select>
                 <p id="xyModifierDesc"></p>
                 <button id="xyBuyBtn" type="button">Buy selected</button>
               </div>
               <div class="xy-sidecard">
                 <h3>Powerups</h3>
+                <div class="xy-mobile-shop-notice" data-mobile-shop-notice="powerup" hidden>
+                  Powerup purchases are not supported on mobile yet. Please use desktop to buy and equip powerups.
+                </div>
                 <select id="xyPowerupSelect"></select>
                 <p id="xyPowerupDesc"></p>
                 <button id="xyBuyPowerupBtn" type="button">Buy selected</button>
@@ -183,6 +189,8 @@
       this.powerupDesc = this.mount.querySelector('#xyPowerupDesc');
       this.buyPowerupBtn = this.mount.querySelector('#xyBuyPowerupBtn');
       this.tokenCountEl = this.mount.querySelector('#xyTokenCount');
+      this.modifierMobileNotice = this.mount.querySelector('[data-mobile-shop-notice="modifier"]');
+      this.powerupMobileNotice = this.mount.querySelector('[data-mobile-shop-notice="powerup"]');
 
       this.modSelect.innerHTML = Object.keys(MODIFIERS)
         .map(name => `<option value="${name}">${name}</option>`)
@@ -256,12 +264,29 @@
         this.canvas.style.height = `${Math.round(availableHeight)}px`;
       };
 
+      this.applyMobileShopState = () => {
+        const isMobileViewport = window.matchMedia('(max-width: 900px)').matches && window.matchMedia('(pointer: coarse)').matches;
+        const selectedPowerup = this.data.selectedPowerup && POWERUPS[this.data.selectedPowerup] ? this.data.selectedPowerup : 'None';
+        const modifierOwned = this.data.ownedModifiers.includes(this.data.selectedModifier);
+        const powerupOwned = selectedPowerup === 'None' || this.data.ownedPowerups.includes(selectedPowerup);
+
+        this.modSelect.disabled = isMobileViewport;
+        this.buyBtn.disabled = isMobileViewport || modifierOwned;
+        this.powerupSelect.disabled = isMobileViewport;
+        this.buyPowerupBtn.disabled = isMobileViewport || powerupOwned;
+
+        if (this.modifierMobileNotice) this.modifierMobileNotice.hidden = !isMobileViewport;
+        if (this.powerupMobileNotice) this.powerupMobileNotice.hidden = !isMobileViewport;
+      };
+
       this.syncUi();
       this.updateModifierUi();
       this.updatePowerupUi();
       this.updateTokenShopUi();
       this.applyResponsiveCanvas();
+      this.applyMobileShopState();
       window.addEventListener('resize', this.applyResponsiveCanvas);
+      window.addEventListener('resize', this.applyMobileShopState);
     }
 
     syncUi() {
@@ -279,6 +304,7 @@
       this.modDesc.innerHTML = `${mod.desc}<br>Coin multiplier: x${mod.coinBonus.toFixed(2)}<br>Speed multiplier: x${mod.playerSpeed.toFixed(2)}<br>Pressure multiplier: x${mod.pressure.toFixed(2)}`;
       this.buyBtn.disabled = owned;
       this.buyBtn.textContent = owned ? 'Owned' : `Buy (${mod.price} coins)`;
+      this.applyMobileShopState?.();
     }
 
     updatePowerupUi() {
@@ -295,6 +321,7 @@
         this.buyPowerupBtn.disabled = owned;
         this.buyPowerupBtn.textContent = owned ? 'Owned' : `Buy (${powerup.price} coins)`;
       }
+      this.applyMobileShopState?.();
     }
 
     updateTokenShopUi() {
@@ -395,6 +422,7 @@
     destroy() {
       this.stop();
       window.removeEventListener('resize', this.applyResponsiveCanvas);
+      window.removeEventListener('resize', this.applyMobileShopState);
       this.mount.innerHTML = '';
     }
 

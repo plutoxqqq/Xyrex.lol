@@ -274,6 +274,7 @@ body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 250px; 
 #xyGameCanvas{ display:block; width:100%; height:100%; max-width:none; background:#0b1020; }
 .xy-sidepanel{ display:flex; flex-direction:column; gap:8px; min-height:0; overflow-y:auto; padding-right:2px; }
 .xy-sidecard{ border:1px solid rgba(178,188,255,.2); border-radius:10px; background:rgba(17,24,42,.9); padding:8px; }
+.xy-mobile-shop-notice{ margin:0 0 8px; padding:8px; border-radius:8px; border:1px solid rgba(255,209,102,.36); background:rgba(255,209,102,.12); color:#ffe4ab; font-size:.8rem; line-height:1.35; }
 .xy-sidecard h3{ margin:0 0 8px; color:#eef4ff; }
 .xy-sidecard p{ margin:8px 0 0; color:#c2d2ef; font-size:.86rem; line-height:1.4; }
 .xy-status{ margin-top:8px; font-weight:700; }
@@ -380,15 +381,23 @@ body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 250px; 
 }
 
 @media (max-width: 720px){
-  body.easter-game-mode .main-content{ padding:10px; }
-  body.easter-game-mode .xy-game-top{ padding:8px; gap:8px; }
+  body.easter-game-mode .main-content{ padding:10px; overflow:auto; }
+  body.easter-game-mode .xy-game-shell{ gap:8px; }
+  body.easter-game-mode .xy-game-top{ padding:8px; gap:8px; flex-direction:column; align-items:stretch; }
   body.easter-game-mode .xy-game-stats span{ padding:6px 8px; font-size:.84rem; }
-  body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 200px; gap:8px; }
+  body.easter-game-mode .xy-game-main{ grid-template-columns:1fr; gap:8px; }
+  body.easter-game-mode .xy-canvas-wrap{ min-height:200px; max-height:44dvh; }
+  body.easter-game-mode .xy-sidepanel{ max-height:none; overflow:visible; padding-right:0; }
   body.easter-game-mode .xy-sidecard{ padding:7px; }
   body.easter-game-mode .xy-run-actions{ gap:6px; }
   body.easter-game-mode .xy-run-actions button,
   body.easter-game-mode .xy-sidecard button,
   body.easter-game-mode .xy-sidecard select{ padding:7px 8px; font-size:.82rem; }
+}
+
+@media (max-width: 900px) and (orientation: landscape){
+  body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 220px; }
+  body.easter-game-mode .xy-canvas-wrap{ min-height:170px; }
 }
 
 @media (prefers-reduced-motion: reduce){
