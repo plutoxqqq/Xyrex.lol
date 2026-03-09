@@ -498,6 +498,11 @@ function createProductCard(product, index) {
   if (product.featured) card.classList.add('featured-card');
   card.setAttribute('data-index', index);
   card.setAttribute('data-name', product.name);
+  card.dataset.officialSite = product.officialSite || '';
+  card.dataset.officialDiscord = product.officialDiscord || '';
+  card.dataset.status = product.status || '';
+  card.dataset.trustLevel = product.trustLevel || '';
+  card.dataset.stability = product.stability || '';
 
   const body = document.createElement('div');
   body.className = 'card-body';
@@ -738,6 +743,16 @@ function getAiTokenSummary() {
   };
 }
 
+
+function getBetaFeaturesEnabled() {
+  return localStorage.getItem('xyrex_beta_features') === 'enabled';
+}
+
+function setBetaFeaturesEnabled(enabled) {
+  localStorage.setItem('xyrex_beta_features', enabled ? 'enabled' : 'disabled');
+  document.body.classList.toggle('beta-features-enabled', enabled);
+}
+
 function openSettingsModal() {
   const overlay = qs('#modalOverlay');
   const content = qs('#modalContent');
@@ -747,7 +762,7 @@ function openSettingsModal() {
     <section class="settings-modal">
       <header class="settings-modal-head">
         <h2>Settings</h2>
-        <p class="modal-headline">Manage interface preferences, open the dodge game quickly, and review your AI token balance.</p>
+        <p class="modal-headline">Manage interface preferences, open the dodge game quickly, and review your AI token balance</p>
       </header>
       <div class="settings-group">
         <h3>Interface</h3>
@@ -755,17 +770,26 @@ function openSettingsModal() {
           <button id="settingsUiModeBtn" class="btn-primary" type="button">${isNewUiMode ? 'Switch to Default UI' : 'Switch to New UI'}</button>
           <button id="settingsThemeCustomizerBtn" class="btn-primary" type="button" ${isNewUiMode ? '' : 'disabled'}>Theme Customizer</button>
         </div>
-        <p class="settings-note">Theme Customizer is available when New UI mode is active.</p>
+        <p class="settings-note">Theme Customizer is available when New UI mode is active</p>
       </div>
       <div class="settings-group">
         <h3>Gameplay</h3>
         <div class="settings-actions">
           <button id="settingsPlayDodgeBtn" class="btn-primary" type="button">Play Dodge</button>
+          <button id="settingsBetaFeaturesBtn" class="btn-primary" type="button">${getBetaFeaturesEnabled() ? 'Disable BETA Features' : 'Enable BETA Features'}</button>
         </div>
       </div>
       <div class="settings-group">
+        <h3>Account</h3>
+        <div class="settings-actions">
+          <button id="settingsLoginBtn" class="btn-primary" type="button">Login</button>
+          <button id="settingsSignUpBtn" class="btn-primary" type="button">Sign Up</button>
+        </div>
+        <p class="settings-note">Secure account storage requires a server-side backend and database, and this static build cannot safely store tamper-proof credentials</p>
+      </div>
+      <div class="settings-group">
         <h3>AI Usage</h3>
-        <p class="settings-token-count">Available AI tokens: <strong>${tokenSummary.available}</strong> (Daily: ${tokenSummary.freeRemaining}, Purchased: ${tokenSummary.purchased})</p>
+        <p class="settings-token-count">Available AI tokens: <strong>${tokenSummary.available}</strong></p>
       </div>
       <footer class="settings-credit">Made by Joseph (plutoxqq)</footer>
     </section>`;
@@ -793,6 +817,21 @@ function openSettingsModal() {
     syncNavButtonsWithPage('easterEggPage');
     setActivePage('easterEggPage');
     closeModal();
+  });
+
+  const betaBtn = qs('#settingsBetaFeaturesBtn');
+  betaBtn?.addEventListener('click', () => {
+    const enabled = !getBetaFeaturesEnabled();
+    setBetaFeaturesEnabled(enabled);
+    openSettingsModal();
+  });
+
+  const accountNotSupportedMessage = 'Secure account login and sign up require a server-side backend, and this static version cannot provide tamper-proof account storage';
+  qs('#settingsLoginBtn')?.addEventListener('click', () => {
+    window.alert(accountNotSupportedMessage);
+  });
+  qs('#settingsSignUpBtn')?.addEventListener('click', () => {
+    window.alert(accountNotSupportedMessage);
   });
 
   qs('#modalCloseBtn').focus();
@@ -1196,6 +1235,7 @@ function initScriptsHub() {
 }
 
 function init() {
+  setBetaFeaturesEnabled(getBetaFeaturesEnabled());
   renderProducts(products);
   initScriptsHub();
   injectLegendIcons();
@@ -1214,6 +1254,8 @@ function init() {
   });
 
   qs('#brandHomeBtn').addEventListener('click', () => {
+    qs('#searchInput').value = '';
+    applyAllFilters();
     syncNavButtonsWithPage('executorsPage');
     setActivePage('executorsPage');
   });

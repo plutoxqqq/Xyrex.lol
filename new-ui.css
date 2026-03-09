@@ -473,8 +473,12 @@ body.new-ui-enabled .modal-headline {
   }
 }
 
-body.new-ui-enabled .settings-tab-btn,
-body.new-ui-enabled .discord-nav-link {
+body.new-ui-enabled {
+  --icon-color: var(--muted);
+  --icon-color-hover: var(--text);
+}
+
+body.new-ui-enabled .themed-icon-control {
   background: transparent;
   box-shadow: none;
   color: var(--muted);
