@@ -21,11 +21,11 @@
   };
 
   const MODIFIERS = {
-    Balanced: { price: 0, desc: 'Steady all-round setup', playerSpeed: 1.0, coinBonus: 1.0, pressure: 1.0 },
-    'Rich Run': { price: 160, desc: 'More coins with higher pressure', playerSpeed: 1.0, coinBonus: 1.5, pressure: 1.2 },
-    Swift: { price: 100, desc: 'Faster movement with light pressure', playerSpeed: 1.25, coinBonus: 1.0, pressure: 1.05 },
-    Zen: { price: 140, desc: 'Calm pace and lighter rewards', playerSpeed: 1.0, coinBonus: 0.5, pressure: 0.5 },
-    Challenger: { price: 120, desc: 'For those who want a challenge...', playerSpeed: 0.5, coinBonus: 2, pressure: 1.85 },
+    Balanced: { price: 0, desc: '', playerSpeed: 1.0, coinBonus: 1.0, pressure: 1.0 },
+    'Rich Run': { price: 160, desc: '', playerSpeed: 1.0, coinBonus: 1.5, pressure: 1.2 },
+    Swift: { price: 100, desc: '', playerSpeed: 1.25, coinBonus: 1.0, pressure: 1.05 },
+    Zen: { price: 140, desc: '', playerSpeed: 1.0, coinBonus: 0.5, pressure: 0.5 },
+    Challenger: { price: 120, desc: '', playerSpeed: 0.5, coinBonus: 2, pressure: 1.85 },
   };
 
   const POWERUPS = {
@@ -50,6 +50,7 @@
 
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  const betaFeaturesEnabled = () => localStorage.getItem('xyrex_beta_features') === 'enabled';
 
   class XyrexDodgeGame {
     constructor(mount) {
@@ -117,7 +118,7 @@
           <header class="xy-game-top">
             <div>
               <h2>Xyrex Dodge</h2>
-              <p>Dodge waves, earn coins, and unlock modifiers</p>
+              <p>Dodge waves, earn coins, and test your reflexes</p>
               <div id="xyMobileGameplayNotice" class="xy-mobile-gameplay-notice" hidden>
                 Gameplay is not supported on mobile yet. Please use desktop for the dodge run. The Token Shop still works on mobile.
               </div>
@@ -165,9 +166,9 @@
                 <h3>Token Shop</h3>
                 <div id="xyTokenCount" class="xy-token-count"></div>
                 <div class="xy-token-actions">
-                  <button type="button" data-token-pack="1" data-token-cost="30">30 coins → 1 token</button>
-                  <button type="button" data-token-pack="2" data-token-cost="50">50 coins → 2 tokens</button>
-                  <button type="button" data-token-pack="5" data-token-cost="100">100 coins → 5 tokens</button>
+                  <button type="button" data-token-pack="1" data-token-cost="60">60 coins → 1 token</button>
+                  <button type="button" data-token-pack="2" data-token-cost="100">100 coins → 2 tokens</button>
+                  <button type="button" data-token-pack="5" data-token-cost="200">200 coins → 5 tokens</button>
                 </div>
               </div>
             </aside>
@@ -344,7 +345,7 @@
       const mod = MODIFIERS[selected] ?? MODIFIERS.Balanced;
       const owned = this.data.ownedModifiers.includes(selected);
       this.modSelect.value = selected;
-      this.modDesc.innerHTML = `${mod.desc}<br>Coin multiplier: x${mod.coinBonus.toFixed(2)}<br>Speed multiplier: x${mod.playerSpeed.toFixed(2)}<br>Pressure multiplier: x${mod.pressure.toFixed(2)}`;
+      this.modDesc.textContent = '';
       this.buyBtn.disabled = owned;
       this.buyBtn.textContent = owned ? 'Owned' : `Buy (${mod.price} coins)`;
       this.applyMobileShopState?.();
@@ -752,6 +753,27 @@
       this.drawRoundedRect(ctx, x1 - 2, y1 - 2, p.w + 4, p.h + 4, 8, 'rgba(10, 16, 36, 0.62)');
       this.drawRoundedRect(ctx, x1, y1, p.w, p.h, 7, 'rgba(102, 230, 255, 0.95)', 'rgba(215, 249, 255, 0.95)', 1.6);
 
+      if (betaFeaturesEnabled()) {
+        const safe = this.safeLanes();
+        if (safe.length) {
+          const laneW = 960 / 6;
+          const target = safe.reduce((best, lane) => (Math.abs(lane - this.player.targetLane) < Math.abs(best - this.player.targetLane) ? lane : best), safe[0]);
+          const hintX = target * laneW + laneW / 2;
+          ctx.strokeStyle = 'rgba(132, 255, 177, 0.85)';
+          ctx.lineWidth = 3;
+          ctx.setLineDash([10, 8]);
+          ctx.beginPath();
+          ctx.moveTo(hintX, 80);
+          ctx.lineTo(hintX, 600);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = 'rgba(132, 255, 177, 0.95)';
+          ctx.font = 'bold 16px Inter, system-ui, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('BETA Safe Lane Assist', hintX, 62);
+        }
+      }
+
       for (const particle of this.particles) {
         ctx.globalAlpha = particle.life;
         ctx.fillStyle = particle.color;
@@ -787,6 +809,52 @@
   }
 
   let gameInstance = null;
+  const readTokenSummary = () => {
+    let parsed = { ...DEFAULT_DATA };
+    try {
+      parsed = { ...DEFAULT_DATA, ...(JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') || {}) };
+    } catch {
+      parsed = { ...DEFAULT_DATA };
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const usedToday = parsed.aiTokenDate === today ? Math.max(0, Number(parsed.aiTokensUsedToday) || 0) : 0;
+    const freeRemaining = Math.max(0, FREE_DAILY_AI_TOKENS - usedToday);
+    const purchased = Math.max(0, Number(parsed.aiPurchasedTokens) || 0);
+    return {
+      available: freeRemaining + purchased,
+      freeRemaining,
+      purchased
+    };
+  };
+
+  const consumeAiToken = () => {
+    const data = (() => {
+      try {
+        return { ...DEFAULT_DATA, ...(JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') || {}) };
+      } catch {
+        return { ...DEFAULT_DATA };
+      }
+    })();
+
+    const today = new Date().toISOString().slice(0, 10);
+    if (data.aiTokenDate !== today) {
+      data.aiTokenDate = today;
+      data.aiTokensUsedToday = 0;
+    }
+
+    const purchased = Math.max(0, Number(data.aiPurchasedTokens) || 0);
+    const usedToday = Math.max(0, Number(data.aiTokensUsedToday) || 0);
+    const freeRemaining = Math.max(0, FREE_DAILY_AI_TOKENS - usedToday);
+    if (freeRemaining + purchased <= 0) return false;
+
+    if (freeRemaining > 0) data.aiTokensUsedToday = usedToday + 1;
+    else data.aiPurchasedTokens = purchased - 1;
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    return true;
+  };
+
   const ensureGame = () => {
     const mount = document.querySelector('#xyrexDodgeMount');
     if (!mount) return null;
@@ -807,5 +875,11 @@
       gameInstance?.destroy();
       gameInstance = null;
     },
+    getTokenSummary() {
+      return readTokenSummary();
+    },
+    consumeAiToken() {
+      return consumeAiToken();
+    }
   };
 })();
