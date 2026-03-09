@@ -481,6 +481,12 @@ body.new-ui-enabled {
 body.new-ui-enabled .themed-icon-control {
   background: transparent;
   box-shadow: none;
+  color: var(--muted);
+}
+
+body.new-ui-enabled .settings-tab-btn:hover,
+body.new-ui-enabled .discord-nav-link:hover {
+  color: var(--text);
 }
 
 body.new-ui-enabled .settings-action-btn {
