@@ -118,6 +118,9 @@
             <div>
               <h2>Xyrex Dodge</h2>
               <p>Dodge waves, earn coins, and unlock modifiers</p>
+              <div id="xyMobileGameplayNotice" class="xy-mobile-gameplay-notice" hidden>
+                Gameplay is not supported on mobile yet. Please use desktop for the dodge run. The Token Shop still works on mobile.
+              </div>
             </div>
             <div class="xy-game-stats">
               <span id="xyBest" class="no-text-select">Best: 0</span>
@@ -142,12 +145,18 @@
               </div>
               <div class="xy-sidecard">
                 <h3>Modifier</h3>
+                <div class="xy-mobile-shop-notice" data-mobile-shop-notice="modifier" hidden>
+                  Modifier purchases are not supported on mobile yet. Please use desktop to buy and equip modifiers.
+                </div>
                 <select id="xyModifierSelect"></select>
                 <p id="xyModifierDesc"></p>
                 <button id="xyBuyBtn" type="button">Buy selected</button>
               </div>
               <div class="xy-sidecard">
                 <h3>Powerups</h3>
+                <div class="xy-mobile-shop-notice" data-mobile-shop-notice="powerup" hidden>
+                  Powerup purchases are not supported on mobile yet. Please use desktop to buy and equip powerups.
+                </div>
                 <select id="xyPowerupSelect"></select>
                 <p id="xyPowerupDesc"></p>
                 <button id="xyBuyPowerupBtn" type="button">Buy selected</button>
@@ -183,6 +192,9 @@
       this.powerupDesc = this.mount.querySelector('#xyPowerupDesc');
       this.buyPowerupBtn = this.mount.querySelector('#xyBuyPowerupBtn');
       this.tokenCountEl = this.mount.querySelector('#xyTokenCount');
+      this.mobileGameplayNotice = this.mount.querySelector('#xyMobileGameplayNotice');
+      this.modifierMobileNotice = this.mount.querySelector('[data-mobile-shop-notice="modifier"]');
+      this.powerupMobileNotice = this.mount.querySelector('[data-mobile-shop-notice="powerup"]');
 
       this.modSelect.innerHTML = Object.keys(MODIFIERS)
         .map(name => `<option value="${name}">${name}</option>`)
@@ -256,12 +268,68 @@
         this.canvas.style.height = `${Math.round(availableHeight)}px`;
       };
 
+      this.isMobileViewport = () => window.matchMedia('(max-width: 900px)').matches && window.matchMedia('(pointer: coarse)').matches;
+
+      this.applyMobileGameplayState = () => {
+        const isMobileViewport = this.isMobileViewport();
+        if (this.mobileGameplayNotice) this.mobileGameplayNotice.hidden = !isMobileViewport;
+
+        if (isMobileViewport) {
+          this.paused = true;
+          this.statusEl.textContent = 'Mobile limited';
+          this.statusEl.className = 'xy-status warning';
+          this.pauseBtn.disabled = true;
+          if (this.overlay) {
+            this.overlay.hidden = false;
+            this.overlay.style.display = 'flex';
+            this.overlay.innerHTML = `
+              <div class="xy-overlay-card">
+                <h3>Mobile not supported</h3>
+                <p>The dodge gameplay is desktop-only for now.</p>
+                <p>You can still use the Token Shop on mobile.</p>
+              </div>
+            `;
+          }
+        } else {
+          this.pauseBtn.disabled = false;
+          if (this.overlay && !this.gameOver) {
+            this.overlay.hidden = true;
+            this.overlay.style.display = 'none';
+            this.overlay.innerHTML = '';
+          }
+          if (this.statusEl.textContent === 'Mobile limited') {
+            this.paused = false;
+            this.statusEl.textContent = 'Running';
+            this.statusEl.className = 'xy-status running';
+          }
+        }
+      };
+
+      this.applyMobileShopState = () => {
+        const isMobileViewport = this.isMobileViewport();
+        const selectedPowerup = this.data.selectedPowerup && POWERUPS[this.data.selectedPowerup] ? this.data.selectedPowerup : 'None';
+        const modifierOwned = this.data.ownedModifiers.includes(this.data.selectedModifier);
+        const powerupOwned = selectedPowerup === 'None' || this.data.ownedPowerups.includes(selectedPowerup);
+
+        this.modSelect.disabled = isMobileViewport;
+        this.buyBtn.disabled = isMobileViewport || modifierOwned;
+        this.powerupSelect.disabled = isMobileViewport;
+        this.buyPowerupBtn.disabled = isMobileViewport || powerupOwned;
+
+        if (this.modifierMobileNotice) this.modifierMobileNotice.hidden = !isMobileViewport;
+        if (this.powerupMobileNotice) this.powerupMobileNotice.hidden = !isMobileViewport;
+      };
+
       this.syncUi();
       this.updateModifierUi();
       this.updatePowerupUi();
       this.updateTokenShopUi();
       this.applyResponsiveCanvas();
+      this.applyMobileShopState();
+      this.applyMobileGameplayState();
       window.addEventListener('resize', this.applyResponsiveCanvas);
+      window.addEventListener('resize', this.applyMobileShopState);
+      window.addEventListener('resize', this.applyMobileGameplayState);
     }
 
     syncUi() {
@@ -279,6 +347,7 @@
       this.modDesc.innerHTML = `${mod.desc}<br>Coin multiplier: x${mod.coinBonus.toFixed(2)}<br>Speed multiplier: x${mod.playerSpeed.toFixed(2)}<br>Pressure multiplier: x${mod.pressure.toFixed(2)}`;
       this.buyBtn.disabled = owned;
       this.buyBtn.textContent = owned ? 'Owned' : `Buy (${mod.price} coins)`;
+      this.applyMobileShopState?.();
     }
 
     updatePowerupUi() {
@@ -295,6 +364,7 @@
         this.buyPowerupBtn.disabled = owned;
         this.buyPowerupBtn.textContent = owned ? 'Owned' : `Buy (${powerup.price} coins)`;
       }
+      this.applyMobileShopState?.();
     }
 
     updateTokenShopUi() {
@@ -374,6 +444,11 @@
     }
 
     start() {
+      this.applyMobileGameplayState?.();
+      if (this.isMobileViewport?.()) {
+        this.stop();
+        return;
+      }
       if (this.running) return;
       this.running = true;
       this.resetState();
@@ -395,6 +470,8 @@
     destroy() {
       this.stop();
       window.removeEventListener('resize', this.applyResponsiveCanvas);
+      window.removeEventListener('resize', this.applyMobileShopState);
+      window.removeEventListener('resize', this.applyMobileGameplayState);
       this.mount.innerHTML = '';
     }
 
