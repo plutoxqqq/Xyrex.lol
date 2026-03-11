@@ -134,6 +134,10 @@
             <div class="xy-canvas-wrap">
               <canvas id="xyGameCanvas" width="960" height="620" aria-label="Game canvas" tabindex="0"></canvas>
               <div id="xyOverlay" class="xy-overlay" hidden></div>
+              <div id="xyMobileControls" class="xy-mobile-controls" hidden>
+                <button type="button" data-mobile-move="left" aria-label="Move left">◀</button>
+                <button type="button" data-mobile-move="right" aria-label="Move right">▶</button>
+              </div>
             </div>
             <aside class="xy-sidepanel">
               <div class="xy-sidecard">
@@ -209,6 +213,7 @@
       this.mobileGameplayNotice = this.mount.querySelector('#xyMobileGameplayNotice');
       this.modifierMobileNotice = this.mount.querySelector('[data-mobile-shop-notice="modifier"]');
       this.powerupMobileNotice = this.mount.querySelector('[data-mobile-shop-notice="powerup"]');
+      this.mobileControls = this.mount.querySelector('#xyMobileControls');
       this.cheatCard = this.mount.querySelector('#xyCheatCard');
       this.cheatInputs = Array.from(this.mount.querySelectorAll('[data-cheat]'));
 
@@ -262,6 +267,14 @@
       this.pauseBtn.addEventListener('click', () => this.togglePause());
       this.restartBtn.addEventListener('click', () => this.restart());
 
+      this.mobileControls?.querySelectorAll('[data-mobile-move]').forEach(button => {
+        button.addEventListener('click', () => {
+          const direction = button.getAttribute('data-mobile-move');
+          if (direction === 'left') this.keys.left = true;
+          if (direction === 'right') this.keys.right = true;
+        });
+      });
+
       this.handleKeyDown = e => {
         const k = e.key.toLowerCase();
         const targetTag = (e.target?.tagName || '').toLowerCase();
@@ -305,12 +318,22 @@
       };
 
       this.isMobileViewport = () => window.matchMedia('(max-width: 900px)').matches && window.matchMedia('(pointer: coarse)').matches;
+      this.isMobileSupportEnabled = () => this.isMobileViewport() && betaFeaturesEnabled();
 
       this.applyMobileGameplayState = () => {
         const isMobileViewport = this.isMobileViewport();
-        if (this.mobileGameplayNotice) this.mobileGameplayNotice.hidden = !isMobileViewport;
+        const canPlayOnMobile = this.isMobileSupportEnabled();
 
-        if (isMobileViewport) {
+        if (this.mobileGameplayNotice) {
+          this.mobileGameplayNotice.hidden = !isMobileViewport;
+          this.mobileGameplayNotice.textContent = canPlayOnMobile
+            ? 'Mobile beta controls are enabled. Use the on-screen arrows or a keyboard for smoother movement.'
+            : 'Mobile gameplay is locked. Enable Beta Features in Settings to play dodge on mobile.';
+        }
+
+        if (this.mobileControls) this.mobileControls.hidden = !canPlayOnMobile;
+
+        if (isMobileViewport && !canPlayOnMobile) {
           this.paused = true;
           this.statusEl.textContent = 'Mobile limited';
           this.statusEl.className = 'xy-status warning';
@@ -320,9 +343,9 @@
             this.overlay.style.display = 'flex';
             this.overlay.innerHTML = `
               <div class="xy-overlay-card">
-                <h3>Mobile not supported</h3>
-                <p>The dodge gameplay is desktop-only for now.</p>
-                <p>You can still use the Token Shop on mobile.</p>
+                <h3>Enable Beta Features</h3>
+                <p>Mobile dodge support is now in beta.</p>
+                <p>Open Settings and enable Beta Features to play on mobile.</p>
               </div>
             `;
           }
@@ -343,17 +366,19 @@
 
       this.applyMobileShopState = () => {
         const isMobileViewport = this.isMobileViewport();
+        const canPlayOnMobile = this.isMobileSupportEnabled();
         const selectedPowerup = this.data.selectedPowerup && POWERUPS[this.data.selectedPowerup] ? this.data.selectedPowerup : 'None';
         const modifierOwned = this.data.ownedModifiers.includes(this.data.selectedModifier);
         const powerupOwned = selectedPowerup === 'None' || this.data.ownedPowerups.includes(selectedPowerup);
+        const restrictMobileShop = isMobileViewport && !canPlayOnMobile;
 
-        this.modSelect.disabled = isMobileViewport;
-        this.buyBtn.disabled = isMobileViewport || modifierOwned;
-        this.powerupSelect.disabled = isMobileViewport;
-        this.buyPowerupBtn.disabled = isMobileViewport || powerupOwned;
+        this.modSelect.disabled = restrictMobileShop;
+        this.buyBtn.disabled = restrictMobileShop || modifierOwned;
+        this.powerupSelect.disabled = restrictMobileShop;
+        this.buyPowerupBtn.disabled = restrictMobileShop || powerupOwned;
 
-        if (this.modifierMobileNotice) this.modifierMobileNotice.hidden = !isMobileViewport;
-        if (this.powerupMobileNotice) this.powerupMobileNotice.hidden = !isMobileViewport;
+        if (this.modifierMobileNotice) this.modifierMobileNotice.hidden = !restrictMobileShop;
+        if (this.powerupMobileNotice) this.powerupMobileNotice.hidden = !restrictMobileShop;
       };
 
       this.syncUi();
@@ -511,7 +536,7 @@
     start() {
       this.applyMobileGameplayState?.();
       this.updateCheatUi();
-      if (this.isMobileViewport?.()) {
+      if (this.isMobileViewport?.() && !this.isMobileSupportEnabled?.()) {
         this.stop();
         return;
       }
