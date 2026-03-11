@@ -66,4 +66,4 @@ Created for the executor and scripting community
 Enjoy!
 
 
-\frac{1}{2}
+$\frac{1}{2}$
