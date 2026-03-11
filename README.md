@@ -64,6 +64,3 @@ Feedback and contributions are welcome. If you’d like to suggest improvements 
 Created for the executor and scripting community
 
 Enjoy!
-
-
-$\frac{1}{2}$
