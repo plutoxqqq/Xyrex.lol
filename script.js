@@ -794,9 +794,11 @@ function openSettingsModal() {
         <div class="settings-actions">
           <button id="settingsLoginBtn" class="btn-primary settings-action-btn" type="button">Login</button>
           <button id="settingsSignUpBtn" class="btn-primary settings-action-btn" type="button">Sign Up</button>
+          <button id="settingsResetPasswordBtn" class="btn-primary settings-action-btn" type="button">Reset Password</button>
           ${isGuestAccount() ? '' : '<button id="settingsLogoutBtn" class="btn-primary settings-action-btn" type="button">Log Out</button>'}
         </div>
-        <p class="settings-note">Account data is scoped to the active profile in this browser</p>
+        <p class="settings-note">Use letters, numbers, underscores, or periods for usernames. Passwords require 8+ characters, at least one uppercase letter, and at least one number.</p>
+        <p class="settings-note">${window.XyrexAuth?.hasRemoteSync?.() ? 'Account sync is enabled for this deployment.' : 'Account sync is not configured on this deployment yet.'}</p>
       </div>
       <div class="settings-group">
         <h3>AI Usage</h3>
@@ -846,6 +848,15 @@ function openSettingsModal() {
   });
   qs('#settingsSignUpBtn')?.addEventListener('click', () => {
     window.XyrexAuth?.openAuthModal?.('signup');
+  });
+
+  qs('#settingsResetPasswordBtn')?.addEventListener('click', async () => {
+    try {
+      const username = await window.XyrexAuth?.resetPassword?.();
+      if (username) window.alert(`Password reset for ${username}`);
+    } catch (error) {
+      window.alert(error?.message || 'Failed to reset password');
+    }
   });
   qs('#settingsLogoutBtn')?.addEventListener('click', () => {
     window.XyrexAccountScope?.clearAccount?.();

@@ -557,7 +557,25 @@ body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 250px; 
 
 .xy-auth-status.success { color: var(--accent-success); }
 .xy-auth-status.error { color: #ff9ec5; }
-.xy-auth-actions { margin-top: 10px; }
+
+.xy-auth-note {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: .8rem;
+  line-height: 1.35;
+}
+
+.xy-auth-actions {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.xy-auth-actions .btn-primary {
+  flex: 1 1 160px;
+}
+
 
 .xy-cheat-grid {
   display: grid;
