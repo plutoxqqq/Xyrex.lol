@@ -22,6 +22,8 @@
   --icon-color: var(--muted);
   --icon-color-hover: var(--periwinkle-2);
   --nav-height: 68px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 *{ box-sizing:border-box; }
@@ -361,8 +363,8 @@ body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 250px; 
 
 @media (max-width: 720px){
   html, body{ height: 100%; min-height:100%; overflow: auto; }
-  body{ padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); background-attachment: fixed; }
-  .topnav{ padding-top: env(safe-area-inset-top); }
+  body{ padding-top: 0; padding-bottom: var(--safe-bottom); background-attachment: fixed; }
+  .topnav{ padding-top: max(0px, var(--safe-top)); }
   .topnav .nav-inner{ flex-wrap:wrap; gap:10px; padding:10px 12px; }
   .ui-toggle-btn{ order:2; }
   .theme-customizer-btn{ order:3; }
@@ -398,9 +400,14 @@ body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 250px; 
 }
 
 @media (max-width: 720px) and (orientation: landscape){
-  .topnav .nav-inner{ flex-wrap:wrap; gap:.65rem; }
-  .search-wrap{ order:4; flex:1 0 100%; }
-  .brand{ white-space:nowrap; }
+  .topnav{ padding-top: 0; }
+  .topnav .nav-inner{ flex-wrap:nowrap; gap:.5rem; padding:8px 10px; align-items:center; }
+  .search-wrap{ order:0; flex:1 1 auto; min-width:0; }
+  .search-input{ height:38px; padding:8px 38px 8px 12px; }
+  .page-switch{ order:0; width:auto; flex-wrap:nowrap; }
+  .page-switch-btn{ padding:7px 10px; font-size:.82rem; }
+  .themed-icon-control{ inline-size:30px; block-size:30px; }
+  .brand{ white-space:nowrap; font-size:.88rem; }
 }
 
 @media (max-width: 720px){
@@ -576,4 +583,33 @@ body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 250px; 
   margin-top: 8px;
   color: #ffd7a8;
   font-size: .8rem;
+}
+
+
+.xy-mobile-controls{
+  position:absolute;
+  inset:auto 10px 10px;
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  z-index:3;
+  pointer-events:none;
+}
+.xy-mobile-controls button{
+  pointer-events:auto;
+  border:1px solid rgba(178,188,255,.35);
+  background:rgba(10,14,28,.72);
+  color:#eef4ff;
+  min-width:56px;
+  min-height:44px;
+  border-radius:12px;
+  font-size:1.1rem;
+  font-weight:800;
+}
+
+
+@media (max-width: 900px) and (orientation: landscape){
+  .sidebar{ max-height:calc(100dvh - var(--nav-height) - 24px); }
+  .main-content{ min-height:0; }
+  body.easter-game-mode .xy-canvas-wrap{ max-height:38dvh; }
 }
