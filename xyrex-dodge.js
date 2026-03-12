@@ -317,7 +317,14 @@
         this.canvas.style.height = `${Math.round(availableHeight)}px`;
       };
 
-      this.isMobileViewport = () => window.matchMedia('(max-width: 900px)').matches && window.matchMedia('(pointer: coarse)').matches;
+      this.isMobileViewport = () => {
+        const compactViewport = window.matchMedia('(max-width: 900px)').matches;
+        const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+        const noHover = window.matchMedia('(hover: none)').matches;
+        const touchCapable = (navigator.maxTouchPoints || 0) > 0;
+        const mobilePlatform = /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent || '');
+        return compactViewport && coarsePointer && noHover && touchCapable && mobilePlatform;
+      };
       this.isMobileSupportEnabled = () => this.isMobileViewport() && betaFeaturesEnabled();
 
       this.applyMobileGameplayState = () => {
