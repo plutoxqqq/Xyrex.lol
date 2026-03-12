@@ -613,6 +613,11 @@ body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 250px; 
   z-index:3;
   pointer-events:none;
 }
+
+.xy-mobile-controls[hidden]{
+  display:none !important;
+}
+
 .xy-mobile-controls button{
   pointer-events:auto;
   border:1px solid rgba(178,188,255,.35);
