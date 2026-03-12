@@ -447,26 +447,8 @@ body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 250px; 
 @media (max-width: 900px) and (pointer: coarse) and (orientation: landscape){
   body.easter-game-mode #easterEggPage,
   body.easter-game-mode .egg-game,
-  body.easter-game-mode .xy-game-shell{ height:auto; min-height:0; }
-  body.easter-game-mode .main-content{ overflow:auto; -webkit-overflow-scrolling:touch; }
-  body.easter-game-mode .xy-game-top{ padding:6px 8px; gap:4px; }
-  body.easter-game-mode .xy-game-top p{ margin-top:2px; font-size:.78rem; }
-  body.easter-game-mode .xy-mobile-gameplay-notice{ margin-top:4px; padding:6px 8px; font-size:.74rem; line-height:1.2; }
-  body.easter-game-mode .egg-entry-hint{ display:none; }
-  body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 192px; gap:8px; min-height:0; align-items:start; }
-  body.easter-game-mode .xy-canvas-wrap{ min-height:0; max-height:calc(100dvh - var(--nav-height) - 36px); }
-  body.easter-game-mode .xy-sidepanel{ overflow:visible; max-height:none; padding-right:0; }
-  body.easter-game-mode .xy-sidecard{ padding:6px; }
-  body.easter-game-mode .xy-run-actions button,
-  body.easter-game-mode .xy-sidecard button,
-  body.easter-game-mode .xy-sidecard select{ padding:6px 7px; font-size:.78rem; }
-}
-
-@media (max-width: 900px) and (pointer: coarse) and (orientation: landscape){
-  body.easter-game-mode #easterEggPage,
-  body.easter-game-mode .egg-game,
   body.easter-game-mode .xy-game-shell{ height:100%; min-height:0; }
-  body.easter-game-mode .main-content{ overflow:auto; }
+  body.easter-game-mode .main-content{ overflow:hidden; }
   body.easter-game-mode .xy-game-top{ padding:7px 8px; gap:6px; }
   body.easter-game-mode .xy-game-top p{ margin-top:4px; font-size:.8rem; }
   body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 200px; gap:8px; min-height:0; }
@@ -677,5 +659,5 @@ body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 250px; 
 @media (max-width: 900px) and (orientation: landscape){
   .sidebar{ max-height:calc(100dvh - var(--nav-height) - 24px); }
   .main-content{ min-height:0; }
-  body.easter-game-mode .xy-canvas-wrap{ max-height:calc(100dvh - var(--nav-height) - 36px); min-height:170px; }
+  body.easter-game-mode .xy-canvas-wrap{ max-height:calc(100dvh - var(--nav-height) - 42px); min-height:170px; }
 }
