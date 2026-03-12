@@ -291,7 +291,7 @@ body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 250px; 
 .xy-game-top p{ margin:5px 0 0; color:#c2d2ef; font-size:.9rem; }
 .xy-game-stats{ display:flex; gap:8px; flex-wrap:wrap; }
 .xy-game-stats span{ padding:8px 10px; border-radius:8px; border:1px solid rgba(178,188,255,.2); background:rgba(17,24,42,.85); color:#ffde7a; font-weight:700; }
-.xy-canvas-wrap{ position:relative; border:1px solid rgba(178,188,255,.2); border-radius:10px; background:#0b1020; min-height:240px; overflow:hidden; display:flex; justify-content:stretch; align-items:stretch; }
+.xy-canvas-wrap{ position:relative; border:1px solid rgba(178,188,255,.2); border-radius:10px; background:#0b1020; min-height:240px; aspect-ratio:960 / 620; overflow:hidden; display:flex; justify-content:stretch; align-items:stretch; }
 #xyGameCanvas{ display:block; width:100%; height:100%; max-width:none; background:#0b1020; }
 .xy-sidepanel{ display:flex; flex-direction:column; gap:8px; min-height:0; overflow-y:auto; padding-right:2px; }
 .xy-sidecard{ border:1px solid rgba(178,188,255,.2); border-radius:10px; background:rgba(17,24,42,.9); padding:8px; }
@@ -404,7 +404,7 @@ body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 250px; 
 
 @media (max-width: 720px) and (orientation: landscape){
   .topnav{ padding-top: max(0px, var(--safe-top)); }
-  .topnav .nav-inner{ flex-wrap:nowrap; gap:.5rem; padding:8px 10px; align-items:center; }
+  .topnav .nav-inner{ flex-wrap:nowrap; gap:.5rem; padding-block:8px; padding-inline:max(10px, env(safe-area-inset-left, 0px)) max(10px, env(safe-area-inset-right, 0px)); align-items:center; }
   .search-wrap{ order:0; flex:1 1 auto; min-width:0; }
   .search-input{ height:38px; padding:8px 38px 8px 12px; }
   .page-switch{ order:0; width:auto; flex-wrap:nowrap; }
@@ -429,8 +429,8 @@ body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 250px; 
 }
 
 @media (max-width: 900px) and (orientation: landscape){
-  body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 220px; }
-  body.easter-game-mode .xy-canvas-wrap{ min-height:170px; }
+  body.easter-game-mode .xy-game-main{ grid-template-columns:1fr; }
+  body.easter-game-mode .xy-canvas-wrap{ min-height:220px; max-height:none; }
 }
 
 
@@ -440,7 +440,7 @@ body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 250px; 
   body.easter-game-mode .egg-game{ height:auto; min-height:0; }
   body.easter-game-mode .xy-game-shell{ height:auto; min-height:0; }
   body.easter-game-mode .xy-game-main{ grid-template-columns:1fr; }
-  body.easter-game-mode .xy-canvas-wrap{ min-height:180px; max-height:42dvh; }
+  body.easter-game-mode .xy-canvas-wrap{ min-height:220px; max-height:none; }
   body.easter-game-mode .xy-sidepanel{ overflow:visible; max-height:none; padding-right:0; }
 }
 
@@ -615,6 +615,9 @@ body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 250px; 
   gap:10px;
   z-index:3;
   pointer-events:none;
+  touch-action:none;
+  -webkit-user-select:none;
+  user-select:none;
 }
 
 .xy-mobile-controls[hidden]{
@@ -623,7 +626,7 @@ body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 250px; 
 
 .xy-mobile-controls button{
   pointer-events:auto;
-  touch-action:manipulation;
+  touch-action:none;
   -webkit-user-select:none;
   user-select:none;
   border:1px solid rgba(178,188,255,.35);
@@ -640,5 +643,5 @@ body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 250px; 
 @media (max-width: 900px) and (orientation: landscape){
   .sidebar{ max-height:calc(100dvh - var(--nav-height) - 24px); }
   .main-content{ min-height:0; }
-  body.easter-game-mode .xy-canvas-wrap{ max-height:38dvh; }
+  body.easter-game-mode .xy-canvas-wrap{ max-height:none; min-height:220px; }
 }
