@@ -339,7 +339,7 @@
 
         const wrapHeight = Math.max(0, wrap.clientHeight || wrap.getBoundingClientRect().height);
         const viewportHeight = Math.max(280, window.innerHeight - reservedPanelHeight);
-        const maxHeightByViewport = isMobileViewport && isLandscape ? Math.round(viewportHeight * 0.62) : viewportHeight;
+        const maxHeightByViewport = isMobileViewport && isLandscape ? Math.round(viewportHeight * 0.54) : viewportHeight;
         const widthDrivenHeight = Math.round(availableWidth / canvasAspectRatio);
         const mobileLandscapeMin = isMobileViewport && isLandscape ? 220 : 180;
         const baseHeight = Math.max(wrapHeight, widthDrivenHeight);
