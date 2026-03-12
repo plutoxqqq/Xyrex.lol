@@ -740,13 +740,20 @@
             }
             this.player.targetLane = safeSorted.includes(nextLane) ? nextLane : nearestSafe;
           } else {
+            const pressures = this.lanePressure();
+            const currentLane = this.player.targetLane;
             const preferredLane = safeLanes.reduce((best, lane) => {
-              const laneVisits = (this.playerLaneHistory || []).filter(item => item === lane).length;
-              const bestVisits = (this.playerLaneHistory || []).filter(item => item === best).length;
-              const distScore = Math.abs(lane - this.player.targetLane);
-              const bestDistScore = Math.abs(best - this.player.targetLane);
-              if (laneVisits !== bestVisits) return laneVisits < bestVisits ? lane : best;
-              return distScore < bestDistScore ? lane : best;
+              const bestPressure = pressures[best] ?? Number.POSITIVE_INFINITY;
+              const lanePressure = pressures[lane] ?? Number.POSITIVE_INFINITY;
+              if (lanePressure !== bestPressure) return lanePressure < bestPressure ? lane : best;
+
+              const bestDistance = Math.abs(best - currentLane);
+              const laneDistance = Math.abs(lane - currentLane);
+              if (laneDistance !== bestDistance) return laneDistance < bestDistance ? lane : best;
+
+              const bestCenterBias = Math.abs(best - 2.5);
+              const laneCenterBias = Math.abs(lane - 2.5);
+              return laneCenterBias < bestCenterBias ? lane : best;
             }, safeLanes[0]);
             this.player.targetLane = preferredLane;
           }
@@ -762,7 +769,8 @@
       if (this.powerups.has('Quickstep')) {
         this.player.x = targetX;
       } else {
-        this.player.x += (targetX - this.player.x) * (0.16 * this.mod.playerSpeed);
+        const trackingStrength = autoPlay ? 0.34 : 0.16;
+        this.player.x += (targetX - this.player.x) * (trackingStrength * this.mod.playerSpeed);
       }
 
       const settledLane = Math.max(0, Math.min(5, Math.round((this.player.x - laneW / 2) / laneW)));
