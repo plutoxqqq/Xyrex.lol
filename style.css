@@ -448,7 +448,7 @@ body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 250px; 
   body.easter-game-mode #easterEggPage,
   body.easter-game-mode .egg-game,
   body.easter-game-mode .xy-game-shell{ height:100%; min-height:0; }
-  body.easter-game-mode .main-content{ overflow:hidden; }
+  body.easter-game-mode .main-content{ overflow:auto; }
   body.easter-game-mode .xy-game-top{ padding:7px 8px; gap:6px; }
   body.easter-game-mode .xy-game-top p{ margin-top:4px; font-size:.8rem; }
   body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 200px; gap:8px; min-height:0; }
