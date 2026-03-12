@@ -182,7 +182,6 @@
                 <div class="xy-cheat-grid">
                   <label class="xy-cheat-item"><input type="checkbox" data-cheat="autoplay" /> Auto Play</label>
                   <label class="xy-cheat-item"><input type="checkbox" data-cheat="nodeath" /> No Death</label>
-                  <label class="xy-cheat-item"><input type="checkbox" data-cheat="insane" /> Insane Completion</label>
                   <label class="xy-cheat-item"><input type="checkbox" data-cheat="slowtime" /> Slow Time</label>
                   <label class="xy-cheat-item"><input type="checkbox" data-cheat="ghost" /> Ghost Trail</label>
                 </div>
@@ -317,13 +316,18 @@
         this.canvas.style.height = `${Math.round(availableHeight)}px`;
       };
 
+      this.isLikelyMobileDevice = () => {
+        const uaDataMobile = typeof navigator.userAgentData?.mobile === 'boolean' ? navigator.userAgentData.mobile : false;
+        const mobilePlatform = /android|iphone|ipad|ipod/i.test(navigator.userAgent || '');
+        return uaDataMobile || mobilePlatform;
+      };
+
       this.isMobileViewport = () => {
         const compactViewport = window.matchMedia('(max-width: 900px)').matches;
         const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
         const noHover = window.matchMedia('(hover: none)').matches;
         const touchCapable = (navigator.maxTouchPoints || 0) > 0;
-        const mobilePlatform = /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent || '');
-        return compactViewport && coarsePointer && noHover && touchCapable && mobilePlatform;
+        return compactViewport && coarsePointer && noHover && touchCapable && this.isLikelyMobileDevice();
       };
       this.isMobileSupportEnabled = () => this.isMobileViewport() && betaFeaturesEnabled();
 
@@ -437,7 +441,7 @@
 
     activeCheatSet() {
       const active = Array.isArray(this.data.activeCheats) ? this.data.activeCheats.map(item => String(item).toLowerCase()).filter(Boolean) : [];
-      return new Set(active);
+      return new Set(active.filter(cheat => cheat !== 'insane'));
     }
 
     hasEnabledCheat() {
@@ -720,22 +724,12 @@
     updatePlayer() {
       const cheats = this.activeCheatSet();
       const autoPlay = cheats.has('autoplay');
-      const insane = cheats.has('insane');
       const ghost = cheats.has('ghost');
 
-      if (autoPlay || insane || ghost) {
+      if (autoPlay || ghost) {
         const safeLanes = this.safeLanes();
         if (safeLanes.length) {
-          if (insane) {
-            const laneW = 960 / 6;
-            const currentLane = Math.max(0, Math.min(5, Math.round((this.player.x - laneW / 2) / laneW)));
-            if (!safeLanes.includes(currentLane)) {
-              this.player.targetLane = safeLanes.reduce((best, lane) => (Math.abs(lane - currentLane) < Math.abs(best - currentLane) ? lane : best), safeLanes[0]);
-              this.player.x = this.player.targetLane * laneW + laneW / 2;
-            } else {
-              this.player.targetLane = currentLane;
-            }
-          } else if (ghost) {
+          if (ghost) {
             const safeSorted = [...safeLanes].sort((a, b) => a - b);
             const current = this.player.targetLane;
             const nearestSafe = safeSorted.reduce((best, lane) => (Math.abs(lane - current) < Math.abs(best - current) ? lane : best), safeSorted[0]);
@@ -765,7 +759,7 @@
       this.keys.right = false;
       const laneW = 960 / 6;
       const targetX = this.player.targetLane * laneW + laneW / 2;
-      if (this.powerups.has('Quickstep') || autoPlay || insane) {
+      if (this.powerups.has('Quickstep')) {
         this.player.x = targetX;
       } else {
         this.player.x += (targetX - this.player.x) * (0.16 * this.mod.playerSpeed);
