@@ -267,11 +267,21 @@
       this.restartBtn.addEventListener('click', () => this.restart());
 
       this.mobileControls?.querySelectorAll('[data-mobile-move]').forEach(button => {
-        button.addEventListener('click', () => {
+        const queueMove = () => {
+          if (!this.running || this.paused || this.gameOver) return;
           const direction = button.getAttribute('data-mobile-move');
           if (direction === 'left') this.keys.left = true;
           if (direction === 'right') this.keys.right = true;
-        });
+        };
+
+        const captureTap = e => {
+          e.preventDefault();
+          queueMove();
+        };
+
+        button.addEventListener('pointerdown', captureTap);
+        button.addEventListener('touchstart', captureTap, { passive: false });
+        button.addEventListener('click', e => e.preventDefault());
       });
 
       this.handleKeyDown = e => {
@@ -305,12 +315,19 @@
         const wrap = this.canvas.parentElement;
         const gameMain = this.mount.querySelector('.xy-game-main');
         const sidePanel = this.mount.querySelector('.xy-sidepanel');
+        const isLandscape = window.matchMedia('(orientation: landscape)').matches;
+        const isMobileViewport = this.isMobileViewport();
 
         const availableWidth = Math.max(280, wrap.clientWidth);
-        const reservedPanelHeight = gameMain && sidePanel && getComputedStyle(gameMain).gridTemplateColumns.split(' ').length === 1
+        const stackedLayout = gameMain && sidePanel
+          ? sidePanel.getBoundingClientRect().top > wrap.getBoundingClientRect().bottom
+          : false;
+        const reservedPanelHeight = stackedLayout
           ? sidePanel.offsetHeight + 8
           : 0;
-        const availableHeight = Math.max(220, wrap.clientHeight - reservedPanelHeight);
+        const baseHeight = Math.max(0, wrap.clientHeight || wrap.getBoundingClientRect().height);
+        const mobileLandscapeMin = isMobileViewport && isLandscape ? Math.round(window.innerHeight * 0.5) : 220;
+        const availableHeight = Math.max(mobileLandscapeMin, baseHeight - reservedPanelHeight);
 
         this.canvas.style.width = `${Math.round(availableWidth)}px`;
         this.canvas.style.height = `${Math.round(availableHeight)}px`;
