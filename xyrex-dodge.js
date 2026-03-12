@@ -267,10 +267,32 @@
       this.restartBtn.addEventListener('click', () => this.restart());
 
       this.mobileControls?.querySelectorAll('[data-mobile-move]').forEach(button => {
-        button.addEventListener('click', () => {
+        const queueMove = () => {
+          if (!this.running || this.paused || this.gameOver) return;
           const direction = button.getAttribute('data-mobile-move');
           if (direction === 'left') this.keys.left = true;
           if (direction === 'right') this.keys.right = true;
+        };
+
+        const captureTap = e => {
+          e.preventDefault();
+          e.stopPropagation();
+          queueMove();
+        };
+
+        button.addEventListener('pointerdown', captureTap);
+        button.addEventListener('touchstart', captureTap, { passive: false });
+        button.addEventListener('touchend', e => {
+          e.preventDefault();
+          e.stopPropagation();
+        }, { passive: false });
+        button.addEventListener('dblclick', e => {
+          e.preventDefault();
+          e.stopPropagation();
+        });
+        button.addEventListener('click', e => {
+          e.preventDefault();
+          e.stopPropagation();
         });
       });
 
@@ -305,12 +327,23 @@
         const wrap = this.canvas.parentElement;
         const gameMain = this.mount.querySelector('.xy-game-main');
         const sidePanel = this.mount.querySelector('.xy-sidepanel');
+        const isLandscape = window.matchMedia('(orientation: landscape)').matches;
+        const isMobileViewport = this.isMobileViewport();
+        const canvasAspectRatio = 960 / 620;
 
-        const availableWidth = Math.max(280, wrap.clientWidth);
-        const reservedPanelHeight = gameMain && sidePanel && getComputedStyle(gameMain).gridTemplateColumns.split(' ').length === 1
-          ? sidePanel.offsetHeight + 8
-          : 0;
-        const availableHeight = Math.max(220, wrap.clientHeight - reservedPanelHeight);
+        const availableWidth = Math.max(280, wrap.clientWidth || wrap.getBoundingClientRect().width);
+        const stackedLayout = gameMain && sidePanel
+          ? sidePanel.getBoundingClientRect().top >= wrap.getBoundingClientRect().bottom - 1
+          : false;
+        const reservedPanelHeight = stackedLayout ? sidePanel.offsetHeight + 8 : 0;
+
+        const wrapHeight = Math.max(0, wrap.clientHeight || wrap.getBoundingClientRect().height);
+        const viewportHeight = Math.max(280, window.innerHeight - reservedPanelHeight);
+        const maxHeightByViewport = isMobileViewport && isLandscape ? Math.round(viewportHeight * 0.62) : viewportHeight;
+        const widthDrivenHeight = Math.round(availableWidth / canvasAspectRatio);
+        const mobileLandscapeMin = isMobileViewport && isLandscape ? 220 : 180;
+        const baseHeight = Math.max(wrapHeight, widthDrivenHeight);
+        const availableHeight = clamp(baseHeight, mobileLandscapeMin, Math.max(mobileLandscapeMin, maxHeightByViewport));
 
         this.canvas.style.width = `${Math.round(availableWidth)}px`;
         this.canvas.style.height = `${Math.round(availableHeight)}px`;
