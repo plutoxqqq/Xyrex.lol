@@ -445,55 +445,46 @@ body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 250px; 
 }
 
 @media (max-width: 900px) and (pointer: coarse) and (orientation: landscape){
+  .topnav .nav-inner{ flex-wrap:wrap; align-items:center; gap:8px; }
+  .brand{ flex:0 1 auto; }
+  .search-wrap{ order:2; flex:1 1 200px; margin:0; max-width:none; }
+  .page-switch{ order:3; width:auto; margin-left:auto; }
+
   body.easter-game-mode #easterEggPage,
   body.easter-game-mode .egg-game,
   body.easter-game-mode .xy-game-shell{ height:auto; min-height:0; }
   body.easter-game-mode .main-content{ overflow:auto; -webkit-overflow-scrolling:touch; }
-  body.easter-game-mode .xy-game-top{ padding:6px 8px; gap:4px; }
-  body.easter-game-mode .xy-game-top p{ margin-top:2px; font-size:.78rem; }
-  body.easter-game-mode .xy-mobile-gameplay-notice{ margin-top:4px; padding:6px 8px; font-size:.74rem; line-height:1.2; }
-  body.easter-game-mode .egg-entry-hint{ display:none; }
-  body.easter-game-mode .xy-game-main{ grid-template-columns:1fr; gap:8px; min-height:0; align-items:start; }
-  body.easter-game-mode .xy-canvas-wrap{ min-height:190px; max-height:58dvh; }
-  body.easter-game-mode .xy-sidepanel{ overflow:visible; max-height:none; padding-right:0; }
-  body.easter-game-mode .xy-sidecard{ padding:6px; }
-  body.easter-game-mode .xy-run-actions button,
-  body.easter-game-mode .xy-sidecard button,
-  body.easter-game-mode .xy-sidecard select{ padding:6px 7px; font-size:.78rem; }
-}
-
-@media (max-width: 900px) and (pointer: coarse) and (orientation: landscape){
-  body.easter-game-mode #easterEggPage,
-  body.easter-game-mode .egg-game,
-  body.easter-game-mode .xy-game-shell{ height:auto; min-height:0; }
-  body.easter-game-mode .main-content{ overflow:auto; -webkit-overflow-scrolling:touch; }
-  body.easter-game-mode .xy-game-top{ padding:6px 8px; gap:4px; }
-  body.easter-game-mode .xy-game-top p{ margin-top:2px; font-size:.78rem; }
-  body.easter-game-mode .xy-mobile-gameplay-notice{ margin-top:4px; padding:6px 8px; font-size:.74rem; line-height:1.2; }
-  body.easter-game-mode .egg-entry-hint{ display:none; }
-  body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 192px; gap:8px; min-height:0; align-items:start; }
-  body.easter-game-mode .xy-canvas-wrap{ min-height:0; max-height:calc(100dvh - var(--nav-height) - 36px); }
-  body.easter-game-mode .xy-sidepanel{ overflow:visible; max-height:none; padding-right:0; }
-  body.easter-game-mode .xy-sidecard{ padding:6px; }
-  body.easter-game-mode .xy-run-actions button,
-  body.easter-game-mode .xy-sidecard button,
-  body.easter-game-mode .xy-sidecard select{ padding:6px 7px; font-size:.78rem; }
-}
-
-@media (max-width: 900px) and (pointer: coarse) and (orientation: landscape){
-  body.easter-game-mode #easterEggPage,
-  body.easter-game-mode .egg-game,
-  body.easter-game-mode .xy-game-shell{ height:100%; min-height:0; }
-  body.easter-game-mode .main-content{ overflow:auto; }
-  body.easter-game-mode .xy-game-top{ padding:7px 8px; gap:6px; }
+  body.easter-game-mode .xy-game-top{ padding:7px 8px; gap:6px; align-items:flex-start; }
   body.easter-game-mode .xy-game-top p{ margin-top:4px; font-size:.8rem; }
-  body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 200px; gap:8px; min-height:0; }
-  body.easter-game-mode .xy-canvas-wrap{ min-height:0; max-height:calc(100dvh - var(--nav-height) - 42px); }
-  body.easter-game-mode .xy-sidepanel{ overflow-y:auto; max-height:100%; padding-right:0; }
+  body.easter-game-mode .xy-mobile-gameplay-notice{ margin-top:4px; padding:6px 8px; font-size:.74rem; line-height:1.2; }
+  body.easter-game-mode .egg-entry-hint{ display:none; }
+
+  body.easter-game-mode .xy-game-main{ grid-template-columns:1fr; gap:8px; min-height:0; align-items:start; }
+  body.easter-game-mode .xy-canvas-wrap{ width:100%; min-height:200px; max-height:58dvh; }
+
+  body.easter-game-mode .xy-sidepanel{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:8px;
+    overflow:visible;
+    max-height:none;
+    padding-right:0;
+  }
+  body.easter-game-mode .xy-sidepanel .xy-sidecard:first-child{ grid-column:2; grid-row:1; }
+  body.easter-game-mode .xy-sidepanel .xy-sidecard:nth-child(2){ grid-column:1; grid-row:1; }
   body.easter-game-mode .xy-sidecard{ padding:6px; }
+  body.easter-game-mode .xy-run-actions{ display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  body.easter-game-mode #xyPauseBtn{ grid-column:1; }
+  body.easter-game-mode #xyRestartBtn{ grid-column:2; }
   body.easter-game-mode .xy-run-actions button,
   body.easter-game-mode .xy-sidecard button,
   body.easter-game-mode .xy-sidecard select{ padding:6px 7px; font-size:.78rem; }
+}
+
+@media (max-width: 900px) and (pointer: coarse) and (orientation: landscape) and (max-height: 350px){
+  body.easter-game-mode .xy-canvas-wrap{ min-height:180px; }
+  body.easter-game-mode .xy-sidepanel{ grid-template-columns:1fr; }
+  body.easter-game-mode .xy-sidepanel .xy-sidecard:first-child{ grid-column:1; }
 }
 
 @media (max-width: 420px){
