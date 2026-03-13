@@ -276,25 +276,26 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 .saved-empty,.dev-list{ color:var(--muted); }
 .saved-error{ margin-top:10px; color:#ff9ec5; font-size:.88rem; }
 .dev-list{ margin:12px 0 0; line-height:1.5; }
-.egg-card{ min-height: 300px; border:1px solid rgba(178,188,255,.2); border-radius:14px; background: linear-gradient(180deg, rgba(28,35,64,.88), rgba(12,15,28,.88)); }
-.egg-game{ padding:12px; height:100%; }
-.egg-entry-hint{ color:var(--muted); font-size:.9rem; text-align:center; margin-top:6px; }
+#easterEggPage{ display:flex; flex-direction:column; gap:10px; min-height:100%; }
+.egg-card{ min-height:300px; border:1px solid rgba(178,188,255,.2); border-radius:12px; background:rgba(10,14,28,.72); }
+.egg-game{ padding:14px; height:100%; }
+.egg-entry-hint{ color:var(--muted); font-size:.9rem; text-align:center; margin-top:2px; }
 .xy-game-shell{ display:flex; flex-direction:column; gap:10px; height:100%; min-height:0; }
 .xy-game-main{ display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:10px; flex:1; min-height:0; }
 .xy-canvas-wrap{ min-height:0; }
-body.easter-game-mode #easterEggPage{ height:100%; min-height:0; }
+body.easter-game-mode #easterEggPage{ height:100%; min-height:0; display:flex; }
 body.easter-game-mode .main-content{ overflow:hidden; }
-body.easter-game-mode .egg-game{ min-height:0; height:100%; }
+body.easter-game-mode .egg-game{ min-height:0; height:100%; flex:1 1 auto; }
 body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 250px; }
-.xy-game-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding:10px 12px; border:1px solid rgba(178,188,255,.18); border-radius:10px; background:rgba(11,16,31,.62); }
+.xy-game-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding:10px 12px; border:1px solid rgba(178,188,255,.18); border-radius:10px; background:rgba(17,20,38,.72); }
 .xy-game-top h2{ margin:0; color:#eef4ff; }
 .xy-game-top p{ margin:5px 0 0; color:#c2d2ef; font-size:.9rem; }
 .xy-game-stats{ display:flex; gap:8px; flex-wrap:wrap; }
 .xy-game-stats span{ padding:8px 10px; border-radius:8px; border:1px solid rgba(178,188,255,.2); background:rgba(17,24,42,.85); color:#ffde7a; font-weight:700; }
-.xy-canvas-wrap{ position:relative; border:1px solid rgba(178,188,255,.2); border-radius:10px; background:#0b1020; min-height:240px; aspect-ratio:960 / 620; overflow:hidden; display:flex; justify-content:stretch; align-items:stretch; }
+.xy-canvas-wrap{ position:relative; border:1px solid rgba(178,188,255,.2); border-radius:10px; background:rgba(8,12,26,.92); min-height:240px; aspect-ratio:960 / 620; overflow:hidden; display:flex; justify-content:stretch; align-items:stretch; }
 #xyGameCanvas{ display:block; width:100%; height:100%; max-width:none; background:#0b1020; }
 .xy-sidepanel{ display:flex; flex-direction:column; gap:8px; min-height:0; overflow-y:auto; padding-right:2px; }
-.xy-sidecard{ border:1px solid rgba(178,188,255,.2); border-radius:10px; background:rgba(17,24,42,.9); padding:8px; }
+.xy-sidecard{ border:1px solid rgba(178,188,255,.2); border-radius:10px; background:rgba(17,20,38,.7); padding:8px; }
 .xy-mobile-shop-notice{ margin:0 0 8px; padding:8px; border-radius:8px; border:1px solid rgba(255,209,102,.36); background:rgba(255,209,102,.12); color:#ffe4ab; font-size:.8rem; line-height:1.35; }
 .xy-mobile-gameplay-notice{ margin-top:8px; padding:8px 10px; border:1px solid rgba(255,209,102,.4); border-radius:8px; background:rgba(255,209,102,.12); color:#ffe4ab; font-size:.82rem; line-height:1.35; }
 .xy-sidecard h3{ margin:0 0 8px; color:#eef4ff; }
