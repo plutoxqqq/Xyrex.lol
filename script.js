@@ -850,17 +850,29 @@ function openSettingsModal() {
     window.XyrexAuth?.openAuthModal?.('signup');
   });
 
-  qs('#settingsResetPasswordBtn')?.addEventListener('click', async () => {
+  qs('#settingsResetPasswordBtn')?.addEventListener('click', async event => {
+    const button = event.currentTarget;
+    if (!button) return;
+    button.disabled = true;
     try {
-      const username = await window.XyrexAuth?.resetPassword?.();
-      if (username) window.alert(`Password reset for ${username}`);
+      await window.XyrexAuth?.resetPassword?.();
+      window.alert('If the account exists, a reset email has been sent.');
     } catch (error) {
-      window.alert(error?.message || 'Failed to reset password');
+      window.alert(error?.message || 'Failed to send password reset email');
+    } finally {
+      button.disabled = false;
     }
   });
-  qs('#settingsLogoutBtn')?.addEventListener('click', () => {
-    window.XyrexAccountScope?.clearAccount?.();
-    window.location.reload();
+  qs('#settingsLogoutBtn')?.addEventListener('click', async event => {
+    const button = event.currentTarget;
+    if (!button) return;
+    button.disabled = true;
+    try {
+      await window.XyrexAuth?.logout?.();
+      openSettingsModal();
+    } finally {
+      button.disabled = false;
+    }
   });
 
   qs('#modalCloseBtn').focus();
@@ -1281,6 +1293,14 @@ function syncNavigationLayoutMetrics() {
     observer.observe(topnav);
   }
 }
+
+
+window.addEventListener('xyrex:account-changed', () => {
+  const overlay = qs('#modalOverlay');
+  if (overlay?.getAttribute('aria-hidden') === 'false' && qs('.settings-modal')) {
+    openSettingsModal();
+  }
+});
 
 function init() {
   setBetaFeaturesEnabled(getBetaFeaturesEnabled());
