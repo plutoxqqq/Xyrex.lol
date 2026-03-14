@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Voxlis-style Product Listing (Remake)</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- TOP NAV -->
+  <header class="topnav">
+    <div class="nav-inner">
+      <div class="brand">ProductVault</div>
+
+      <!-- Centered search. JavaScript will wire this up. -->
+      <div class="search-wrap">
+        <input id="searchInput" class="search-input" type="search" placeholder="Search products..." aria-label="Search products" />
+        <button id="clearSearchBtn" class="btn-ghost" title="Clear search">✕</button>
+      </div>
+
+      <div class="nav-spacer"></div>
+    </div>
+  </header>
+
+  <div class="page-layout">
+    <!-- LEFT SIDEBAR (FILTERS) -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-inner">
+        <h2 class="sidebar-title">Filters</h2>
+
+        <!-- PLATFORM FILTERS -->
+        <section class="filter-group">
+          <h3 class="filter-title">Platform</h3>
+          <!-- Checkbox inputs: to add another platform, copy the label block below and change data-filter-group & value -->
+          <label><input type="checkbox" class="filter-checkbox" data-filter-group="platform" value="Windows" /> Windows</label>
+          <label><input type="checkbox" class="filter-checkbox" data-filter-group="platform" value="macOS" /> macOS</label>
+          <label><input type="checkbox" class="filter-checkbox" data-filter-group="platform" value="Android" /> Android</label>
+          <label><input type="checkbox" class="filter-checkbox" data-filter-group="platform" value="iOS" /> iOS</label>
+          <!-- END add more by duplicating above -->
+        </section>
+
+        <!-- TAG FILTERS -->
+        <section class="filter-group">
+          <h3 class="filter-title">Tags</h3>
+          <label><input type="checkbox" class="filter-checkbox" data-filter-group="tags" value="Decompiler" /> Decompiler</label>
+          <label><input type="checkbox" class="filter-checkbox" data-filter-group="tags" value="Kernel" /> Kernel</label>
+          <label><input type="checkbox" class="filter-checkbox" data-filter-group="tags" value="AI" /> AI</label>
+          <label><input type="checkbox" class="filter-checkbox" data-filter-group="tags" value="Supports VNG" /> Supports VNG</label>
+          <label><input type="checkbox" class="filter-checkbox" data-filter-group="tags" value="Multi-instance" /> Multi-instance</label>
+        </section>
+
+        <!-- CHEAT TYPE FILTERS -->
+        <section class="filter-group">
+          <h3 class="filter-title">Cheat Type</h3>
+          <label><input type="checkbox" class="filter-checkbox" data-filter-group="cheatType" value="Internal" /> Internal (Executor)</label>
+          <label><input type="checkbox" class="filter-checkbox" data-filter-group="cheatType" value="External" /> External</label>
+        </section>
+
+        <!-- KEY SYSTEM FILTERS -->
+        <section class="filter-group">
+          <h3 class="filter-title">Key System</h3>
+          <label><input type="checkbox" class="filter-checkbox" data-filter-group="keySystem" value="Keyed" /> Keyed</label>
+          <label><input type="checkbox" class="filter-checkbox" data-filter-group="keySystem" value="Keyless" /> Keyless</label>
+        </section>
+
+        <!-- PRICE FILTER -->
+        <section class="filter-group">
+          <h3 class="filter-title">Price</h3>
+
+          <!-- Note: values are numeric and come from product.priceValue. Lifetime products have priceValue = null -->
+          <div class="price-controls">
+            <label class="small">Max price: <span id="priceMaxLabel">$100</span></label>
+            <input id="priceRange" type="range" min="0" max="100" value="100" />
+            <div class="price-quick">
+              <select id="priceDropdown">
+                <option value="all">All prices</option>
+                <option value="lt5">&lt; $5</option>
+                <option value="lt10">&lt; $10</option>
+                <option value="lt20">&lt; $20</option>
+                <option value="20plus">$20+</option>
+                <option value="lifetime">Show only Lifetime</option>
+              </select>
+            </div>
+            <label><input id="includeLifetime" type="checkbox" /> Include Lifetime items</label>
+          </div>
+
+          <!-- Comments: To change slider behavior, edit script.js where priceRange and priceDropdown are handled -->
+        </section>
+
+        <hr />
+        <button id="resetFilters" class="btn-primary block">Reset filters</button>
+        <p class="sidebar-note">Tip: To add filters, copy a <code>label + input</code> block and adjust <code>data-filter-group</code>.</p>
+      </div>
+    </aside>
+
+    <!-- MAIN AREA -->
+    <main class="main-content">
+      <!-- LEGEND / KEY ABOVE PRODUCT LIST -->
+      <div class="legend">
+        <div class="legend-item"><span class="badge verified"></span> Verified</div>
+        <div class="legend-item"><span class="badge warning"></span> Warning</div>
+        <div class="legend-item"><span class="badge trending"></span> Trending</div>
+        <div class="legend-item"><span class="tag internal">Internal</span> Internal / Executor</div>
+        <div class="legend-item"><span class="tag external">External</span> External</div>
+        <div class="legend-item"><span class="score-bubble">sUNC</span> sUNC score indicates community confidence (higher = better)</div>
+      </div>
+
+      <!-- Product grid -->
+      <section id="productGrid" class="product-grid" aria-live="polite">
+        <!-- Product cards are injected here by script.js -->
+      </section>
+
+      <!-- empty state -->
+      <div id="noResults" class="no-results" hidden>
+        <p>No products match your filters.</p>
+      </div>
+    </main>
+  </div>
+
+  <!-- INFO MODAL -->
+  <div id="modalOverlay" class="modal-overlay" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal">
+      <button id="modalCloseBtn" class="modal-close" aria-label="Close modal">✕</button>
+      <div id="modalContent" class="modal-content">
+        <!-- Modal content injected by script.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- SVG ICONS (inline so no external assets) -->
+  <svg style="display:none" aria-hidden="true">
+    <symbol id="icon-decompiler" viewBox="0 0 24 24"><path d="M4 4h16v2H4zM4 9h10v2H4zM4 14h16v2H4zM4 19h10v2H4z" /></symbol>
+    <symbol id="icon-multi" viewBox="0 0 24 24"><path d="M12 2l4 4-4 4-4-4zM2 12l4 4 4-4-4-4zM12 18l4 4 4-4-4-4z"/></symbol>
+    <symbol id="icon-kernel" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 5h-2v7h2z"/></symbol>
+    <symbol id="icon-info" viewBox="0 0 24 24"><path d="M11 9h2V7h-2zM11 17h2v-6h-2zM12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20z"/></symbol>
+  </svg>
+
+  <script src="script.js"></script>
+</body>
+</html>
