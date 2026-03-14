@@ -52,6 +52,13 @@
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
   const betaFeaturesEnabled = () => localStorage.getItem('xyrex_beta_features') === 'enabled';
+  const localDayKey = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   class XyrexDodgeGame {
     constructor(mount) {
@@ -71,6 +78,17 @@
       this.particles = [];
       this.ensureTokenState();
       this.buildUi();
+      this.hydrateRemoteProgress();
+      window.XyrexAccountScope?.onAccountChange?.(() => {
+        this.data = this.loadData();
+        this.ensureTokenState();
+        this.hydrateRemoteProgress();
+        this.syncUi();
+        this.updateModifierUi();
+        this.updatePowerupUi();
+        this.updateTokenShopUi();
+        this.updateCheatUi();
+      });
     }
 
     loadData() {
@@ -94,10 +112,44 @@
 
     saveData() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
+      this.queueRemoteSync();
+    }
+
+    async hydrateRemoteProgress() {
+      try {
+        const remote = await window.XyrexAuth?.loadAccountProgress?.('dodge');
+        if (!remote || typeof remote !== 'object') return;
+        this.data = {
+          ...this.data,
+          ...remote,
+          ownedModifiers: Array.isArray(remote.ownedModifiers) && remote.ownedModifiers.length ? remote.ownedModifiers.filter(name => MODIFIERS[name]) : this.data.ownedModifiers,
+          ownedPowerups: Array.isArray(remote.ownedPowerups) ? remote.ownedPowerups.filter(name => POWERUPS[name]) : this.data.ownedPowerups,
+          selectedModifier: MODIFIERS[remote.selectedModifier] ? remote.selectedModifier : this.data.selectedModifier,
+          selectedPowerup: POWERUPS[remote.selectedPowerup] ? remote.selectedPowerup : this.data.selectedPowerup,
+          activeCheats: Array.isArray(remote.activeCheats) ? remote.activeCheats.map(item => String(item).toLowerCase()).filter(Boolean) : this.data.activeCheats
+        };
+        this.ensureTokenState();
+        this.saveData();
+        this.syncUi();
+        this.updateModifierUi();
+        this.updatePowerupUi();
+        this.updateTokenShopUi();
+        this.updateCheatUi();
+      } catch {
+        // ignore remote hydration failures
+      }
+    }
+
+    queueRemoteSync() {
+      if (this.syncTimer) window.clearTimeout(this.syncTimer);
+      this.syncTimer = window.setTimeout(() => {
+        this.syncTimer = 0;
+        window.XyrexAuth?.saveAccountProgress?.('dodge', this.data);
+      }, 180);
     }
 
     dayKey() {
-      return new Date().toISOString().slice(0, 10);
+      return localDayKey();
     }
 
     ensureTokenState() {
@@ -997,7 +1049,7 @@
       parsed = { ...DEFAULT_DATA };
     }
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDayKey();
     const usedToday = parsed.aiTokenDate === today ? Math.max(0, Number(parsed.aiTokensUsedToday) || 0) : 0;
     const freeRemaining = Math.max(0, FREE_DAILY_AI_TOKENS - usedToday);
     const purchased = Math.max(0, Number(parsed.aiPurchasedTokens) || 0);
@@ -1017,7 +1069,7 @@
       }
     })();
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDayKey();
     if (data.aiTokenDate !== today) {
       data.aiTokenDate = today;
       data.aiTokensUsedToday = 0;
