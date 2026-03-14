@@ -308,6 +308,11 @@ body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 250px; 
 .xy-run-actions button,.xy-sidecard button,.xy-sidecard select{ width:100%; border:1px solid rgba(178,188,255,.22); background:rgba(34,49,80,.95); color:#eef4ff; border-radius:8px; padding:9px 10px; font-weight:700; }
 .xy-sidecard button{ cursor:pointer; }
 .xy-sidecard button:disabled{ opacity:.6; cursor:not-allowed; }
+
+@media (min-width: 901px){
+  body.easter-game-mode .xy-canvas-wrap{ width:100%; max-width:100%; }
+}
+
 .xy-help{ color:var(--muted); font-size:.84rem; margin:0; }
 .xy-token-count{ color:#c2d2ef; font-size:.84rem; line-height:1.35; margin-bottom:8px; }
 .xy-token-actions{ display:grid; gap:6px; }
