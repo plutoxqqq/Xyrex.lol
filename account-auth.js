@@ -40,6 +40,7 @@
     if (!USERNAME_REGEX.test(username)) {
       throw new Error('Username must be 3 to 24 characters and only include letters, numbers, underscores, or periods.');
     }
+    return email;
   }
 
   function validateEmail(value) {
@@ -213,6 +214,8 @@
     const email = validateEmail(emailRaw);
     const password = validatePassword(passwordRaw);
     validateUsername(username);
+    const email = validateEmail(emailRaw);
+    const password = validatePassword(passwordRaw);
 
     const existing = await getProfileByUsername(client, username);
     if (existing) throw new Error('That username is already registered.');
@@ -240,6 +243,7 @@
   async function login(usernameRaw, passwordRaw) {
     const client = await requireClient();
     const username = normalizeUsername(usernameRaw);
+    validateUsername(username);
     const password = String(passwordRaw || '');
     validateUsername(username);
     if (!password) throw new Error('Please provide your password.');
@@ -390,6 +394,7 @@
     modal.addEventListener('click', event => {
       if (event.target === modal) close();
     });
+
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape' && modal.getAttribute('aria-hidden') === 'false') close();
     });
@@ -532,6 +537,9 @@
     },
     getCurrentAccount() {
       return ACCOUNT_SCOPE.getAccount?.() || 'guest';
+    },
+    getProfile() {
+      return activeProfile;
     },
     getProfile() {
       return activeProfile;
