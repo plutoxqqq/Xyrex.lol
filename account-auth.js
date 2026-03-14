@@ -41,9 +41,13 @@
 
     const anonKey = getConfigValue([
       window.XYREX_SUPABASE_ANON_KEY,
+      window.XYREX_SUPABASE_PUBLISHABLE_KEY,
       window.SUPABASE_ANON_KEY,
+      window.SUPABASE_PUBLISHABLE_KEY,
       globalConfig.anonKey,
+      globalConfig.publishableKey,
       globalConfig.supabaseAnonKey,
+      globalConfig.supabasePublishableKey,
       anonMeta
     ]);
 
@@ -52,6 +56,18 @@
 
   let resolvedConfig = resolveSupabaseConfig();
   let authConfigured = Boolean(resolvedConfig.url && resolvedConfig.anonKey);
+  const redactKey = key => {
+    const value = String(key || '');
+    if (!value) return '(missing)';
+    if (value.length <= 8) return `${value.slice(0, 2)}***`;
+    return `${value.slice(0, 4)}***${value.slice(-4)}`;
+  };
+
+  console.info('[XyrexAuth] Supabase config detection:', {
+    configured: authConfigured,
+    url: resolvedConfig.url || '(missing)',
+    anonKey: redactKey(resolvedConfig.anonKey)
+  });
 
   function normalizeUsername(value) {
     return String(value || '').trim().toLowerCase();
