@@ -11,53 +11,9 @@
 
   let supabaseClientPromise = null;
   let supabaseClient = null;
-  let authConfigured = false;
+  let supabaseFactoryPromise = null;
   let activeProfile = null;
   let activeModalMode = 'login';
-
-  const readStorage = key => {
-    try {
-      return localStorage.getItem(key);
-    } catch {
-      return null;
-    }
-  };
-
-  const writeStorage = (key, value) => {
-    try {
-      if (value == null) localStorage.removeItem(key);
-      else localStorage.setItem(key, value);
-    } catch {
-      // Ignore storage write failures
-    }
-  };
-
-  function normalizeUsername(value) {
-    return String(value || '').trim().toLowerCase();
-  }
-
-  function validateUsername(username) {
-    if (!USERNAME_REGEX.test(username)) {
-      throw new Error('Username must be 3 to 24 characters and only include letters, numbers, underscores, or periods.');
-    }
-    return email;
-  }
-
-  function validateEmail(value) {
-    const email = String(value || '').trim().toLowerCase();
-    if (!EMAIL_REGEX.test(email)) {
-      throw new Error('Please enter a valid email address.');
-    }
-    return email;
-  }
-
-  function validatePassword(value) {
-    const password = String(value || '');
-    if (password.length < 8) throw new Error('Password must be at least 8 characters long.');
-    if (!/[A-Z]/.test(password)) throw new Error('Password must include at least one uppercase letter.');
-    if (!/\d/.test(password)) throw new Error('Password must include at least one number.');
-    return password;
-  }
 
   function getConfigValue(candidates) {
     for (const item of candidates) {
@@ -94,28 +50,49 @@
     return { url, anonKey };
   }
 
-  async function getSupabaseClient() {
-    if (supabaseClient) return supabaseClient;
-    if (supabaseClientPromise) return supabaseClientPromise;
+  let resolvedConfig = resolveSupabaseConfig();
+  let authConfigured = Boolean(resolvedConfig.url && resolvedConfig.anonKey);
 
-    supabaseClientPromise = (async () => {
-      const { url, anonKey } = resolveSupabaseConfig();
-      authConfigured = Boolean(url && anonKey);
-      if (!authConfigured) return null;
+  function normalizeUsername(value) {
+    return String(value || '').trim().toLowerCase();
+  }
 
-      const module = await import('https://esm.sh/@supabase/supabase-js@2');
-      const client = module.createClient(url, anonKey, {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true
-        }
-      });
-      supabaseClient = client;
-      return client;
-    })();
+  function validateUsername(username) {
+    if (!USERNAME_REGEX.test(username)) {
+      throw new Error('Username must be 3 to 24 characters and only include letters, numbers, underscores, or periods.');
+    }
+    return email;
+  }
 
-    return supabaseClientPromise;
+  function validateEmail(value) {
+    const email = String(value || '').trim().toLowerCase();
+    if (!EMAIL_REGEX.test(email)) throw new Error('Please enter a valid email address.');
+    return email;
+  }
+
+  function validatePassword(value) {
+    const password = String(value || '');
+    if (password.length < 8) throw new Error('Password must be at least 8 characters long.');
+    if (!/[A-Z]/.test(password)) throw new Error('Password must include at least one uppercase letter.');
+    if (!/\d/.test(password)) throw new Error('Password must include at least one number.');
+    return password;
+  }
+
+  function readStorage(key) {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  }
+
+  function writeStorage(key, value) {
+    try {
+      if (value == null) localStorage.removeItem(key);
+      else localStorage.setItem(key, value);
+    } catch {
+      // Ignore storage failures
+    }
   }
 
   function getCachedProfile() {
@@ -129,8 +106,110 @@
 
   function setProfile(profile) {
     activeProfile = profile && typeof profile === 'object' ? profile : null;
-    if (!activeProfile) writeStorage(PROFILE_CACHE_KEY, null);
-    else writeStorage(PROFILE_CACHE_KEY, JSON.stringify(activeProfile));
+    if (activeProfile) writeStorage(PROFILE_CACHE_KEY, JSON.stringify(activeProfile));
+    else writeStorage(PROFILE_CACHE_KEY, null);
+  }
+
+  function notifyAccountChange() {
+    window.dispatchEvent(new CustomEvent('xyrex:account-changed', {
+      detail: { username: ACCOUNT_SCOPE.getAccount?.() || 'guest' }
+    }));
+  }
+
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const existing = document.querySelector(`script[data-xyrex-supabase-src="${src}"]`);
+      if (existing && existing.getAttribute('data-loaded') === 'true') {
+        resolve(true);
+        return;
+      }
+      const script = existing || document.createElement('script');
+      script.async = true;
+      script.src = src;
+      script.dataset.xyrexSupabaseSrc = src;
+      script.onload = () => {
+        script.setAttribute('data-loaded', 'true');
+        resolve(true);
+      };
+      script.onerror = () => reject(new Error(`Failed to load Supabase script: ${src}`));
+      if (!existing) document.head.appendChild(script);
+    });
+  }
+
+  async function getSupabaseFactory() {
+    if (window.supabase?.createClient) return window.supabase.createClient;
+    if (supabaseFactoryPromise) return supabaseFactoryPromise;
+
+    supabaseFactoryPromise = (async () => {
+      const importCandidates = [
+        'https://esm.sh/@supabase/supabase-js@2',
+        'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+      ];
+
+      for (const source of importCandidates) {
+        try {
+          const module = await import(source);
+          if (typeof module?.createClient === 'function') return module.createClient;
+        } catch {
+          // Try the next source
+        }
+      }
+
+      const scriptCandidates = [
+        'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js',
+        'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js'
+      ];
+
+      for (const source of scriptCandidates) {
+        try {
+          await loadScript(source);
+          if (window.supabase?.createClient) return window.supabase.createClient;
+        } catch {
+          // Try the next source
+        }
+      }
+
+      throw new Error('Unable to load Supabase client library.');
+    })();
+
+    return supabaseFactoryPromise;
+  }
+
+  async function getSupabaseClient() {
+    if (supabaseClient) return supabaseClient;
+    if (supabaseClientPromise) return supabaseClientPromise;
+
+    supabaseClientPromise = (async () => {
+      resolvedConfig = resolveSupabaseConfig();
+      authConfigured = Boolean(resolvedConfig.url && resolvedConfig.anonKey);
+      if (!authConfigured) return null;
+
+      try {
+        const createClient = await getSupabaseFactory();
+        const client = createClient(resolvedConfig.url, resolvedConfig.anonKey, {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true
+          }
+        });
+        supabaseClient = client;
+        return client;
+      } catch {
+        return null;
+      }
+    })();
+
+    return supabaseClientPromise;
+  }
+
+  async function requireClient() {
+    const client = await getSupabaseClient();
+    if (!client) {
+      if (!authConfigured) throw new Error('Supabase auth is not configured for this deployment yet.');
+      throw new Error('Supabase auth client could not be initialized. Please try again shortly.');
+    }
+    return client;
   }
 
   async function getProfileByUsername(client, username) {
@@ -202,17 +281,9 @@
     return profile;
   }
 
-  async function requireClient() {
-    const client = await getSupabaseClient();
-    if (!client) throw new Error('Supabase auth is not configured for this deployment yet.');
-    return client;
-  }
-
   async function signUp(usernameRaw, emailRaw, passwordRaw) {
     const client = await requireClient();
     const username = normalizeUsername(usernameRaw);
-    const email = validateEmail(emailRaw);
-    const password = validatePassword(passwordRaw);
     validateUsername(username);
     const email = validateEmail(emailRaw);
     const password = validatePassword(passwordRaw);
@@ -231,27 +302,28 @@
 
     if (error) throw new Error(error.message || 'Unable to complete sign up.');
     if (!data?.user) throw new Error('Unable to complete sign up.');
+    if (!data?.session) throw new Error('Sign up succeeded. Please verify your email address before signing in.');
 
-    if (data.session) {
-      await ensureProfileForUser(client, data.user, username);
-      return username;
-    }
-
-    throw new Error('Sign up succeeded. Please verify your email address before signing in.');
+    await ensureProfileForUser(client, data.user, username);
+    return username;
   }
 
   async function login(usernameRaw, passwordRaw) {
     const client = await requireClient();
     const username = normalizeUsername(usernameRaw);
     validateUsername(username);
+
     const password = String(passwordRaw || '');
-    validateUsername(username);
     if (!password) throw new Error('Please provide your password.');
 
     const profile = await getProfileByUsername(client, username);
     if (!profile?.email) throw new Error('Account not found.');
 
-    const { data, error } = await client.auth.signInWithPassword({ email: profile.email, password });
+    const { data, error } = await client.auth.signInWithPassword({
+      email: profile.email,
+      password
+    });
+
     if (error) throw new Error(error.message || 'Login failed.');
     if (!data?.user) throw new Error('Login failed.');
 
@@ -288,11 +360,34 @@
       try {
         await client.auth.signOut();
       } catch {
-        // Ignore network failures during sign out
+        // Ignore transient signout errors
       }
     }
+
     setProfile(null);
     ACCOUNT_SCOPE.setAccount('guest');
+  }
+
+  async function restoreSession() {
+    const client = await getSupabaseClient();
+    if (!client) {
+      setProfile(getCachedProfile());
+      return;
+    }
+
+    try {
+      const { data } = await client.auth.getSession();
+      const user = data?.session?.user || null;
+      if (!user) {
+        setProfile(null);
+        ACCOUNT_SCOPE.setAccount('guest');
+        return;
+      }
+      await ensureProfileForUser(client, user);
+    } catch {
+      setProfile(null);
+      ACCOUNT_SCOPE.setAccount('guest');
+    }
   }
 
   async function loadAccountProgress(scope = 'dodge') {
@@ -300,8 +395,8 @@
     if (!client) return null;
 
     try {
-      const { data: sessionData } = await client.auth.getSession();
-      const userId = sessionData?.session?.user?.id;
+      const { data } = await client.auth.getSession();
+      const userId = data?.session?.user?.id;
       if (!userId) return null;
 
       const profile = await getProfileByUserId(client, userId);
@@ -381,6 +476,7 @@
         </div>
       </section>
     `;
+
     document.body.appendChild(modal);
 
     const close = () => {
@@ -400,18 +496,18 @@
     });
   }
 
-  function showStatus(modal, message, mode = 'error') {
-    const status = modal.querySelector('#xyAuthStatus');
-    status.hidden = false;
-    status.textContent = message;
-    status.className = `xy-auth-status ${mode}`;
-  }
-
   function setBusy(modal, busy) {
     modal.querySelectorAll('input, button').forEach(element => {
       if (element.classList.contains('xy-auth-close')) return;
       element.disabled = busy;
     });
+  }
+
+  function showStatus(modal, message, mode = 'error') {
+    const status = modal.querySelector('#xyAuthStatus');
+    status.hidden = false;
+    status.textContent = message;
+    status.className = `xy-auth-status ${mode}`;
   }
 
   function syncModalUi(modal) {
@@ -424,12 +520,6 @@
     modal.querySelector('#xyAuthEmailWrap').hidden = !isSignUp;
     modal.querySelector('#xyAuthReset').hidden = isRecovery;
     modal.querySelector('#xyAuthNewPassWrap').hidden = !isRecovery;
-  }
-
-  function notifyAccountChange() {
-    window.dispatchEvent(new CustomEvent('xyrex:account-changed', {
-      detail: { username: ACCOUNT_SCOPE.getAccount?.() || 'guest' }
-    }));
   }
 
   function openAuthModal(mode = 'login') {
@@ -456,17 +546,18 @@
       setBusy(modal, true);
       try {
         if (activeModalMode === 'signup') {
-          const resolved = await signUp(username, email, password);
-          showStatus(modal, `Signed in as ${resolved}.`, 'success');
+          const account = await signUp(username, email, password);
+          showStatus(modal, `Signed in as ${account}.`, 'success');
         } else if (activeModalMode === 'recovery') {
           await updateRecoveredPassword(newPassword);
           showStatus(modal, 'Password updated. You can now log in with your new password.', 'success');
           activeModalMode = 'login';
           syncModalUi(modal);
         } else {
-          const resolved = await login(username, password);
-          showStatus(modal, `Signed in as ${resolved}.`, 'success');
+          const account = await login(username, password);
+          showStatus(modal, `Signed in as ${account}.`, 'success');
         }
+
         notifyAccountChange();
       } catch (error) {
         showStatus(modal, error?.message || 'Authentication failed.', 'error');
@@ -476,10 +567,7 @@
     };
 
     reset.onclick = async () => {
-      const userField = modal.querySelector('#xyAuthUser').value;
-      const emailField = modal.querySelector('#xyAuthEmail').value;
-      const identifier = userField || emailField;
-
+      const identifier = modal.querySelector('#xyAuthUser').value || modal.querySelector('#xyAuthEmail').value;
       setBusy(modal, true);
       try {
         await sendResetEmail(identifier);
@@ -494,30 +582,10 @@
     modal.querySelector('#xyAuthUser').focus();
   }
 
-  async function restoreSession() {
-    const client = await getSupabaseClient();
-    if (!client) {
-      setProfile(getCachedProfile());
-      return;
-    }
+  const originalClearAccount = typeof ACCOUNT_SCOPE.clearAccount === 'function'
+    ? ACCOUNT_SCOPE.clearAccount.bind(ACCOUNT_SCOPE)
+    : null;
 
-    try {
-      const { data } = await client.auth.getSession();
-      const user = data?.session?.user || null;
-      if (!user) {
-        setProfile(null);
-        ACCOUNT_SCOPE.setAccount('guest');
-        return;
-      }
-
-      await ensureProfileForUser(client, user);
-    } catch {
-      setProfile(null);
-      ACCOUNT_SCOPE.setAccount('guest');
-    }
-  }
-
-  const originalClearAccount = typeof ACCOUNT_SCOPE.clearAccount === 'function' ? ACCOUNT_SCOPE.clearAccount.bind(ACCOUNT_SCOPE) : null;
   ACCOUNT_SCOPE.clearAccount = async () => {
     await logout();
     if (originalClearAccount) originalClearAccount();
@@ -541,20 +609,18 @@
     getProfile() {
       return activeProfile;
     },
-    getProfile() {
-      return activeProfile;
-    },
     hasRemoteSync() {
+      resolvedConfig = resolveSupabaseConfig();
+      authConfigured = Boolean(resolvedConfig.url && resolvedConfig.anonKey);
       return authConfigured;
     },
     loadAccountProgress,
     saveAccountProgress,
     async initialize() {
       const client = await getSupabaseClient();
-      authConfigured = Boolean(client);
 
       if (client) {
-        client.auth.onAuthStateChange(async (event, session) => {
+        client.auth.onAuthStateChange(async (_event, session) => {
           const user = session?.user || null;
           if (!user) {
             setProfile(null);
@@ -568,6 +634,7 @@
           } catch {
             ACCOUNT_SCOPE.setAccount('guest');
           }
+
           notifyAccountChange();
         });
       }
