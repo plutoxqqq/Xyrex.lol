@@ -1,37 +1,35 @@
 (() => {
-  const GLOBAL_PREFIX = '__xyrex_global__';
-  const SESSION_KEY = `${GLOBAL_PREFIX}auth_session_v2`;
-  const PROFILE_CACHE_KEY = `${GLOBAL_PREFIX}profile_cache_v2`;
   const ACCOUNT_SCOPE = window.XyrexAccountScope;
   if (!ACCOUNT_SCOPE) return;
 
-  const SUPABASE_URL = typeof window.XYREX_SUPABASE_URL === 'string' ? window.XYREX_SUPABASE_URL.trim().replace(/\/+$/, '') : '';
-  const SUPABASE_ANON_KEY = typeof window.XYREX_SUPABASE_ANON_KEY === 'string' ? window.XYREX_SUPABASE_ANON_KEY.trim() : '';
-  const AUTH_READY = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
-
+  const GLOBAL_PREFIX = '__xyrex_global__';
+  const PROFILE_CACHE_KEY = `${GLOBAL_PREFIX}profile_cache_v2`;
+  const REDIRECT_URL = `${window.location.origin}${window.location.pathname}`;
+  const PROFILE_TABLE = 'xyrex_profiles';
   const USERNAME_REGEX = /^[a-z0-9._]{3,24}$/;
   const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const PROFILE_TABLE = 'xyrex_profiles';
-  const REDIRECT_URL = `${window.location.origin}${window.location.pathname}`;
 
-  let activeSession = null;
+  let supabaseClientPromise = null;
+  let supabaseClient = null;
+  let authConfigured = false;
   let activeProfile = null;
   let activeModalMode = 'login';
 
-  const readGlobalStorage = key => {
+  const readStorage = key => {
     try {
-      return window.localStorage.getItem(key);
+      return localStorage.getItem(key);
     } catch {
       return null;
     }
   };
 
-  const writeGlobalStorage = (key, value) => {
-    if (value == null) {
-      window.localStorage.removeItem(key);
-      return;
+  const writeStorage = (key, value) => {
+    try {
+      if (value == null) localStorage.removeItem(key);
+      else localStorage.setItem(key, value);
+    } catch {
+      // Ignore storage write failures
     }
-    window.localStorage.setItem(key, value);
   };
 
   function normalizeUsername(value) {
@@ -42,100 +40,127 @@
     if (!USERNAME_REGEX.test(username)) {
       throw new Error('Username must be 3 to 24 characters and only include letters, numbers, underscores, or periods.');
     }
+    return email;
   }
 
-  function validateEmail(emailRaw) {
-    const email = String(emailRaw || '').trim().toLowerCase();
+  function validateEmail(value) {
+    const email = String(value || '').trim().toLowerCase();
     if (!EMAIL_REGEX.test(email)) {
       throw new Error('Please enter a valid email address.');
     }
     return email;
   }
 
-  function validatePassword(passwordRaw) {
-    const password = String(passwordRaw || '');
+  function validatePassword(value) {
+    const password = String(value || '');
     if (password.length < 8) throw new Error('Password must be at least 8 characters long.');
     if (!/[A-Z]/.test(password)) throw new Error('Password must include at least one uppercase letter.');
     if (!/\d/.test(password)) throw new Error('Password must include at least one number.');
     return password;
   }
 
-  async function request(path, options = {}, accessToken = '') {
-    const headers = {
-      apikey: SUPABASE_ANON_KEY,
-      ...(options.headers || {})
-    };
-    if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
-
-    const response = await fetch(`${SUPABASE_URL}${path}`, {
-      ...options,
-      headers
-    });
-
-    let payload = null;
-    try {
-      payload = await response.json();
-    } catch {
-      payload = null;
+  function getConfigValue(candidates) {
+    for (const item of candidates) {
+      const value = typeof item === 'string' ? item.trim() : '';
+      if (value) return value;
     }
-
-    if (!response.ok) {
-      const message = payload?.msg || payload?.error_description || payload?.message || 'Authentication request failed.';
-      throw new Error(message);
-    }
-
-    return payload;
+    return '';
   }
 
-  function setSession(session) {
-    activeSession = session && typeof session === 'object' ? session : null;
-    if (!activeSession) {
-      writeGlobalStorage(SESSION_KEY, null);
-      return;
-    }
-    writeGlobalStorage(SESSION_KEY, JSON.stringify(activeSession));
+  function resolveSupabaseConfig() {
+    const globalConfig = window.__XYREX_SUPABASE_CONFIG && typeof window.__XYREX_SUPABASE_CONFIG === 'object'
+      ? window.__XYREX_SUPABASE_CONFIG
+      : {};
+
+    const urlMeta = document.querySelector('meta[name="xyrex-supabase-url"]')?.content || '';
+    const anonMeta = document.querySelector('meta[name="xyrex-supabase-anon-key"]')?.content || '';
+
+    const url = getConfigValue([
+      window.XYREX_SUPABASE_URL,
+      window.SUPABASE_URL,
+      globalConfig.url,
+      globalConfig.supabaseUrl,
+      urlMeta
+    ]).replace(/\/+$/, '');
+
+    const anonKey = getConfigValue([
+      window.XYREX_SUPABASE_ANON_KEY,
+      window.SUPABASE_ANON_KEY,
+      globalConfig.anonKey,
+      globalConfig.supabaseAnonKey,
+      anonMeta
+    ]);
+
+    return { url, anonKey };
   }
 
-  function setProfile(profile) {
-    activeProfile = profile && typeof profile === 'object' ? profile : null;
-    if (activeProfile) {
-      writeGlobalStorage(PROFILE_CACHE_KEY, JSON.stringify(activeProfile));
-    } else {
-      writeGlobalStorage(PROFILE_CACHE_KEY, null);
-    }
+  async function getSupabaseClient() {
+    if (supabaseClient) return supabaseClient;
+    if (supabaseClientPromise) return supabaseClientPromise;
+
+    supabaseClientPromise = (async () => {
+      const { url, anonKey } = resolveSupabaseConfig();
+      authConfigured = Boolean(url && anonKey);
+      if (!authConfigured) return null;
+
+      const module = await import('https://esm.sh/@supabase/supabase-js@2');
+      const client = module.createClient(url, anonKey, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true
+        }
+      });
+      supabaseClient = client;
+      return client;
+    })();
+
+    return supabaseClientPromise;
   }
 
   function getCachedProfile() {
     try {
-      const parsed = JSON.parse(readGlobalStorage(PROFILE_CACHE_KEY) || 'null');
+      const parsed = JSON.parse(readStorage(PROFILE_CACHE_KEY) || 'null');
       return parsed && typeof parsed === 'object' ? parsed : null;
     } catch {
       return null;
     }
   }
 
-  async function getProfileByUsername(username) {
-    const rows = await request(
-      `/rest/v1/${PROFILE_TABLE}?select=*&username=eq.${encodeURIComponent(username)}&limit=1`,
-      { headers: { Accept: 'application/json' } }
-    );
-    return Array.isArray(rows) && rows[0] ? rows[0] : null;
+  function setProfile(profile) {
+    activeProfile = profile && typeof profile === 'object' ? profile : null;
+    if (!activeProfile) writeStorage(PROFILE_CACHE_KEY, null);
+    else writeStorage(PROFILE_CACHE_KEY, JSON.stringify(activeProfile));
   }
 
-  async function getProfileByUserId(userId, accessToken) {
-    const rows = await request(
-      `/rest/v1/${PROFILE_TABLE}?select=*&user_id=eq.${encodeURIComponent(userId)}&limit=1`,
-      { headers: { Accept: 'application/json' } },
-      accessToken
-    );
-    return Array.isArray(rows) && rows[0] ? rows[0] : null;
+  async function getProfileByUsername(client, username) {
+    const { data, error } = await client
+      .from(PROFILE_TABLE)
+      .select('*')
+      .eq('username', username)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message || 'Unable to fetch account profile.');
+    return data || null;
   }
 
-  async function ensureProfileForUser(user, accessToken, fallbackUsername = '') {
-    const userId = user?.id;
-    if (!userId) throw new Error('Missing authenticated user.');
+  async function getProfileByUserId(client, userId) {
+    const { data, error } = await client
+      .from(PROFILE_TABLE)
+      .select('*')
+      .eq('user_id', userId)
+      .limit(1)
+      .maybeSingle();
 
-    let profile = await getProfileByUserId(userId, accessToken);
+    if (error) throw new Error(error.message || 'Unable to fetch account profile.');
+    return data || null;
+  }
+
+  async function ensureProfileForUser(client, user, fallbackUsername = '') {
+    if (!user?.id) throw new Error('Missing authenticated user.');
+
+    let profile = await getProfileByUserId(client, user.id);
     if (profile) {
       setProfile(profile);
       ACCOUNT_SCOPE.setAccount(profile.username || 'guest');
@@ -145,211 +170,178 @@
     const username = normalizeUsername(fallbackUsername || user?.user_metadata?.username || user?.email?.split('@')[0] || 'guest');
     validateUsername(username);
 
-    const insertPayload = {
-      user_id: userId,
-      username,
-      email: String(user?.email || '').toLowerCase(),
-      progress: {
-        dodge: {
-          coins: 0,
-          bestScore: 0,
-          ownedModifiers: ['Balanced'],
-          selectedModifier: 'Balanced',
-          ownedPowerups: [],
-          selectedPowerup: 'None',
-          aiTokenDate: '',
-          aiTokensUsedToday: 0,
-          aiPurchasedTokens: 0,
-          activeCheats: []
+    const { error: insertError } = await client
+      .from(PROFILE_TABLE)
+      .insert({
+        user_id: user.id,
+        username,
+        email: String(user.email || '').toLowerCase(),
+        progress: {
+          dodge: {
+            coins: 0,
+            bestScore: 0,
+            ownedModifiers: ['Balanced'],
+            selectedModifier: 'Balanced',
+            ownedPowerups: [],
+            selectedPowerup: 'None',
+            aiTokenDate: '',
+            aiTokensUsedToday: 0,
+            aiPurchasedTokens: 0,
+            activeCheats: []
+          }
         }
-      }
-    };
+      });
 
-    await request(`/rest/v1/${PROFILE_TABLE}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Prefer: 'return=representation'
-      },
-      body: JSON.stringify(insertPayload)
-    }, accessToken);
+    if (insertError) throw new Error(insertError.message || 'Unable to initialize account profile.');
 
-    profile = await getProfileByUserId(userId, accessToken);
-    if (!profile) throw new Error('Unable to initialize profile data.');
+    profile = await getProfileByUserId(client, user.id);
+    if (!profile) throw new Error('Unable to initialize account profile.');
+
     setProfile(profile);
     ACCOUNT_SCOPE.setAccount(profile.username || 'guest');
     return profile;
   }
 
-  async function refreshSessionIfNeeded() {
-    if (!activeSession?.refresh_token) return null;
-    const expiresAt = Number(activeSession?.expires_at || 0);
-    if (expiresAt > Math.floor(Date.now() / 1000) + 30) return activeSession;
-
-    const refreshed = await request('/auth/v1/token?grant_type=refresh_token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: activeSession.refresh_token })
-    });
-
-    setSession(refreshed);
-    return refreshed;
-  }
-
-  async function hydrateFromStoredSession() {
-    if (!AUTH_READY) {
-      setProfile(getCachedProfile());
-      return;
-    }
-
-    try {
-      const storedSession = JSON.parse(readGlobalStorage(SESSION_KEY) || 'null');
-      if (!storedSession?.access_token) return;
-      setSession(storedSession);
-      await refreshSessionIfNeeded();
-      const userPayload = await request('/auth/v1/user', { headers: { Accept: 'application/json' } }, activeSession.access_token);
-      await ensureProfileForUser(userPayload, activeSession.access_token);
-    } catch {
-      setSession(null);
-      setProfile(null);
-      ACCOUNT_SCOPE.clearAccount();
-    }
+  async function requireClient() {
+    const client = await getSupabaseClient();
+    if (!client) throw new Error('Supabase auth is not configured for this deployment yet.');
+    return client;
   }
 
   async function signUp(usernameRaw, emailRaw, passwordRaw) {
-    if (!AUTH_READY) throw new Error('Supabase auth is not configured for this deployment yet.');
+    const client = await requireClient();
     const username = normalizeUsername(usernameRaw);
+    const email = validateEmail(emailRaw);
+    const password = validatePassword(passwordRaw);
     validateUsername(username);
     const email = validateEmail(emailRaw);
     const password = validatePassword(passwordRaw);
 
-    const existing = await getProfileByUsername(username);
+    const existing = await getProfileByUsername(client, username);
     if (existing) throw new Error('That username is already registered.');
 
-    const authPayload = await request('/auth/v1/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email,
-        password,
+    const { data, error } = await client.auth.signUp({
+      email,
+      password,
+      options: {
         data: { username },
-        options: { emailRedirectTo: REDIRECT_URL }
-      })
+        emailRedirectTo: REDIRECT_URL
+      }
     });
 
-    if (!authPayload?.session || !authPayload?.user) {
-      throw new Error('Sign up succeeded. Please verify your email address before signing in.');
+    if (error) throw new Error(error.message || 'Unable to complete sign up.');
+    if (!data?.user) throw new Error('Unable to complete sign up.');
+
+    if (data.session) {
+      await ensureProfileForUser(client, data.user, username);
+      return username;
     }
 
-    setSession(authPayload.session);
-    const profile = await ensureProfileForUser(authPayload.user, authPayload.session.access_token, username);
-    return profile.username;
+    throw new Error('Sign up succeeded. Please verify your email address before signing in.');
   }
 
   async function login(usernameRaw, passwordRaw) {
-    if (!AUTH_READY) throw new Error('Supabase auth is not configured for this deployment yet.');
+    const client = await requireClient();
     const username = normalizeUsername(usernameRaw);
     validateUsername(username);
     const password = String(passwordRaw || '');
+    validateUsername(username);
     if (!password) throw new Error('Please provide your password.');
 
-    const profile = await getProfileByUsername(username);
+    const profile = await getProfileByUsername(client, username);
     if (!profile?.email) throw new Error('Account not found.');
 
-    const authPayload = await request('/auth/v1/token?grant_type=password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: profile.email, password })
-    });
+    const { data, error } = await client.auth.signInWithPassword({ email: profile.email, password });
+    if (error) throw new Error(error.message || 'Login failed.');
+    if (!data?.user) throw new Error('Login failed.');
 
-    setSession(authPayload);
-    const userPayload = await request('/auth/v1/user', { headers: { Accept: 'application/json' } }, authPayload.access_token);
-    const ensuredProfile = await ensureProfileForUser(userPayload, authPayload.access_token, username);
-    return ensuredProfile.username;
+    await ensureProfileForUser(client, data.user, username);
+    return username;
   }
 
   async function sendResetEmail(identifierRaw) {
-    if (!AUTH_READY) throw new Error('Supabase auth is not configured for this deployment yet.');
-    const normalized = String(identifierRaw || '').trim().toLowerCase();
-    if (!normalized) throw new Error('Please enter your username or email address.');
+    const client = await requireClient();
+    const identifier = String(identifierRaw || '').trim().toLowerCase();
+    if (!identifier) throw new Error('Please enter your username or email address.');
 
-    let email = normalized;
-    if (!EMAIL_REGEX.test(normalized)) {
-      const profile = await getProfileByUsername(normalized);
+    let email = identifier;
+    if (!EMAIL_REGEX.test(identifier)) {
+      const profile = await getProfileByUsername(client, identifier);
       if (!profile?.email) throw new Error('Account not found.');
       email = profile.email;
     }
 
-    await request('/auth/v1/recover', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, options: { emailRedirectTo: REDIRECT_URL } })
-    });
+    const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo: REDIRECT_URL });
+    if (error) throw new Error(error.message || 'Failed to send reset email.');
   }
 
-  async function updatePassword(passwordRaw) {
-    if (!activeSession?.access_token) throw new Error('No recovery session found.');
+  async function updateRecoveredPassword(passwordRaw) {
+    const client = await requireClient();
     const password = validatePassword(passwordRaw);
-
-    await request('/auth/v1/user', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password })
-    }, activeSession.access_token);
+    const { error } = await client.auth.updateUser({ password });
+    if (error) throw new Error(error.message || 'Failed to update password.');
   }
 
   async function logout() {
-    if (AUTH_READY && activeSession?.access_token) {
+    const client = await getSupabaseClient();
+    if (client) {
       try {
-        await request('/auth/v1/logout', { method: 'POST' }, activeSession.access_token);
+        await client.auth.signOut();
       } catch {
-        // ignore logout transport errors
+        // Ignore network failures during sign out
       }
     }
-    setSession(null);
     setProfile(null);
-    ACCOUNT_SCOPE.clearAccount();
+    ACCOUNT_SCOPE.setAccount('guest');
   }
 
   async function loadAccountProgress(scope = 'dodge') {
-    if (!AUTH_READY || !activeSession?.access_token || !activeProfile?.user_id) return null;
-    await refreshSessionIfNeeded();
-    const profile = await getProfileByUserId(activeProfile.user_id, activeSession.access_token);
-    if (!profile) return null;
-    setProfile(profile);
-    const progress = profile.progress && typeof profile.progress === 'object' ? profile.progress : {};
-    return progress[scope] && typeof progress[scope] === 'object' ? progress[scope] : null;
+    const client = await getSupabaseClient();
+    if (!client) return null;
+
+    try {
+      const { data: sessionData } = await client.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+      if (!userId) return null;
+
+      const profile = await getProfileByUserId(client, userId);
+      if (!profile) return null;
+      setProfile(profile);
+
+      const progress = profile.progress && typeof profile.progress === 'object' ? profile.progress : {};
+      return progress[scope] && typeof progress[scope] === 'object' ? progress[scope] : null;
+    } catch {
+      return null;
+    }
   }
 
   async function saveAccountProgress(scope = 'dodge', payload = {}) {
-    if (!AUTH_READY || !activeSession?.access_token || !activeProfile?.user_id) return false;
-    await refreshSessionIfNeeded();
-    const progress = activeProfile.progress && typeof activeProfile.progress === 'object' ? { ...activeProfile.progress } : {};
-    progress[scope] = { ...(payload || {}) };
+    const client = await getSupabaseClient();
+    if (!client || !activeProfile?.user_id) return false;
 
-    const rows = await request(
-      `/rest/v1/${PROFILE_TABLE}?user_id=eq.${encodeURIComponent(activeProfile.user_id)}`,
-      {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Prefer: 'return=representation'
-        },
-        body: JSON.stringify({ progress, updated_at: new Date().toISOString() })
-      },
-      activeSession.access_token
-    );
+    try {
+      const progress = activeProfile.progress && typeof activeProfile.progress === 'object' ? { ...activeProfile.progress } : {};
+      progress[scope] = { ...(payload || {}) };
 
-    if (Array.isArray(rows) && rows[0]) {
-      setProfile(rows[0]);
+      const { data, error } = await client
+        .from(PROFILE_TABLE)
+        .update({ progress, updated_at: new Date().toISOString() })
+        .eq('user_id', activeProfile.user_id)
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+
+      if (error) return false;
+      if (data) setProfile(data);
       return true;
+    } catch {
+      return false;
     }
-
-    return false;
   }
 
   function ensureModal() {
     if (document.getElementById('xyAuthModal')) return;
+
     const modal = document.createElement('div');
     modal.id = 'xyAuthModal';
     modal.className = 'xy-auth-modal';
@@ -363,20 +355,25 @@
         <div class="xy-auth-body">
           <label class="xy-auth-label" for="xyAuthUser">Username</label>
           <input id="xyAuthUser" class="xy-auth-input" type="text" autocomplete="username" placeholder="your_username" />
+
           <div id="xyAuthEmailWrap" hidden>
             <label class="xy-auth-label" for="xyAuthEmail">Email</label>
             <input id="xyAuthEmail" class="xy-auth-input" type="email" autocomplete="email" placeholder="you@example.com" />
           </div>
+
           <div id="xyAuthPassWrap">
             <label class="xy-auth-label" for="xyAuthPass">Password</label>
             <input id="xyAuthPass" class="xy-auth-input" type="password" autocomplete="current-password" placeholder="8+ chars, uppercase, number" />
           </div>
+
           <div id="xyAuthNewPassWrap" hidden>
             <label class="xy-auth-label" for="xyAuthNewPass">New password</label>
             <input id="xyAuthNewPass" class="xy-auth-input" type="password" autocomplete="new-password" placeholder="8+ chars, uppercase, number" />
           </div>
+
           <p class="xy-auth-note">Usernames support letters, numbers, underscores, and periods.</p>
           <p id="xyAuthStatus" class="xy-auth-status" hidden></p>
+
           <div class="xy-auth-actions">
             <button type="button" id="xyAuthSubmit" class="btn-primary">Continue</button>
             <button type="button" id="xyAuthReset" class="btn-primary settings-action-btn">Reset Password</button>
@@ -403,18 +400,18 @@
     });
   }
 
-  function setBusy(modal, busy) {
-    modal.querySelectorAll('input, button').forEach(el => {
-      if (el.classList.contains('xy-auth-close')) return;
-      el.disabled = busy;
-    });
-  }
-
   function showStatus(modal, message, mode = 'error') {
     const status = modal.querySelector('#xyAuthStatus');
     status.hidden = false;
     status.textContent = message;
     status.className = `xy-auth-status ${mode}`;
+  }
+
+  function setBusy(modal, busy) {
+    modal.querySelectorAll('input, button').forEach(element => {
+      if (element.classList.contains('xy-auth-close')) return;
+      element.disabled = busy;
+    });
   }
 
   function syncModalUi(modal) {
@@ -425,15 +422,20 @@
     modal.querySelector('#xyAuthSubmit').textContent = isRecovery ? 'Update Password' : isSignUp ? 'Create Account' : 'Login';
     modal.querySelector('#xyAuthPassWrap').hidden = isRecovery;
     modal.querySelector('#xyAuthEmailWrap').hidden = !isSignUp;
-    modal.querySelector('#xyAuthUser').disabled = isRecovery;
-    modal.querySelector('#xyAuthEmail').disabled = !isSignUp;
     modal.querySelector('#xyAuthReset').hidden = isRecovery;
     modal.querySelector('#xyAuthNewPassWrap').hidden = !isRecovery;
+  }
+
+  function notifyAccountChange() {
+    window.dispatchEvent(new CustomEvent('xyrex:account-changed', {
+      detail: { username: ACCOUNT_SCOPE.getAccount?.() || 'guest' }
+    }));
   }
 
   function openAuthModal(mode = 'login') {
     activeModalMode = mode;
     ensureModal();
+
     const modal = document.getElementById('xyAuthModal');
     if (!modal) return;
 
@@ -443,7 +445,7 @@
     modal.querySelector('#xyAuthStatus').textContent = '';
 
     const submit = modal.querySelector('#xyAuthSubmit');
-    const resetBtn = modal.querySelector('#xyAuthReset');
+    const reset = modal.querySelector('#xyAuthReset');
 
     submit.onclick = async () => {
       const username = modal.querySelector('#xyAuthUser').value;
@@ -453,21 +455,19 @@
 
       setBusy(modal, true);
       try {
-        let resolvedName = 'guest';
         if (activeModalMode === 'signup') {
-          resolvedName = await signUp(username, email, password);
-          showStatus(modal, `Signed in as ${resolvedName}.`, 'success');
+          const resolved = await signUp(username, email, password);
+          showStatus(modal, `Signed in as ${resolved}.`, 'success');
         } else if (activeModalMode === 'recovery') {
-          await updatePassword(newPassword);
+          await updateRecoveredPassword(newPassword);
           showStatus(modal, 'Password updated. You can now log in with your new password.', 'success');
           activeModalMode = 'login';
           syncModalUi(modal);
         } else {
-          resolvedName = await login(username, password);
-          showStatus(modal, `Signed in as ${resolvedName}.`, 'success');
+          const resolved = await login(username, password);
+          showStatus(modal, `Signed in as ${resolved}.`, 'success');
         }
-
-        window.dispatchEvent(new CustomEvent('xyrex:account-changed', { detail: { username: ACCOUNT_SCOPE.getAccount() } }));
+        notifyAccountChange();
       } catch (error) {
         showStatus(modal, error?.message || 'Authentication failed.', 'error');
       } finally {
@@ -475,8 +475,11 @@
       }
     };
 
-    resetBtn.onclick = async () => {
-      const identifier = modal.querySelector('#xyAuthUser').value || modal.querySelector('#xyAuthEmail').value;
+    reset.onclick = async () => {
+      const userField = modal.querySelector('#xyAuthUser').value;
+      const emailField = modal.querySelector('#xyAuthEmail').value;
+      const identifier = userField || emailField;
+
       setBusy(modal, true);
       try {
         await sendResetEmail(identifier);
@@ -491,50 +494,86 @@
     modal.querySelector('#xyAuthUser').focus();
   }
 
-  function handleRecoveryFromUrl() {
-    const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : '';
-    const params = new URLSearchParams(hash);
-    if (params.get('type') !== 'recovery') return;
+  async function restoreSession() {
+    const client = await getSupabaseClient();
+    if (!client) {
+      setProfile(getCachedProfile());
+      return;
+    }
 
-    const accessToken = params.get('access_token');
-    const refreshToken = params.get('refresh_token');
-    const expiresIn = Number(params.get('expires_in') || 3600);
-    if (!accessToken || !refreshToken) return;
+    try {
+      const { data } = await client.auth.getSession();
+      const user = data?.session?.user || null;
+      if (!user) {
+        setProfile(null);
+        ACCOUNT_SCOPE.setAccount('guest');
+        return;
+      }
 
-    setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken,
-      expires_at: Math.floor(Date.now() / 1000) + expiresIn
-    });
-
-    window.history.replaceState(null, '', REDIRECT_URL + window.location.search);
-    openAuthModal('recovery');
+      await ensureProfileForUser(client, user);
+    } catch {
+      setProfile(null);
+      ACCOUNT_SCOPE.setAccount('guest');
+    }
   }
+
+  const originalClearAccount = typeof ACCOUNT_SCOPE.clearAccount === 'function' ? ACCOUNT_SCOPE.clearAccount.bind(ACCOUNT_SCOPE) : null;
+  ACCOUNT_SCOPE.clearAccount = async () => {
+    await logout();
+    if (originalClearAccount) originalClearAccount();
+    notifyAccountChange();
+  };
 
   window.XyrexAuth = {
     openAuthModal,
     async resetPassword() {
-      return sendResetEmail(window.prompt('Enter your username or email:') || '');
+      const identifier = window.prompt('Enter your username or email:') || '';
+      await sendResetEmail(identifier);
+      return true;
     },
     async logout() {
       await logout();
-      window.dispatchEvent(new CustomEvent('xyrex:account-changed', { detail: { username: 'guest' } }));
+      notifyAccountChange();
     },
     getCurrentAccount() {
-      return ACCOUNT_SCOPE.getAccount();
+      return ACCOUNT_SCOPE.getAccount?.() || 'guest';
+    },
+    getProfile() {
+      return activeProfile;
     },
     getProfile() {
       return activeProfile;
     },
     hasRemoteSync() {
-      return AUTH_READY;
+      return authConfigured;
     },
     loadAccountProgress,
     saveAccountProgress,
     async initialize() {
-      handleRecoveryFromUrl();
-      await hydrateFromStoredSession();
-      window.dispatchEvent(new CustomEvent('xyrex:account-changed', { detail: { username: ACCOUNT_SCOPE.getAccount() } }));
+      const client = await getSupabaseClient();
+      authConfigured = Boolean(client);
+
+      if (client) {
+        client.auth.onAuthStateChange(async (event, session) => {
+          const user = session?.user || null;
+          if (!user) {
+            setProfile(null);
+            ACCOUNT_SCOPE.setAccount('guest');
+            notifyAccountChange();
+            return;
+          }
+
+          try {
+            await ensureProfileForUser(client, user);
+          } catch {
+            ACCOUNT_SCOPE.setAccount('guest');
+          }
+          notifyAccountChange();
+        });
+      }
+
+      await restoreSession();
+      notifyAccountChange();
     }
   };
 
