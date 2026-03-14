@@ -61,6 +61,7 @@
     if (!USERNAME_REGEX.test(username)) {
       throw new Error('Username must be 3 to 24 characters and only include letters, numbers, underscores, or periods.');
     }
+    return email;
   }
 
   function validateEmail(value) {
