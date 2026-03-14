@@ -1,233 +1,343 @@
 (() => {
-  const DB_NAME = 'xyrex_auth_db_v1';
-  const STORE_NAME = 'accounts';
-  const LEGACY_LOCAL_KEY = '__xyrex_auth_accounts_local_v1';
   const ACCOUNT_SCOPE = window.XyrexAccountScope;
   if (!ACCOUNT_SCOPE) return;
 
-  const toBase64 = bytes => btoa(String.fromCharCode(...bytes));
-  const fromBase64 = value => Uint8Array.from(atob(value), c => c.charCodeAt(0));
+  const GLOBAL_PREFIX = '__xyrex_global__';
+  const PROFILE_CACHE_KEY = `${GLOBAL_PREFIX}profile_cache_v2`;
+  const REDIRECT_URL = `${window.location.origin}${window.location.pathname}`;
+  const PROFILE_TABLE = 'xyrex_profiles';
+  const USERNAME_REGEX = /^[a-z0-9._]{3,24}$/;
+  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  const remoteAuthEndpoint = typeof window.XYREX_AUTH_API_URL === 'string' ? window.XYREX_AUTH_API_URL.trim().replace(/\/+$/, '') : '';
+  let supabaseClientPromise = null;
+  let supabaseClient = null;
+  let authConfigured = false;
+  let activeProfile = null;
+  let activeModalMode = 'login';
+
+  const readStorage = key => {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  };
+
+  const writeStorage = (key, value) => {
+    try {
+      if (value == null) localStorage.removeItem(key);
+      else localStorage.setItem(key, value);
+    } catch {
+      // Ignore storage write failures
+    }
+  };
 
   function normalizeUsername(value) {
     return String(value || '').trim().toLowerCase();
   }
 
   function validateUsername(username) {
-    if (!/^[a-z0-9._]{3,24}$/.test(username)) {
-      throw new Error('Username must be 3 to 24 characters and only include letters, numbers, underscores, or periods');
+    if (!USERNAME_REGEX.test(username)) {
+      throw new Error('Username must be 3 to 24 characters and only include letters, numbers, underscores, or periods.');
     }
   }
 
-  function validatePassword(passwordRaw) {
-    const password = String(passwordRaw || '');
-    if (password.length < 8) {
-      throw new Error('Password must be at least 8 characters long');
+  function validateEmail(value) {
+    const email = String(value || '').trim().toLowerCase();
+    if (!EMAIL_REGEX.test(email)) {
+      throw new Error('Please enter a valid email address.');
     }
-    if (!/[A-Z]/.test(password)) {
-      throw new Error('Password must include at least one uppercase letter');
-    }
-    if (!/\d/.test(password)) {
-      throw new Error('Password must include at least one number');
-    }
+    return email;
+  }
+
+  function validatePassword(value) {
+    const password = String(value || '');
+    if (password.length < 8) throw new Error('Password must be at least 8 characters long.');
+    if (!/[A-Z]/.test(password)) throw new Error('Password must include at least one uppercase letter.');
+    if (!/\d/.test(password)) throw new Error('Password must include at least one number.');
     return password;
   }
 
-  function openDb() {
-    return new Promise((resolve, reject) => {
-      if (!('indexedDB' in window)) {
-        reject(new Error('IndexedDB is not available'));
-        return;
-      }
-      const request = indexedDB.open(DB_NAME, 1);
-      request.onupgradeneeded = () => {
-        const db = request.result;
-        if (!db.objectStoreNames.contains(STORE_NAME)) {
-          const store = db.createObjectStore(STORE_NAME, { keyPath: 'username' });
-          store.createIndex('username', 'username', { unique: true });
+  function getConfigValue(candidates) {
+    for (const item of candidates) {
+      const value = typeof item === 'string' ? item.trim() : '';
+      if (value) return value;
+    }
+    return '';
+  }
+
+  function resolveSupabaseConfig() {
+    const globalConfig = window.__XYREX_SUPABASE_CONFIG && typeof window.__XYREX_SUPABASE_CONFIG === 'object'
+      ? window.__XYREX_SUPABASE_CONFIG
+      : {};
+
+    const urlMeta = document.querySelector('meta[name="xyrex-supabase-url"]')?.content || '';
+    const anonMeta = document.querySelector('meta[name="xyrex-supabase-anon-key"]')?.content || '';
+
+    const url = getConfigValue([
+      window.XYREX_SUPABASE_URL,
+      window.SUPABASE_URL,
+      globalConfig.url,
+      globalConfig.supabaseUrl,
+      urlMeta
+    ]).replace(/\/+$/, '');
+
+    const anonKey = getConfigValue([
+      window.XYREX_SUPABASE_ANON_KEY,
+      window.SUPABASE_ANON_KEY,
+      globalConfig.anonKey,
+      globalConfig.supabaseAnonKey,
+      anonMeta
+    ]);
+
+    return { url, anonKey };
+  }
+
+  async function getSupabaseClient() {
+    if (supabaseClient) return supabaseClient;
+    if (supabaseClientPromise) return supabaseClientPromise;
+
+    supabaseClientPromise = (async () => {
+      const { url, anonKey } = resolveSupabaseConfig();
+      authConfigured = Boolean(url && anonKey);
+      if (!authConfigured) return null;
+
+      const module = await import('https://esm.sh/@supabase/supabase-js@2');
+      const client = module.createClient(url, anonKey, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true
         }
-      };
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error || new Error('Failed to open auth database'));
-    });
-  }
-
-  function getLegacyLocalMap() {
-    try {
-      const raw = localStorage.getItem(LEGACY_LOCAL_KEY);
-      const parsed = raw ? JSON.parse(raw) : {};
-      return parsed && typeof parsed === 'object' ? parsed : {};
-    } catch {
-      return {};
-    }
-  }
-
-  function setLegacyLocalMap(map) {
-    localStorage.setItem(LEGACY_LOCAL_KEY, JSON.stringify(map));
-  }
-
-  async function deriveHash(password, saltBytes) {
-    const enc = new TextEncoder();
-    const keyMaterial = await crypto.subtle.importKey(
-      'raw',
-      enc.encode(password),
-      { name: 'PBKDF2' },
-      false,
-      ['deriveBits']
-    );
-    const bits = await crypto.subtle.deriveBits(
-      {
-        name: 'PBKDF2',
-        salt: saltBytes,
-        iterations: 120000,
-        hash: 'SHA-256'
-      },
-      keyMaterial,
-      256
-    );
-    return new Uint8Array(bits);
-  }
-
-  async function remoteGetAccount(username) {
-    if (!remoteAuthEndpoint) return null;
-    const response = await fetch(`${remoteAuthEndpoint}/account/${encodeURIComponent(username)}`, {
-      method: 'GET',
-      headers: { Accept: 'application/json' }
-    });
-
-    if (response.status === 404) return null;
-    if (!response.ok) throw new Error('Remote authentication service is unavailable');
-    const payload = await response.json();
-    return payload && typeof payload === 'object' ? payload : null;
-  }
-
-  async function remotePutAccount(record) {
-    if (!remoteAuthEndpoint) return false;
-    const response = await fetch(`${remoteAuthEndpoint}/account/${encodeURIComponent(record.username)}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(record)
-    });
-    if (!response.ok) throw new Error('Unable to save account to remote authentication service');
-    return true;
-  }
-
-  async function getAccount(username) {
-    try {
-      const remoteAccount = await remoteGetAccount(username);
-      if (remoteAccount) return remoteAccount;
-    } catch {
-      // Continue to local fallback
-    }
-
-    try {
-      const db = await openDb();
-      return await new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, 'readonly');
-        const store = tx.objectStore(STORE_NAME);
-        const request = store.get(username);
-        request.onsuccess = () => resolve(request.result || null);
-        request.onerror = () => reject(request.error || new Error('Failed to read account'));
       });
+      supabaseClient = client;
+      return client;
+    })();
+
+    return supabaseClientPromise;
+  }
+
+  function getCachedProfile() {
+    try {
+      const parsed = JSON.parse(readStorage(PROFILE_CACHE_KEY) || 'null');
+      return parsed && typeof parsed === 'object' ? parsed : null;
     } catch {
-      const map = getLegacyLocalMap();
-      return map[username] || null;
+      return null;
     }
   }
 
-  async function putAccount(record) {
-    let wroteRemote = false;
-    try {
-      wroteRemote = await remotePutAccount(record);
-    } catch {
-      wroteRemote = false;
-    }
-
-    try {
-      const db = await openDb();
-      await new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, 'readwrite');
-        tx.oncomplete = () => resolve(true);
-        tx.onerror = () => reject(tx.error || new Error('Failed to write account'));
-        tx.objectStore(STORE_NAME).put(record);
-      });
-      return true;
-    } catch {
-      const map = getLegacyLocalMap();
-      map[record.username] = record;
-      setLegacyLocalMap(map);
-      return wroteRemote || true;
-    }
+  function setProfile(profile) {
+    activeProfile = profile && typeof profile === 'object' ? profile : null;
+    if (!activeProfile) writeStorage(PROFILE_CACHE_KEY, null);
+    else writeStorage(PROFILE_CACHE_KEY, JSON.stringify(activeProfile));
   }
 
-  async function signUp(usernameRaw, passwordRaw) {
-    const username = normalizeUsername(usernameRaw);
-    const password = validatePassword(passwordRaw);
+  async function getProfileByUsername(client, username) {
+    const { data, error } = await client
+      .from(PROFILE_TABLE)
+      .select('*')
+      .eq('username', username)
+      .limit(1)
+      .maybeSingle();
 
+    if (error) throw new Error(error.message || 'Unable to fetch account profile.');
+    return data || null;
+  }
+
+  async function getProfileByUserId(client, userId) {
+    const { data, error } = await client
+      .from(PROFILE_TABLE)
+      .select('*')
+      .eq('user_id', userId)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message || 'Unable to fetch account profile.');
+    return data || null;
+  }
+
+  async function ensureProfileForUser(client, user, fallbackUsername = '') {
+    if (!user?.id) throw new Error('Missing authenticated user.');
+
+    let profile = await getProfileByUserId(client, user.id);
+    if (profile) {
+      setProfile(profile);
+      ACCOUNT_SCOPE.setAccount(profile.username || 'guest');
+      return profile;
+    }
+
+    const username = normalizeUsername(fallbackUsername || user?.user_metadata?.username || user?.email?.split('@')[0] || 'guest');
     validateUsername(username);
 
-    const existing = await getAccount(username);
-    if (existing) throw new Error('That username is already registered');
+    const { error: insertError } = await client
+      .from(PROFILE_TABLE)
+      .insert({
+        user_id: user.id,
+        username,
+        email: String(user.email || '').toLowerCase(),
+        progress: {
+          dodge: {
+            coins: 0,
+            bestScore: 0,
+            ownedModifiers: ['Balanced'],
+            selectedModifier: 'Balanced',
+            ownedPowerups: [],
+            selectedPowerup: 'None',
+            aiTokenDate: '',
+            aiTokensUsedToday: 0,
+            aiPurchasedTokens: 0,
+            activeCheats: []
+          }
+        }
+      });
 
-    const salt = crypto.getRandomValues(new Uint8Array(16));
-    const hash = await deriveHash(password, salt);
+    if (insertError) throw new Error(insertError.message || 'Unable to initialize account profile.');
 
-    await putAccount({
-      username,
-      salt: toBase64(salt),
-      hash: toBase64(hash),
-      createdAt: Date.now(),
-      updatedAt: Date.now()
+    profile = await getProfileByUserId(client, user.id);
+    if (!profile) throw new Error('Unable to initialize account profile.');
+
+    setProfile(profile);
+    ACCOUNT_SCOPE.setAccount(profile.username || 'guest');
+    return profile;
+  }
+
+  async function requireClient() {
+    const client = await getSupabaseClient();
+    if (!client) throw new Error('Supabase auth is not configured for this deployment yet.');
+    return client;
+  }
+
+  async function signUp(usernameRaw, emailRaw, passwordRaw) {
+    const client = await requireClient();
+    const username = normalizeUsername(usernameRaw);
+    const email = validateEmail(emailRaw);
+    const password = validatePassword(passwordRaw);
+    validateUsername(username);
+
+    const existing = await getProfileByUsername(client, username);
+    if (existing) throw new Error('That username is already registered.');
+
+    const { data, error } = await client.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { username },
+        emailRedirectTo: REDIRECT_URL
+      }
     });
 
-    ACCOUNT_SCOPE.setAccount(username);
-    return username;
+    if (error) throw new Error(error.message || 'Unable to complete sign up.');
+    if (!data?.user) throw new Error('Unable to complete sign up.');
+
+    if (data.session) {
+      await ensureProfileForUser(client, data.user, username);
+      return username;
+    }
+
+    throw new Error('Sign up succeeded. Please verify your email address before signing in.');
   }
 
   async function login(usernameRaw, passwordRaw) {
+    const client = await requireClient();
     const username = normalizeUsername(usernameRaw);
     const password = String(passwordRaw || '');
+    validateUsername(username);
+    if (!password) throw new Error('Please provide your password.');
 
-    if (!username || !password) throw new Error('Please provide both username and password');
+    const profile = await getProfileByUsername(client, username);
+    if (!profile?.email) throw new Error('Account not found.');
 
-    const account = await getAccount(username);
-    if (!account) throw new Error('Account not found');
+    const { data, error } = await client.auth.signInWithPassword({ email: profile.email, password });
+    if (error) throw new Error(error.message || 'Login failed.');
+    if (!data?.user) throw new Error('Login failed.');
 
-    const salt = fromBase64(account.salt);
-    const hash = await deriveHash(password, salt);
-    const expected = toBase64(hash);
-    if (expected !== account.hash) throw new Error('Invalid password');
-
-    ACCOUNT_SCOPE.setAccount(username);
+    await ensureProfileForUser(client, data.user, username);
     return username;
   }
 
-  async function resetPasswordPrompt() {
-    const username = normalizeUsername(window.prompt('Enter your username to reset the password:') || '');
-    if (!username) return;
-    validateUsername(username);
+  async function sendResetEmail(identifierRaw) {
+    const client = await requireClient();
+    const identifier = String(identifierRaw || '').trim().toLowerCase();
+    if (!identifier) throw new Error('Please enter your username or email address.');
 
-    const account = await getAccount(username);
-    if (!account) throw new Error('Account not found');
+    let email = identifier;
+    if (!EMAIL_REGEX.test(identifier)) {
+      const profile = await getProfileByUsername(client, identifier);
+      if (!profile?.email) throw new Error('Account not found.');
+      email = profile.email;
+    }
 
-    const nextPassword = window.prompt('Enter your new password (8+ chars, 1 uppercase letter, 1 number):') || '';
-    const validPassword = validatePassword(nextPassword);
+    const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo: REDIRECT_URL });
+    if (error) throw new Error(error.message || 'Failed to send reset email.');
+  }
 
-    const salt = crypto.getRandomValues(new Uint8Array(16));
-    const hash = await deriveHash(validPassword, salt);
-    await putAccount({
-      ...account,
-      salt: toBase64(salt),
-      hash: toBase64(hash),
-      updatedAt: Date.now()
-    });
+  async function updateRecoveredPassword(passwordRaw) {
+    const client = await requireClient();
+    const password = validatePassword(passwordRaw);
+    const { error } = await client.auth.updateUser({ password });
+    if (error) throw new Error(error.message || 'Failed to update password.');
+  }
 
-    return username;
+  async function logout() {
+    const client = await getSupabaseClient();
+    if (client) {
+      try {
+        await client.auth.signOut();
+      } catch {
+        // Ignore network failures during sign out
+      }
+    }
+    setProfile(null);
+    ACCOUNT_SCOPE.setAccount('guest');
+  }
+
+  async function loadAccountProgress(scope = 'dodge') {
+    const client = await getSupabaseClient();
+    if (!client) return null;
+
+    try {
+      const { data: sessionData } = await client.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+      if (!userId) return null;
+
+      const profile = await getProfileByUserId(client, userId);
+      if (!profile) return null;
+      setProfile(profile);
+
+      const progress = profile.progress && typeof profile.progress === 'object' ? profile.progress : {};
+      return progress[scope] && typeof progress[scope] === 'object' ? progress[scope] : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function saveAccountProgress(scope = 'dodge', payload = {}) {
+    const client = await getSupabaseClient();
+    if (!client || !activeProfile?.user_id) return false;
+
+    try {
+      const progress = activeProfile.progress && typeof activeProfile.progress === 'object' ? { ...activeProfile.progress } : {};
+      progress[scope] = { ...(payload || {}) };
+
+      const { data, error } = await client
+        .from(PROFILE_TABLE)
+        .update({ progress, updated_at: new Date().toISOString() })
+        .eq('user_id', activeProfile.user_id)
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+
+      if (error) return false;
+      if (data) setProfile(data);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   function ensureModal() {
     if (document.getElementById('xyAuthModal')) return;
+
     const modal = document.createElement('div');
     modal.id = 'xyAuthModal';
     modal.className = 'xy-auth-modal';
@@ -241,10 +351,25 @@
         <div class="xy-auth-body">
           <label class="xy-auth-label" for="xyAuthUser">Username</label>
           <input id="xyAuthUser" class="xy-auth-input" type="text" autocomplete="username" placeholder="your_username" />
-          <label class="xy-auth-label" for="xyAuthPass">Password</label>
-          <input id="xyAuthPass" class="xy-auth-input" type="password" autocomplete="current-password" placeholder="8+ chars, uppercase, number" />
-          <p class="xy-auth-note">Username: letters, numbers, underscores, and periods only.</p>
+
+          <div id="xyAuthEmailWrap" hidden>
+            <label class="xy-auth-label" for="xyAuthEmail">Email</label>
+            <input id="xyAuthEmail" class="xy-auth-input" type="email" autocomplete="email" placeholder="you@example.com" />
+          </div>
+
+          <div id="xyAuthPassWrap">
+            <label class="xy-auth-label" for="xyAuthPass">Password</label>
+            <input id="xyAuthPass" class="xy-auth-input" type="password" autocomplete="current-password" placeholder="8+ chars, uppercase, number" />
+          </div>
+
+          <div id="xyAuthNewPassWrap" hidden>
+            <label class="xy-auth-label" for="xyAuthNewPass">New password</label>
+            <input id="xyAuthNewPass" class="xy-auth-input" type="password" autocomplete="new-password" placeholder="8+ chars, uppercase, number" />
+          </div>
+
+          <p class="xy-auth-note">Usernames support letters, numbers, underscores, and periods.</p>
           <p id="xyAuthStatus" class="xy-auth-status" hidden></p>
+
           <div class="xy-auth-actions">
             <button type="button" id="xyAuthSubmit" class="btn-primary">Continue</button>
             <button type="button" id="xyAuthReset" class="btn-primary settings-action-btn">Reset Password</button>
@@ -270,80 +395,179 @@
     });
   }
 
-  function openAuthModal(mode = 'login') {
-    const currentAccount = ACCOUNT_SCOPE.getAccount?.() || 'guest';
-    if (mode === 'login' && currentAccount !== 'guest') {
-      window.alert('You are already logged into an account. Please log out first if you want to switch accounts.');
-      return;
-    }
+  function showStatus(modal, message, mode = 'error') {
+    const status = modal.querySelector('#xyAuthStatus');
+    status.hidden = false;
+    status.textContent = message;
+    status.className = `xy-auth-status ${mode}`;
+  }
 
+  function setBusy(modal, busy) {
+    modal.querySelectorAll('input, button').forEach(element => {
+      if (element.classList.contains('xy-auth-close')) return;
+      element.disabled = busy;
+    });
+  }
+
+  function syncModalUi(modal) {
+    const isSignUp = activeModalMode === 'signup';
+    const isRecovery = activeModalMode === 'recovery';
+
+    modal.querySelector('#xyAuthTitle').textContent = isRecovery ? 'Set New Password' : isSignUp ? 'Create Account' : 'Login';
+    modal.querySelector('#xyAuthSubmit').textContent = isRecovery ? 'Update Password' : isSignUp ? 'Create Account' : 'Login';
+    modal.querySelector('#xyAuthPassWrap').hidden = isRecovery;
+    modal.querySelector('#xyAuthEmailWrap').hidden = !isSignUp;
+    modal.querySelector('#xyAuthReset').hidden = isRecovery;
+    modal.querySelector('#xyAuthNewPassWrap').hidden = !isRecovery;
+  }
+
+  function notifyAccountChange() {
+    window.dispatchEvent(new CustomEvent('xyrex:account-changed', {
+      detail: { username: ACCOUNT_SCOPE.getAccount?.() || 'guest' }
+    }));
+  }
+
+  function openAuthModal(mode = 'login') {
+    activeModalMode = mode;
     ensureModal();
+
     const modal = document.getElementById('xyAuthModal');
     if (!modal) return;
 
-    const status = modal.querySelector('#xyAuthStatus');
-    const title = modal.querySelector('#xyAuthTitle');
-    const submit = modal.querySelector('#xyAuthSubmit');
-    const passInput = modal.querySelector('#xyAuthPass');
-    const resetBtn = modal.querySelector('#xyAuthReset');
-
-    const isSignUp = mode === 'signup';
-    title.textContent = isSignUp ? 'Create Account' : 'Login';
-    submit.textContent = isSignUp ? 'Create Account' : 'Login';
-    passInput.setAttribute('autocomplete', isSignUp ? 'new-password' : 'current-password');
-
+    syncModalUi(modal);
     modal.setAttribute('aria-hidden', 'false');
-    status.hidden = true;
-    status.textContent = '';
+    modal.querySelector('#xyAuthStatus').hidden = true;
+    modal.querySelector('#xyAuthStatus').textContent = '';
 
-    const onSubmit = async () => {
+    const submit = modal.querySelector('#xyAuthSubmit');
+    const reset = modal.querySelector('#xyAuthReset');
+
+    submit.onclick = async () => {
       const username = modal.querySelector('#xyAuthUser').value;
-      const password = passInput.value;
-      submit.disabled = true;
-      status.hidden = true;
+      const email = modal.querySelector('#xyAuthEmail').value;
+      const password = modal.querySelector('#xyAuthPass').value;
+      const newPassword = modal.querySelector('#xyAuthNewPass').value;
+
+      setBusy(modal, true);
       try {
-        const account = isSignUp ? await signUp(username, password) : await login(username, password);
-        status.hidden = false;
-        status.textContent = `Authenticated as ${account}`;
-        status.className = 'xy-auth-status success';
-        window.setTimeout(() => window.location.reload(), 450);
+        if (activeModalMode === 'signup') {
+          const resolved = await signUp(username, email, password);
+          showStatus(modal, `Signed in as ${resolved}.`, 'success');
+        } else if (activeModalMode === 'recovery') {
+          await updateRecoveredPassword(newPassword);
+          showStatus(modal, 'Password updated. You can now log in with your new password.', 'success');
+          activeModalMode = 'login';
+          syncModalUi(modal);
+        } else {
+          const resolved = await login(username, password);
+          showStatus(modal, `Signed in as ${resolved}.`, 'success');
+        }
+        notifyAccountChange();
       } catch (error) {
-        status.hidden = false;
-        status.textContent = error?.message || 'Authentication failed';
-        status.className = 'xy-auth-status error';
+        showStatus(modal, error?.message || 'Authentication failed.', 'error');
       } finally {
-        submit.disabled = false;
+        setBusy(modal, false);
       }
     };
 
-    submit.onclick = onSubmit;
-    resetBtn.onclick = async () => {
-      status.hidden = true;
+    reset.onclick = async () => {
+      const userField = modal.querySelector('#xyAuthUser').value;
+      const emailField = modal.querySelector('#xyAuthEmail').value;
+      const identifier = userField || emailField;
+
+      setBusy(modal, true);
       try {
-        const account = await resetPasswordPrompt();
-        if (!account) return;
-        status.hidden = false;
-        status.textContent = `Password reset for ${account}`;
-        status.className = 'xy-auth-status success';
+        await sendResetEmail(identifier);
+        showStatus(modal, 'Password reset email sent. Please check your inbox.', 'success');
       } catch (error) {
-        status.hidden = false;
-        status.textContent = error?.message || 'Failed to reset password';
-        status.className = 'xy-auth-status error';
+        showStatus(modal, error?.message || 'Failed to send reset email.', 'error');
+      } finally {
+        setBusy(modal, false);
       }
     };
+
     modal.querySelector('#xyAuthUser').focus();
   }
+
+  async function restoreSession() {
+    const client = await getSupabaseClient();
+    if (!client) {
+      setProfile(getCachedProfile());
+      return;
+    }
+
+    try {
+      const { data } = await client.auth.getSession();
+      const user = data?.session?.user || null;
+      if (!user) {
+        setProfile(null);
+        ACCOUNT_SCOPE.setAccount('guest');
+        return;
+      }
+
+      await ensureProfileForUser(client, user);
+    } catch {
+      setProfile(null);
+      ACCOUNT_SCOPE.setAccount('guest');
+    }
+  }
+
+  const originalClearAccount = typeof ACCOUNT_SCOPE.clearAccount === 'function' ? ACCOUNT_SCOPE.clearAccount.bind(ACCOUNT_SCOPE) : null;
+  ACCOUNT_SCOPE.clearAccount = async () => {
+    await logout();
+    if (originalClearAccount) originalClearAccount();
+    notifyAccountChange();
+  };
 
   window.XyrexAuth = {
     openAuthModal,
     async resetPassword() {
-      return resetPasswordPrompt();
+      const identifier = window.prompt('Enter your username or email:') || '';
+      await sendResetEmail(identifier);
+      return true;
+    },
+    async logout() {
+      await logout();
+      notifyAccountChange();
     },
     getCurrentAccount() {
-      return ACCOUNT_SCOPE.getAccount();
+      return ACCOUNT_SCOPE.getAccount?.() || 'guest';
+    },
+    getProfile() {
+      return activeProfile;
     },
     hasRemoteSync() {
-      return Boolean(remoteAuthEndpoint);
+      return authConfigured;
+    },
+    loadAccountProgress,
+    saveAccountProgress,
+    async initialize() {
+      const client = await getSupabaseClient();
+      authConfigured = Boolean(client);
+
+      if (client) {
+        client.auth.onAuthStateChange(async (event, session) => {
+          const user = session?.user || null;
+          if (!user) {
+            setProfile(null);
+            ACCOUNT_SCOPE.setAccount('guest');
+            notifyAccountChange();
+            return;
+          }
+
+          try {
+            await ensureProfileForUser(client, user);
+          } catch {
+            ACCOUNT_SCOPE.setAccount('guest');
+          }
+          notifyAccountChange();
+        });
+      }
+
+      await restoreSession();
+      notifyAccountChange();
     }
   };
+
+  window.XyrexAuth.initialize();
 })();
