@@ -283,10 +283,13 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 .xy-game-shell{ display:flex; flex-direction:column; gap:10px; height:100%; min-height:0; }
 .xy-game-main{ display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:10px; flex:1; min-height:0; }
 .xy-canvas-wrap{ min-height:0; }
-body.easter-game-mode #easterEggPage{ height:100%; min-height:0; display:flex; }
+body.easter-game-mode{ overflow:auto; overscroll-behavior-y:auto; }
+body.easter-game-mode .page-layout{ height:auto; min-height:calc(100dvh - var(--nav-height)); }
+body.easter-game-mode #easterEggPage{ height:auto; min-height:0; display:flex; }
 body.easter-game-mode .main-content{ overflow:auto; }
-body.easter-game-mode .egg-game{ min-height:0; height:100%; flex:1 1 auto; }
+body.easter-game-mode .egg-game{ min-height:0; height:auto; flex:1 1 auto; }
 body.easter-game-mode .xy-game-main{ grid-template-columns:minmax(0,1fr) 250px; }
+body.easter-game-mode .xy-sidepanel{ max-height:min(72dvh, 680px); overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; }
 .xy-game-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding:10px 12px; border:1px solid rgba(178,188,255,.18); border-radius:10px; background:rgba(17,20,38,.72); }
 .xy-game-top h2{ margin:0; color:#eef4ff; }
 .xy-game-top p{ margin:5px 0 0; color:#c2d2ef; font-size:.9rem; }

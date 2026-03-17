@@ -245,6 +245,7 @@
       `;
 
       this.canvas = this.mount.querySelector('#xyGameCanvas');
+      this.canvasWrap = this.mount.querySelector('.xy-canvas-wrap');
       this.ctx = this.canvas.getContext('2d');
       this.overlay = this.mount.querySelector('#xyOverlay');
       this.bestEl = this.mount.querySelector('#xyBest');
@@ -267,6 +268,17 @@
       this.mobileControls = this.mount.querySelector('#xyMobileControls');
       this.cheatCard = this.mount.querySelector('#xyCheatCard');
       this.cheatInputs = Array.from(this.mount.querySelectorAll('[data-cheat]'));
+
+      this.forwardWheelScroll = e => {
+        if (!document.body.classList.contains('easter-game-mode')) return;
+        const deltaY = Number.isFinite(e.deltaY) ? e.deltaY : 0;
+        if (!deltaY) return;
+        const pageScroller = this.mount.closest('.main-content');
+        if (!pageScroller) return;
+        e.preventDefault();
+        pageScroller.scrollBy({ top: deltaY, left: 0, behavior: 'auto' });
+      };
+
 
       this.modSelect.innerHTML = Object.keys(MODIFIERS)
         .map(name => `<option value="${name}">${name}</option>`)
@@ -347,6 +359,9 @@
           e.stopPropagation();
         });
       });
+
+      this.canvasWrap?.addEventListener('wheel', this.forwardWheelScroll, { passive: false });
+      this.canvas?.addEventListener('wheel', this.forwardWheelScroll, { passive: false });
 
       this.handleKeyDown = e => {
         const k = e.key.toLowerCase();
@@ -659,6 +674,8 @@
       window.removeEventListener('resize', this.applyResponsiveCanvas);
       window.removeEventListener('resize', this.applyMobileShopState);
       window.removeEventListener('resize', this.applyMobileGameplayState);
+      this.canvasWrap?.removeEventListener('wheel', this.forwardWheelScroll);
+      this.canvas?.removeEventListener('wheel', this.forwardWheelScroll);
       this.mount.innerHTML = '';
     }
 
@@ -811,6 +828,11 @@
       const autoPlay = cheats.has('autoplay');
       const ghost = cheats.has('ghost');
 
+      if (!Number.isFinite(this.player.targetLane)) {
+        this.player.targetLane = 3;
+      }
+      this.player.targetLane = clamp(Math.round(this.player.targetLane), 0, 5);
+
       if (autoPlay || ghost) {
         const safeLanes = this.safeLanes();
         if (safeLanes.length) {
@@ -857,6 +879,13 @@
         const trackingStrength = autoPlay ? 0.34 : 0.16;
         this.player.x += (targetX - this.player.x) * (trackingStrength * this.mod.playerSpeed);
       }
+
+      const minX = laneW / 2;
+      const maxX = 960 - laneW / 2;
+      if (!Number.isFinite(this.player.x)) {
+        this.player.x = targetX;
+      }
+      this.player.x = clamp(this.player.x, minX, maxX);
 
       const settledLane = Math.max(0, Math.min(5, Math.round((this.player.x - laneW / 2) / laneW)));
       this.playerLaneHistory.push(settledLane);
