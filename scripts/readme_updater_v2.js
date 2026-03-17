@@ -22,8 +22,8 @@ async function fetchMessages() {
     const text = await res.text();
     throw new Error(`Discord API error ${res.status}: ${text}`);
   }
-
-  const messages = await res.json();
+  
+const messages = [{ content: "🔥 IF YOU SEE THIS, SCRIPT WORKS 🔥" }];
 
   console.log("📥 Raw Discord response:", messages);
 
