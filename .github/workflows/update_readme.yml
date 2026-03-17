@@ -3,7 +3,7 @@ name: Update README from Discord
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/5 * * * *" # every 5 minutes (optional)
+    - cron: "*/5 * * * *"
 
 permissions:
   contents: write
@@ -24,11 +24,11 @@ jobs:
         with:
           node-version: 18
 
-      - name: Run script
-        run: node scripts/update-readme-from-discord.js
-
-      - name: Show README (debug)
-        run: cat README.md
+      - name: Run updater
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_CHANNEL_ID: ${{ secrets.DISCORD_CHANNEL_ID }}
+        run: node scripts/readme_updater_v2.js
 
       - name: Commit and push
         run: |
