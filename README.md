@@ -1,6 +1,6 @@
 # Xyrex.lol
 
-**Xyrex.lol** is an executor hub that displays details about different executors - including pricing, official websites, features, and relevant information. It aims to help users compare options and discover trustworthy details about your favorite executors.
+**Xyrex.lol** is an executor hub that displays details about different executors - including pricing, official websites, features, and relevant information. It aims to help users compare options and discover trustworthy details about your favorite executors!
 
 > https://xyrex.lol
 
@@ -55,14 +55,6 @@ Xyrex.lol continues to evolve with:
 - Community feedback integration
 - More credible executors
 
----
-
-## Recent Changes
-> Live from Discord!
-
-<!-- RECENT_CHANGES_START -->
-Loading latest updates...
-<!-- RECENT_CHANGES_END -->
 ---
 
 ## 📝 Contributing
