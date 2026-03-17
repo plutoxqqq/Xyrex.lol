@@ -25,6 +25,9 @@ jobs:
           DISCORD_CHANNEL_ID: ${{ secrets.DISCORD_CHANNEL_ID }}
         run: node scripts/update-readme-from-discord.js
 
+      - name: Show README after update
+        run: cat README.md
+
       - name: Commit changes
         run: |
           git config user.name "github-actions[bot]"
