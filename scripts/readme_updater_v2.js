@@ -1,16 +1,18 @@
 const fs = require("fs");
-const fetch = global.fetch || require("node-fetch");
 
+const fetchFn = global.fetch || require("node-fetch");
 const TOKEN = process.env.DISCORD_BOT_TOKEN;
 const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
+const API_BASE = process.env.DISCORD_API_BASE || "https://discord.com/api/v10";
+const MESSAGE_LIMIT = 5;
 
 if (!TOKEN || !CHANNEL_ID) {
   throw new Error("Missing DISCORD_BOT_TOKEN or DISCORD_CHANNEL_ID");
 }
 
 async function fetchMessages() {
-  const res = await fetch(
-    `https://discord.com/api/v10/channels/${CHANNEL_ID}/messages?limit=1`,
+  const res = await fetchFn(
+    `${API_BASE}/channels/${CHANNEL_ID}/messages?limit=${MESSAGE_LIMIT}`,
     {
       headers: {
         Authorization: `Bot ${TOKEN}`,
@@ -22,30 +24,33 @@ async function fetchMessages() {
     const text = await res.text();
     throw new Error(`Discord API error ${res.status}: ${text}`);
   }
-  
-const messages = [{ content: "🔥 IF YOU SEE THIS, SCRIPT WORKS 🔥" }];
 
-  console.log("📥 Raw Discord response:", messages);
+  const messages = await res.json();
+  if (!Array.isArray(messages)) {
+    throw new Error("Discord API did not return a message array");
+  }
 
-  // DO NOT filter aggressively — just take latest
   return messages;
 }
 
-function formatMessages(messages) {
-  if (!messages.length) {
+function pickLatestMessage(messages) {
+  return messages.find((message) => {
+    const content = (message?.content || "").trim();
+    return content.length > 0;
+  });
+}
+
+function formatMessage(message) {
+  if (!message) {
     return "No updates.";
   }
 
-  const content = messages[0]?.content;
-
-  console.log("📝 Raw message content:", content);
-
-  if (!content || !content.trim()) {
+  const content = (message.content || "").trim();
+  if (!content) {
     return "No updates.";
   }
 
-  // Single-line, raw text only
-  return content.replace(/\n/g, " ");
+  return content.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n");
 }
 
 async function main() {
@@ -60,9 +65,8 @@ async function main() {
   }
 
   const messages = await fetchMessages();
-  const newContent = formatMessages(messages);
-
-  console.log("✅ Final content going into README:", newContent);
+  const latestMessage = pickLatestMessage(messages);
+  const newContent = formatMessage(latestMessage);
 
   const updated = readme.replace(
     /<!-- RECENT_CHANGES_START -->[\s\S]*<!-- RECENT_CHANGES_END -->/,
@@ -70,15 +74,15 @@ async function main() {
   );
 
   if (readme === updated) {
-    console.log("⚠️ No changes detected — README not updated");
+    console.log("No README changes detected.");
     return;
   }
 
   fs.writeFileSync(readmePath, updated);
-  console.log("🚀 README updated successfully");
+  console.log("README updated successfully.");
 }
 
 main().catch((err) => {
-  console.error("❌ Script failed:", err);
+  console.error("Script failed:", err);
   process.exit(1);
 });
