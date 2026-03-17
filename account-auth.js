@@ -3,17 +3,22 @@
   if (!ACCOUNT_SCOPE) return;
 
   const GLOBAL_PREFIX = '__xyrex_global__';
-  const PROFILE_CACHE_KEY = `${GLOBAL_PREFIX}profile_cache_v2`;
+  const PROFILE_CACHE_KEY = `${GLOBAL_PREFIX}profile_cache_v3`;
   const REDIRECT_URL = `${window.location.origin}${window.location.pathname}`;
   const PROFILE_TABLE = 'xyrex_profiles';
   const USERNAME_REGEX = /^[a-z0-9._]{3,24}$/;
   const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const AUTH_TIMEOUT_MS = 15000;
 
   let supabaseClientPromise = null;
   let supabaseClient = null;
   let supabaseFactoryPromise = null;
   let activeProfile = null;
   let activeModalMode = 'login';
+  let isAuthBusy = false;
+  let authInitialized = false;
+  let authStateSubscription = null;
+  let lastNotifiedAccount = null;
 
   function getConfigValue(candidates) {
     for (const item of candidates) {
@@ -56,28 +61,17 @@
 
   let resolvedConfig = resolveSupabaseConfig();
   let authConfigured = Boolean(resolvedConfig.url && resolvedConfig.anonKey);
-  const redactKey = key => {
-    const value = String(key || '');
-    if (!value) return '(missing)';
-    if (value.length <= 8) return `${value.slice(0, 2)}***`;
-    return `${value.slice(0, 4)}***${value.slice(-4)}`;
-  };
-
-  console.info('[XyrexAuth] Supabase config detection:', {
-    configured: authConfigured,
-    url: resolvedConfig.url || '(missing)',
-    anonKey: redactKey(resolvedConfig.anonKey)
-  });
 
   function normalizeUsername(value) {
     return String(value || '').trim().toLowerCase();
   }
 
-  function validateUsername(username) {
+  function validateUsername(usernameRaw) {
+    const username = normalizeUsername(usernameRaw);
     if (!USERNAME_REGEX.test(username)) {
       throw new Error('Username must be 3 to 24 characters and only include letters, numbers, underscores, or periods.');
     }
-    return email;
+    return username;
   }
 
   function validateEmail(value) {
@@ -92,6 +86,15 @@
     if (!/[A-Z]/.test(password)) throw new Error('Password must include at least one uppercase letter.');
     if (!/\d/.test(password)) throw new Error('Password must include at least one number.');
     return password;
+  }
+
+  function withTimeout(promise, ms, message) {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        window.setTimeout(() => reject(new Error(message)), ms);
+      })
+    ]);
   }
 
   function readStorage(key) {
@@ -126,9 +129,30 @@
     else writeStorage(PROFILE_CACHE_KEY, null);
   }
 
+  function setCurrentAccount(username) {
+    ACCOUNT_SCOPE.setAccount(username || 'guest');
+  }
+
   function notifyAccountChange() {
+    const account = ACCOUNT_SCOPE.getAccount?.() || 'guest';
+    if (account === lastNotifiedAccount) return;
+    lastNotifiedAccount = account;
+
     window.dispatchEvent(new CustomEvent('xyrex:account-changed', {
-      detail: { username: ACCOUNT_SCOPE.getAccount?.() || 'guest' }
+      detail: {
+        username: account,
+        configured: authConfigured,
+        profileReady: Boolean(activeProfile)
+      }
+    }));
+  }
+
+  function emitAuthConfigEvent() {
+    window.dispatchEvent(new CustomEvent('xyrex:auth-config', {
+      detail: {
+        configured: authConfigured,
+        url: resolvedConfig.url || ''
+      }
     }));
   }
 
@@ -167,7 +191,7 @@
           const module = await import(source);
           if (typeof module?.createClient === 'function') return module.createClient;
         } catch {
-          // Try the next source
+          // Try next source
         }
       }
 
@@ -181,11 +205,11 @@
           await loadScript(source);
           if (window.supabase?.createClient) return window.supabase.createClient;
         } catch {
-          // Try the next source
+          // Try next source
         }
       }
 
-      throw new Error('Unable to load Supabase client library.');
+      throw new Error('Unable to load the Supabase client library.');
     })();
 
     return supabaseFactoryPromise;
@@ -198,10 +222,12 @@
     supabaseClientPromise = (async () => {
       resolvedConfig = resolveSupabaseConfig();
       authConfigured = Boolean(resolvedConfig.url && resolvedConfig.anonKey);
+      emitAuthConfigEvent();
+
       if (!authConfigured) return null;
 
       try {
-        const createClient = await getSupabaseFactory();
+        const createClient = await withTimeout(getSupabaseFactory(), AUTH_TIMEOUT_MS, 'Loading auth provider timed out.');
         const client = createClient(resolvedConfig.url, resolvedConfig.anonKey, {
           auth: {
             persistSession: true,
@@ -222,8 +248,8 @@
   async function requireClient() {
     const client = await getSupabaseClient();
     if (!client) {
-      if (!authConfigured) throw new Error('Supabase auth is not configured for this deployment yet.');
-      throw new Error('Supabase auth client could not be initialized. Please try again shortly.');
+      if (!authConfigured) throw new Error('Account auth is not configured for this deployment yet.');
+      throw new Error('Account auth could not be initialized. Please try again shortly.');
     }
     return client;
   }
@@ -252,60 +278,110 @@
     return data || null;
   }
 
+  async function checkUsernameExists(client, username) {
+    try {
+      const { data, error } = await client.rpc('xyrex_username_exists', { input_username: username });
+      if (error) return false;
+      return Boolean(data);
+    } catch {
+      return false;
+    }
+  }
+
+  async function lookupLoginEmailByUsername(client, username) {
+    try {
+      const { data, error } = await client.rpc('xyrex_lookup_login_email', { input_username: username });
+      if (error) return '';
+      return String(data || '').trim().toLowerCase();
+    } catch {
+      return '';
+    }
+  }
+
+  function getCandidateUsernames(user, fallbackUsername = '') {
+    const candidates = [
+      fallbackUsername,
+      user?.user_metadata?.username,
+      user?.email?.split('@')[0],
+      `user_${String(user?.id || '').slice(0, 8)}`
+    ];
+
+    const unique = [];
+    for (const raw of candidates) {
+      const normalized = normalizeUsername(raw);
+      if (!normalized) continue;
+      if (!unique.includes(normalized)) unique.push(normalized);
+    }
+    return unique;
+  }
+
+  async function insertProfile(client, user, username) {
+    const payload = {
+      user_id: user.id,
+      username,
+      email: String(user.email || '').toLowerCase(),
+      progress: {
+        dodge: {
+          coins: 0,
+          bestScore: 0,
+          ownedModifiers: ['Balanced'],
+          selectedModifier: 'Balanced',
+          ownedPowerups: [],
+          selectedPowerup: 'None',
+          aiTokenDate: '',
+          aiTokensUsedToday: 0,
+          aiPurchasedTokens: 0,
+          activeCheats: []
+        }
+      }
+    };
+
+    const { error } = await client
+      .from(PROFILE_TABLE)
+      .upsert(payload, { onConflict: 'user_id', ignoreDuplicates: false });
+
+    if (error) throw error;
+  }
+
   async function ensureProfileForUser(client, user, fallbackUsername = '') {
     if (!user?.id) throw new Error('Missing authenticated user.');
 
     let profile = await getProfileByUserId(client, user.id);
     if (profile) {
       setProfile(profile);
-      ACCOUNT_SCOPE.setAccount(profile.username || 'guest');
+      setCurrentAccount(profile.username || 'guest');
       return profile;
     }
 
-    const username = normalizeUsername(fallbackUsername || user?.user_metadata?.username || user?.email?.split('@')[0] || 'guest');
-    validateUsername(username);
+    const candidates = getCandidateUsernames(user, fallbackUsername);
+    let lastInsertError = null;
 
-    const { error: insertError } = await client
-      .from(PROFILE_TABLE)
-      .insert({
-        user_id: user.id,
-        username,
-        email: String(user.email || '').toLowerCase(),
-        progress: {
-          dodge: {
-            coins: 0,
-            bestScore: 0,
-            ownedModifiers: ['Balanced'],
-            selectedModifier: 'Balanced',
-            ownedPowerups: [],
-            selectedPowerup: 'None',
-            aiTokenDate: '',
-            aiTokensUsedToday: 0,
-            aiPurchasedTokens: 0,
-            activeCheats: []
-          }
+    for (const candidate of candidates) {
+      try {
+        const username = validateUsername(candidate);
+        await insertProfile(client, user, username);
+        profile = await getProfileByUserId(client, user.id);
+        if (profile) {
+          setProfile(profile);
+          setCurrentAccount(profile.username || 'guest');
+          return profile;
         }
-      });
+      } catch (error) {
+        lastInsertError = error;
+      }
+    }
 
-    if (insertError) throw new Error(insertError.message || 'Unable to initialize account profile.');
-
-    profile = await getProfileByUserId(client, user.id);
-    if (!profile) throw new Error('Unable to initialize account profile.');
-
-    setProfile(profile);
-    ACCOUNT_SCOPE.setAccount(profile.username || 'guest');
-    return profile;
+    throw new Error(lastInsertError?.message || 'Unable to initialize account profile.');
   }
 
   async function signUp(usernameRaw, emailRaw, passwordRaw) {
     const client = await requireClient();
-    const username = normalizeUsername(usernameRaw);
-    validateUsername(username);
+    const username = validateUsername(usernameRaw);
     const email = validateEmail(emailRaw);
     const password = validatePassword(passwordRaw);
 
-    const existing = await getProfileByUsername(client, username);
-    if (existing) throw new Error('That username is already registered.');
+    const usernameExists = await checkUsernameExists(client, username);
+    if (usernameExists) throw new Error('That username is already registered.');
 
     const { data, error } = await client.auth.signUp({
       email,
@@ -318,46 +394,52 @@
 
     if (error) throw new Error(error.message || 'Unable to complete sign up.');
     if (!data?.user) throw new Error('Unable to complete sign up.');
-    if (!data?.session) throw new Error('Sign up succeeded. Please verify your email address before signing in.');
 
-    await ensureProfileForUser(client, data.user, username);
-    return username;
+    if (data.session?.user) {
+      await ensureProfileForUser(client, data.user, username);
+      return { username, pendingVerification: false };
+    }
+
+    return { username, pendingVerification: true };
   }
 
-  async function login(usernameRaw, passwordRaw) {
+  async function resolveLoginEmail(client, identifierRaw) {
+    const identifier = String(identifierRaw || '').trim().toLowerCase();
+    if (!identifier) throw new Error('Please provide your username or email address.');
+    if (EMAIL_REGEX.test(identifier)) return identifier;
+
+    const username = validateUsername(identifier);
+    const rpcEmail = await lookupLoginEmailByUsername(client, username);
+    if (rpcEmail) return rpcEmail;
+
+    const profile = await getProfileByUsername(client, username);
+    if (profile?.email) return String(profile.email).toLowerCase();
+
+    throw new Error('Account not found. You can also log in directly with your email address.');
+  }
+
+  async function login(identifierRaw, passwordRaw) {
     const client = await requireClient();
-    const username = normalizeUsername(usernameRaw);
-    validateUsername(username);
+    const email = await resolveLoginEmail(client, identifierRaw);
 
     const password = String(passwordRaw || '');
     if (!password) throw new Error('Please provide your password.');
 
-    const profile = await getProfileByUsername(client, username);
-    if (!profile?.email) throw new Error('Account not found.');
-
     const { data, error } = await client.auth.signInWithPassword({
-      email: profile.email,
+      email,
       password
     });
 
     if (error) throw new Error(error.message || 'Login failed.');
     if (!data?.user) throw new Error('Login failed.');
 
-    await ensureProfileForUser(client, data.user, username);
-    return username;
+    const profile = await ensureProfileForUser(client, data.user);
+    return profile?.username || data.user.email || 'account';
   }
 
   async function sendResetEmail(identifierRaw) {
     const client = await requireClient();
-    const identifier = String(identifierRaw || '').trim().toLowerCase();
-    if (!identifier) throw new Error('Please enter your username or email address.');
-
-    let email = identifier;
-    if (!EMAIL_REGEX.test(identifier)) {
-      const profile = await getProfileByUsername(client, identifier);
-      if (!profile?.email) throw new Error('Account not found.');
-      email = profile.email;
-    }
+    const email = await resolveLoginEmail(client, identifierRaw);
 
     const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo: REDIRECT_URL });
     if (error) throw new Error(error.message || 'Failed to send reset email.');
@@ -381,28 +463,30 @@
     }
 
     setProfile(null);
-    ACCOUNT_SCOPE.setAccount('guest');
+    setCurrentAccount('guest');
   }
 
   async function restoreSession() {
     const client = await getSupabaseClient();
     if (!client) {
       setProfile(getCachedProfile());
+      if (!activeProfile) setCurrentAccount('guest');
+      else setCurrentAccount(activeProfile.username || 'guest');
       return;
     }
 
     try {
-      const { data } = await client.auth.getSession();
+      const { data } = await withTimeout(client.auth.getSession(), AUTH_TIMEOUT_MS, 'Session restore timed out.');
       const user = data?.session?.user || null;
       if (!user) {
         setProfile(null);
-        ACCOUNT_SCOPE.setAccount('guest');
+        setCurrentAccount('guest');
         return;
       }
       await ensureProfileForUser(client, user);
     } catch {
       setProfile(null);
-      ACCOUNT_SCOPE.setAccount('guest');
+      setCurrentAccount('guest');
     }
   }
 
@@ -416,7 +500,11 @@
       if (!userId) return null;
 
       const profile = await getProfileByUserId(client, userId);
-      if (!profile) return null;
+      if (!profile) {
+        await ensureProfileForUser(client, data.session.user);
+        return null;
+      }
+
       setProfile(profile);
 
       const progress = profile.progress && typeof profile.progress === 'object' ? profile.progress : {};
@@ -443,7 +531,10 @@
         .maybeSingle();
 
       if (error) return false;
-      if (data) setProfile(data);
+      if (data) {
+        setProfile(data);
+        setCurrentAccount(data.username || 'guest');
+      }
       return true;
     } catch {
       return false;
@@ -464,8 +555,8 @@
           <button type="button" class="xy-auth-close" aria-label="Close authentication">✕</button>
         </header>
         <div class="xy-auth-body">
-          <label class="xy-auth-label" for="xyAuthUser">Username</label>
-          <input id="xyAuthUser" class="xy-auth-input" type="text" autocomplete="username" placeholder="your_username" />
+          <label class="xy-auth-label" for="xyAuthUser">Username or email</label>
+          <input id="xyAuthUser" class="xy-auth-input" type="text" autocomplete="username" placeholder="your_username or you@example.com" />
 
           <div id="xyAuthEmailWrap" hidden>
             <label class="xy-auth-label" for="xyAuthEmail">Email</label>
@@ -496,6 +587,7 @@
     document.body.appendChild(modal);
 
     const close = () => {
+      if (isAuthBusy) return;
       modal.setAttribute('aria-hidden', 'true');
       const status = modal.querySelector('#xyAuthStatus');
       status.hidden = true;
@@ -513,6 +605,7 @@
   }
 
   function setBusy(modal, busy) {
+    isAuthBusy = busy;
     modal.querySelectorAll('input, button').forEach(element => {
       if (element.classList.contains('xy-auth-close')) return;
       element.disabled = busy;
@@ -539,6 +632,13 @@
   }
 
   function openAuthModal(mode = 'login') {
+    if (!authConfigured) {
+      window.dispatchEvent(new CustomEvent('xyrex:auth-feedback', {
+        detail: { message: 'Account auth is not configured on this deployment.' }
+      }));
+      return;
+    }
+
     activeModalMode = mode;
     ensureModal();
 
@@ -554,7 +654,9 @@
     const reset = modal.querySelector('#xyAuthReset');
 
     submit.onclick = async () => {
-      const username = modal.querySelector('#xyAuthUser').value;
+      if (isAuthBusy) return;
+
+      const identifier = modal.querySelector('#xyAuthUser').value;
       const email = modal.querySelector('#xyAuthEmail').value;
       const password = modal.querySelector('#xyAuthPass').value;
       const newPassword = modal.querySelector('#xyAuthNewPass').value;
@@ -562,15 +664,19 @@
       setBusy(modal, true);
       try {
         if (activeModalMode === 'signup') {
-          const account = await signUp(username, email, password);
-          showStatus(modal, `Signed in as ${account}.`, 'success');
+          const result = await withTimeout(signUp(identifier, email, password), AUTH_TIMEOUT_MS, 'Sign up request timed out.');
+          if (result.pendingVerification) {
+            showStatus(modal, 'Account created. Check your email to verify your account, then log in.', 'success');
+          } else {
+            showStatus(modal, `Signed in as ${result.username}.`, 'success');
+          }
         } else if (activeModalMode === 'recovery') {
-          await updateRecoveredPassword(newPassword);
+          await withTimeout(updateRecoveredPassword(newPassword), AUTH_TIMEOUT_MS, 'Password update timed out.');
           showStatus(modal, 'Password updated. You can now log in with your new password.', 'success');
           activeModalMode = 'login';
           syncModalUi(modal);
         } else {
-          const account = await login(username, password);
+          const account = await withTimeout(login(identifier, password), AUTH_TIMEOUT_MS, 'Login request timed out.');
           showStatus(modal, `Signed in as ${account}.`, 'success');
         }
 
@@ -583,10 +689,12 @@
     };
 
     reset.onclick = async () => {
+      if (isAuthBusy) return;
+
       const identifier = modal.querySelector('#xyAuthUser').value || modal.querySelector('#xyAuthEmail').value;
       setBusy(modal, true);
       try {
-        await sendResetEmail(identifier);
+        await withTimeout(sendResetEmail(identifier), AUTH_TIMEOUT_MS, 'Password reset request timed out.');
         showStatus(modal, 'Password reset email sent. Please check your inbox.', 'success');
       } catch (error) {
         showStatus(modal, error?.message || 'Failed to send reset email.', 'error');
@@ -596,6 +704,18 @@
     };
 
     modal.querySelector('#xyAuthUser').focus();
+  }
+
+  function isRecoverySession() {
+    const hash = window.location.hash || '';
+    return hash.includes('type=recovery') && hash.includes('access_token=');
+  }
+
+  function clearRecoveryHash() {
+    if (!window.location.hash) return;
+    if (!window.history?.replaceState) return;
+    const cleanUrl = `${window.location.pathname}${window.location.search}`;
+    window.history.replaceState({}, document.title, cleanUrl);
   }
 
   const originalClearAccount = typeof ACCOUNT_SCOPE.clearAccount === 'function'
@@ -610,8 +730,7 @@
 
   window.XyrexAuth = {
     openAuthModal,
-    async resetPassword() {
-      const identifier = window.prompt('Enter your username or email:') || '';
+    async resetPassword(identifier = '') {
       await sendResetEmail(identifier);
       return true;
     },
@@ -630,17 +749,23 @@
       authConfigured = Boolean(resolvedConfig.url && resolvedConfig.anonKey);
       return authConfigured;
     },
+    isReady() {
+      return authInitialized;
+    },
     loadAccountProgress,
     saveAccountProgress,
     async initialize() {
+      if (authInitialized) return;
+      authInitialized = true;
+
       const client = await getSupabaseClient();
 
-      if (client) {
-        client.auth.onAuthStateChange(async (_event, session) => {
+      if (client && !authStateSubscription) {
+        const { data } = client.auth.onAuthStateChange(async (_event, session) => {
           const user = session?.user || null;
           if (!user) {
             setProfile(null);
-            ACCOUNT_SCOPE.setAccount('guest');
+            setCurrentAccount('guest');
             notifyAccountChange();
             return;
           }
@@ -648,17 +773,30 @@
           try {
             await ensureProfileForUser(client, user);
           } catch {
-            ACCOUNT_SCOPE.setAccount('guest');
+            setCurrentAccount('guest');
           }
 
           notifyAccountChange();
         });
+        authStateSubscription = data?.subscription || null;
       }
 
       await restoreSession();
       notifyAccountChange();
+      window.dispatchEvent(new CustomEvent('xyrex:auth-ready', {
+        detail: {
+          configured: authConfigured,
+          account: ACCOUNT_SCOPE.getAccount?.() || 'guest'
+        }
+      }));
+
+      if (isRecoverySession()) {
+        openAuthModal('recovery');
+        clearRecoveryHash();
+      }
     }
   };
 
+  emitAuthConfigEvent();
   window.XyrexAuth.initialize();
 })();
