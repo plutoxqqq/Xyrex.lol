@@ -46,5 +46,5 @@ jobs:
           git add README.md
           git commit -m "Update README from Discord" || echo "No changes"
 
-          # force push to correct branch
+      # force push to correct branch
           git push origin HEAD:main
