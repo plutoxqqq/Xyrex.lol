@@ -57,12 +57,12 @@ Xyrex.lol continues to evolve with:
 
 ---
 
-## Recent Changes (Latest Discord Update)
+## Recent Changes
+> Live from Discord!
 
 <!-- RECENT_CHANGES_START -->
 Loading latest updates...
 <!-- RECENT_CHANGES_END -->
-
 ---
 
 ## 📝 Contributing
