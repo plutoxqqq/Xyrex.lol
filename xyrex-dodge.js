@@ -409,8 +409,10 @@
         const maxHeightByViewport = isMobileViewport && isLandscape ? Math.round(viewportHeight * 0.6) : viewportHeight;
         const widthDrivenHeight = Math.round(availableWidth / canvasAspectRatio);
         const mobileLandscapeMin = isMobileViewport && isLandscape ? 190 : 180;
+        const maxHeightByContainer = wrapHeight > 0 ? Math.round(wrapHeight) : maxHeightByViewport;
+        const hardMaxHeight = Math.max(mobileLandscapeMin, Math.min(maxHeightByViewport, maxHeightByContainer));
         const baseHeight = Math.max(wrapHeight, widthDrivenHeight);
-        const availableHeight = clamp(baseHeight, mobileLandscapeMin, Math.max(mobileLandscapeMin, maxHeightByViewport));
+        const availableHeight = clamp(baseHeight, mobileLandscapeMin, hardMaxHeight);
 
         this.canvas.style.width = `${Math.round(availableWidth)}px`;
         this.canvas.style.height = `${Math.round(availableHeight)}px`;
@@ -700,7 +702,7 @@
         lane: 3,
         targetLane: 3,
         x: 3 * (960 / 6) + (960 / 6) / 2,
-        y: 565,
+        y: 548,
         w: 84,
         h: 32,
       };
