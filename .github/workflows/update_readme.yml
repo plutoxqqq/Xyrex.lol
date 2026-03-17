@@ -3,7 +3,7 @@ name: Update README from Discord
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "*/5 * * * *" # every 5 minutes (optional)
 
 permissions:
   contents: write
@@ -13,27 +13,38 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      # ✅ Proper checkout (fixes detached HEAD issue)
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           ref: main
-          persist-credentials: true
+          fetch-depth: 0
 
+      # ✅ Ensure Node works properly
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      - name: Run updater
+      # ✅ Run your Discord → README script
+      - name: Run script
+        run: node scripts/update-readme-from-discord.js
         env:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_CHANNEL_ID: ${{ secrets.DISCORD_CHANNEL_ID }}
-        run: node scripts/readme_updater_v2.js
 
-      - name: Commit and push
+      # 🧪 Debug (shows if README actually changed)
+      - name: Show README after update
+        run: cat README.md
+
+      # 🔥 THIS IS THE FIXED PUSH
+      - name: Commit and push changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions@users.noreply.github.com"
+
           git add README.md
           git commit -m "Update README from Discord" || echo "No changes"
-          git push origin main
+
+          # force push to correct branch
+          git push origin HEAD:main
