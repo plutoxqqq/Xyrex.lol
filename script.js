@@ -766,6 +766,8 @@ function openSettingsModal() {
   const overlay = qs('#modalOverlay');
   const content = qs('#modalContent');
   const tokenSummary = getAiTokenSummary();
+  const authConfigured = Boolean(window.XyrexAuth?.hasRemoteSync?.());
+  const accountActionsDisabled = authConfigured ? '' : 'disabled';
 
   content.innerHTML = `
     <section class="settings-modal">
@@ -791,14 +793,15 @@ function openSettingsModal() {
       <div class="settings-group">
         <h3>Account</h3>
         <p class="settings-note">Current account: <strong>${escapeHtml(getCurrentAccountName())}</strong></p>
+        <p id="settingsAuthFeedback" class="settings-note" hidden></p>
         <div class="settings-actions">
-          <button id="settingsLoginBtn" class="btn-primary settings-action-btn" type="button">Login</button>
-          <button id="settingsSignUpBtn" class="btn-primary settings-action-btn" type="button">Sign Up</button>
-          <button id="settingsResetPasswordBtn" class="btn-primary settings-action-btn" type="button">Reset Password</button>
-          ${isGuestAccount() ? '' : '<button id="settingsLogoutBtn" class="btn-primary settings-action-btn" type="button">Log Out</button>'}
+          <button id="settingsLoginBtn" class="btn-primary settings-action-btn" type="button" ${accountActionsDisabled}>Login</button>
+          <button id="settingsSignUpBtn" class="btn-primary settings-action-btn" type="button" ${accountActionsDisabled}>Sign Up</button>
+          <button id="settingsResetPasswordBtn" class="btn-primary settings-action-btn" type="button" ${accountActionsDisabled}>Reset Password</button>
+          ${isGuestAccount() ? '' : `<button id="settingsLogoutBtn" class="btn-primary settings-action-btn" type="button" ${accountActionsDisabled}>Log Out</button>`}
         </div>
         <p class="settings-note">Use letters, numbers, underscores, or periods for usernames. Passwords require 8+ characters, at least one uppercase letter, and at least one number.</p>
-        <p class="settings-note">${window.XyrexAuth?.hasRemoteSync?.() ? 'Account sync is enabled for this deployment.' : 'Account sync is not configured on this deployment yet.'}</p>
+        <p class="settings-note">${authConfigured ? 'Account sync is enabled for this deployment.' : 'Account sync is not configured on this deployment yet.'}</p>
       </div>
       <div class="settings-group">
         <h3>AI Usage</h3>
@@ -839,9 +842,21 @@ function openSettingsModal() {
     openSettingsModal();
   });
 
+  const authFeedback = qs('#settingsAuthFeedback');
+  const setAuthFeedback = (message, type = 'error') => {
+    if (!authFeedback) return;
+    authFeedback.hidden = !message;
+    authFeedback.textContent = message || '';
+    authFeedback.className = `settings-note ${type === 'success' ? 'xy-auth-status success' : type === 'error' ? 'xy-auth-status error' : ''}`;
+  };
+
+  if (!authConfigured) {
+    setAuthFeedback('Account actions are disabled because Supabase auth is not configured on this deployment.', 'error');
+  }
+
   qs('#settingsLoginBtn')?.addEventListener('click', () => {
     if (!isGuestAccount()) {
-      window.alert('You are already logged into an account. Please log out first if you want to switch accounts.');
+      setAuthFeedback('You are already logged in. Log out first if you want to switch accounts.', 'error');
       return;
     }
     window.XyrexAuth?.openAuthModal?.('login');
@@ -855,10 +870,10 @@ function openSettingsModal() {
     if (!button) return;
     button.disabled = true;
     try {
-      await window.XyrexAuth?.resetPassword?.();
-      window.alert('If the account exists, a reset email has been sent.');
+      window.XyrexAuth?.openAuthModal?.('login');
+      setAuthFeedback('Enter your username or email in the login modal and click Reset Password.', 'success');
     } catch (error) {
-      window.alert(error?.message || 'Failed to send password reset email');
+      setAuthFeedback(error?.message || 'Failed to start password reset flow.', 'error');
     } finally {
       button.disabled = false;
     }
