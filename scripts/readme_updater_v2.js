@@ -1,4 +1,5 @@
 const fs = require("fs");
+const fetch = global.fetch || require("node-fetch");
 
 const TOKEN = process.env.DISCORD_BOT_TOKEN;
 const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
@@ -24,9 +25,10 @@ async function fetchMessages() {
 
   const messages = await res.json();
 
-  return messages
-    .filter((m) => !m.author?.bot)
-    .filter((m) => m.content && m.content.trim());
+  console.log("📥 Raw Discord response:", messages);
+
+  // DO NOT filter aggressively — just take latest
+  return messages;
 }
 
 function formatMessages(messages) {
@@ -34,8 +36,16 @@ function formatMessages(messages) {
     return "No updates.";
   }
 
-  // returns ONLY the raw latest message (no formatting at all)
-  return messages[0].content.replace(/\n/g, " ");
+  const content = messages[0]?.content;
+
+  console.log("📝 Raw message content:", content);
+
+  if (!content || !content.trim()) {
+    return "No updates.";
+  }
+
+  // Single-line, raw text only
+  return content.replace(/\n/g, " ");
 }
 
 async function main() {
@@ -52,16 +62,23 @@ async function main() {
   const messages = await fetchMessages();
   const newContent = formatMessages(messages);
 
+  console.log("✅ Final content going into README:", newContent);
+
   const updated = readme.replace(
     /<!-- RECENT_CHANGES_START -->[\s\S]*<!-- RECENT_CHANGES_END -->/,
     `${start}\n${newContent}\n${end}`
   );
 
+  if (readme === updated) {
+    console.log("⚠️ No changes detected — README not updated");
+    return;
+  }
+
   fs.writeFileSync(readmePath, updated);
-  console.log("README updated successfully");
+  console.log("🚀 README updated successfully");
 }
 
 main().catch((err) => {
-  console.error(err);
+  console.error("❌ Script failed:", err);
   process.exit(1);
 });
