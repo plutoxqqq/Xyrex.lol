@@ -1311,7 +1311,8 @@ function init() {
 
   qs('#searchInput').addEventListener('input', applyAllFilters);
   qs('#searchInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter' && qs('#searchInput').value.trim() === 'XYREX') {
+    const searchValue = qs('#searchInput').value.trim().toLowerCase();
+    if (e.key === 'Enter' && searchValue === 'dodge') {
       qsa('.page-switch-btn').forEach(item => item.classList.remove('is-active'));
       setActivePage('easterEggPage');
     }
