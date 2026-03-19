@@ -382,6 +382,7 @@
                 <div class="xy-dodge-mini-card"><span>AI Tokens</span><strong id="xyTokenCount">0</strong><small>Daily + purchased.</small></div>
                 <div class="xy-dodge-mini-card"><span>Story</span><strong id="xyStoryProgressLabel">0 / ${STORY_CHAPTERS.length}</strong><small>Sector progress.</small></div>
               </div>
+              <div id="xyBetaNotice" class="xy-dodge-toast" data-tone="warning" ${betaEnabled ? 'hidden' : ''}>Beta Features are disabled. Turn them on in Settings to enable story mode, additional game modes, missions, and the new responsive interface.</div>
             </div>
           </section>
 
