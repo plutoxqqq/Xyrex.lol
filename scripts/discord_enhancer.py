@@ -18,9 +18,12 @@ required for the desktop CSS export to take effect inside the Discord app.
 from __future__ import annotations
 
 import argparse
+import base64
+import hashlib
 import json
 import os
 import platform
+import socket
 import subprocess
 import sys
 import threading
@@ -29,6 +32,8 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox
 from typing import Any
+from urllib.parse import urlparse
+from urllib.request import urlopen
 
 APP_TITLE = "Discord Enhancer Studio"
 APP_VERSION = "4.0.0"
@@ -447,24 +452,12 @@ body,
 """
 
 
-def build_web_userscript(settings: dict[str, Any]) -> str:
+def build_runtime_injection(settings: dict[str, Any]) -> str:
     settings = sanitize_settings(settings)
     feature_css = build_feature_css(settings)
     embedded = json.dumps(settings, indent=2)
     scale = settings["panel_scale"] / 100
-    return f'''// ==UserScript==
-// @name         Discord Enhancer Studio Export
-// @namespace    https://discord.com/
-// @version      {APP_VERSION}
-// @description  Exported from the single-file Python Discord Enhancer Studio.
-// @author       OpenAI Codex
-// @match        https://discord.com/channels/*
-// @match        https://discord.com/app
-// @grant        none
-// @run-at       document-idle
-// ==/UserScript==
-
-(() => {{
+    return f'''(() => {{
   "use strict";
 
   const DEFAULTS = {embedded};
@@ -774,6 +767,23 @@ def build_web_userscript(settings: dict[str, Any]) -> str:
 '''
 
 
+def build_web_userscript(settings: dict[str, Any]) -> str:
+    return f'''// ==UserScript==
+// @name         Discord Enhancer Studio Export
+// @namespace    https://discord.com/
+// @version      {APP_VERSION}
+// @description  Exported from the single-file Python Discord Enhancer Studio.
+// @author       OpenAI Codex
+// @match        https://discord.com/channels/*
+// @match        https://discord.com/app
+// @grant        none
+// @run-at       document-idle
+// ==/UserScript==
+
+{build_runtime_injection(settings)}
+'''
+
+
 def build_install_notes() -> str:
     return (
         "Desktop Discord support requires a client mod CSS layer.\n\n"
@@ -791,6 +801,179 @@ def build_install_notes() -> str:
 
 def write_output(text: str, destination: Path) -> None:
     destination.write_text(text, encoding="utf-8")
+
+
+class ChromeDevToolsClient:
+    def __init__(self, host: str = "127.0.0.1", port: int = 9222) -> None:
+        self.host = host.strip() or "127.0.0.1"
+        self.port = port
+
+    def list_tabs(self) -> list[dict[str, Any]]:
+        with urlopen(f"http://{self.host}:{self.port}/json", timeout=3) as response:
+            data = json.loads(response.read().decode("utf-8"))
+        return [tab for tab in data if isinstance(tab, dict)]
+
+    def discord_tabs(self) -> list[dict[str, Any]]:
+        tabs = []
+        for tab in self.list_tabs():
+            url = str(tab.get("url", ""))
+            if "discord.com" in url:
+                tabs.append(tab)
+        return tabs
+
+    def inject_runtime(self, runtime_script: str, inject_all: bool = False) -> int:
+        tabs = self.discord_tabs()
+        if not tabs:
+            raise RuntimeError(
+                "No discord.com tabs were found. Open Chrome with --remote-debugging-port=9222, "
+                "then navigate to Discord."
+            )
+
+        targets = tabs if inject_all else [tabs[0]]
+        for tab in targets:
+            ws_url = str(tab.get("webSocketDebuggerUrl", ""))
+            if not ws_url:
+                continue
+            with DevToolsWebSocket(ws_url) as client:
+                wrapped_script = f"window.__discordEnhancerStudioScript = {json.dumps(runtime_script)};"
+                client.call("Page.enable")
+                client.call(
+                    "Page.addScriptToEvaluateOnNewDocument",
+                    {"source": wrapped_script + "\\n;eval(window.__discordEnhancerStudioScript);"},
+                )
+                client.call("Runtime.evaluate", {"expression": runtime_script})
+        return len(targets)
+
+
+class DevToolsWebSocket:
+    def __init__(self, ws_url: str) -> None:
+        parsed = urlparse(ws_url)
+        self.host = parsed.hostname or "127.0.0.1"
+        self.port = parsed.port or (443 if parsed.scheme == "wss" else 80)
+        self.path = parsed.path + (f"?{parsed.query}" if parsed.query else "")
+        self.secure = parsed.scheme == "wss"
+        self.socket: socket.socket | None = None
+        self.next_id = 1
+
+    def __enter__(self) -> "DevToolsWebSocket":
+        self.connect()
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        self.close()
+
+    def connect(self) -> None:
+        raw_socket = socket.create_connection((self.host, self.port), timeout=5)
+        if self.secure:
+            import ssl
+
+            context = ssl.create_default_context()
+            raw_socket = context.wrap_socket(raw_socket, server_hostname=self.host)
+        key = base64.b64encode(os.urandom(16)).decode("ascii")
+        request = (
+            f"GET {self.path} HTTP/1.1\r\n"
+            f"Host: {self.host}:{self.port}\r\n"
+            "Upgrade: websocket\r\n"
+            "Connection: Upgrade\r\n"
+            f"Sec-WebSocket-Key: {key}\r\n"
+            "Sec-WebSocket-Version: 13\r\n\r\n"
+        )
+        raw_socket.sendall(request.encode("utf-8"))
+        response = self._recv_http_response(raw_socket)
+        if "101" not in response.splitlines()[0]:
+            raise RuntimeError(f"WebSocket handshake failed: {response.splitlines()[0]}")
+        expected_accept = base64.b64encode(
+            hashlib.sha1((key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").encode("utf-8")).digest()
+        ).decode("ascii")
+        if f"Sec-WebSocket-Accept: {expected_accept}" not in response:
+            raise RuntimeError("WebSocket handshake validation failed.")
+        self.socket = raw_socket
+
+    def close(self) -> None:
+        if self.socket is not None:
+            try:
+                self.socket.close()
+            finally:
+                self.socket = None
+
+    def call(self, method: str, params: dict[str, Any] | None = None) -> Any:
+        message_id = self.next_id
+        self.next_id += 1
+        self.send_json({"id": message_id, "method": method, "params": params or {}})
+        while True:
+            payload = self.recv_json()
+            if payload.get("id") == message_id:
+                if "error" in payload:
+                    raise RuntimeError(str(payload["error"]))
+                return payload.get("result")
+
+    def send_json(self, payload: dict[str, Any]) -> None:
+        if self.socket is None:
+            raise RuntimeError("WebSocket is not connected.")
+        self._send_frame(json.dumps(payload).encode("utf-8"))
+
+    def recv_json(self) -> dict[str, Any]:
+        if self.socket is None:
+            raise RuntimeError("WebSocket is not connected.")
+        while True:
+            opcode, payload = self._recv_frame()
+            if opcode == 0x1:
+                return json.loads(payload.decode("utf-8"))
+            if opcode == 0x8:
+                raise RuntimeError("WebSocket connection closed by the browser.")
+
+    def _recv_http_response(self, sock: socket.socket) -> str:
+        data = b""
+        while b"\r\n\r\n" not in data:
+            chunk = sock.recv(4096)
+            if not chunk:
+                break
+            data += chunk
+        return data.decode("utf-8", errors="replace")
+
+    def _send_frame(self, payload: bytes) -> None:
+        if self.socket is None:
+            raise RuntimeError("WebSocket is not connected.")
+        mask = os.urandom(4)
+        frame = bytearray([0x81])
+        length = len(payload)
+        if length < 126:
+            frame.append(0x80 | length)
+        elif length < 65536:
+            frame.append(0x80 | 126)
+            frame.extend(length.to_bytes(2, "big"))
+        else:
+            frame.append(0x80 | 127)
+            frame.extend(length.to_bytes(8, "big"))
+        frame.extend(mask)
+        frame.extend(bytes(byte ^ mask[index % 4] for index, byte in enumerate(payload)))
+        self.socket.sendall(frame)
+
+    def _recv_exact(self, size: int) -> bytes:
+        if self.socket is None:
+            raise RuntimeError("WebSocket is not connected.")
+        data = b""
+        while len(data) < size:
+            chunk = self.socket.recv(size - len(data))
+            if not chunk:
+                raise RuntimeError("Unexpected end of WebSocket stream.")
+            data += chunk
+        return data
+
+    def _recv_frame(self) -> tuple[int, bytes]:
+        header = self._recv_exact(2)
+        opcode = header[0] & 0x0F
+        masked = bool(header[1] & 0x80)
+        length = header[1] & 0x7F
+        if length == 126:
+            length = int.from_bytes(self._recv_exact(2), "big")
+        elif length == 127:
+            length = int.from_bytes(self._recv_exact(8), "big")
+        mask = self._recv_exact(4) if masked else b""
+        payload = self._recv_exact(length)
+        if masked:
+            payload = bytes(byte ^ mask[index % 4] for index, byte in enumerate(payload))
+        return opcode, payload
 
 
 class RightShiftWatcher:
@@ -876,6 +1059,8 @@ class DiscordEnhancerStudio:
         self.bool_vars: dict[str, tk.BooleanVar] = {}
         self.int_vars: dict[str, tk.IntVar] = {}
         self.preview_mode = tk.StringVar(value="web")
+        self.debug_host_var = tk.StringVar(value="127.0.0.1")
+        self.debug_port_var = tk.StringVar(value="9222")
         self.preview_text: tk.Text | None = None
         self.right_shift_watcher = RightShiftWatcher(self.queue_hotkey_toggle)
 
@@ -930,6 +1115,20 @@ class DiscordEnhancerStudio:
         self._sidebar_button(export_card, "Copy web userscript", lambda: self.copy_payload("web"), COLORS["accent"]).pack(fill="x", padx=14)
         self._sidebar_button(export_card, "Copy desktop CSS", lambda: self.copy_payload("desktop"), COLORS["accent_2"]).pack(fill="x", padx=14, pady=8)
         self._sidebar_button(export_card, "Save payload to file", self.save_current_payload, COLORS["panel_alt"]).pack(fill="x", padx=14, pady=(0, 14))
+
+        inject_card = tk.Frame(parent, bg=COLORS["card_alt"], highlightbackground=COLORS["line"], highlightthickness=1)
+        inject_card.pack(fill="x", padx=18, pady=(0, 14))
+        tk.Label(inject_card, text="Live browser injection", bg=COLORS["card_alt"], fg=COLORS["text"], font=self.title_font).pack(anchor="w", padx=14, pady=(12, 8))
+        tk.Label(inject_card, text="Connect to a Chrome-based browser launched with --remote-debugging-port=9222, then inject straight into discord.com.", bg=COLORS["card_alt"], fg=COLORS["muted"], wraplength=250, justify="left", font=self.default_font).pack(anchor="w", padx=14)
+
+        endpoint_row = tk.Frame(inject_card, bg=COLORS["card_alt"])
+        endpoint_row.pack(fill="x", padx=14, pady=(10, 8))
+        tk.Entry(endpoint_row, textvariable=self.debug_host_var, relief="flat", bg="#0b1220", fg=COLORS["text"], insertbackground=COLORS["text"]).pack(side="left", fill="x", expand=True)
+        tk.Entry(endpoint_row, textvariable=self.debug_port_var, width=8, relief="flat", bg="#0b1220", fg=COLORS["text"], insertbackground=COLORS["text"]).pack(side="left", padx=(8, 0))
+
+        self._sidebar_button(inject_card, "Inject into first Discord tab", self.inject_first_discord_tab, COLORS["success"]).pack(fill="x", padx=14)
+        self._sidebar_button(inject_card, "Inject into all Discord tabs", self.inject_all_discord_tabs, COLORS["accent"]).pack(fill="x", padx=14, pady=8)
+        self._sidebar_button(inject_card, "List Discord tabs", self.inspect_discord_tabs, COLORS["panel_alt"]).pack(fill="x", padx=14, pady=(0, 14))
 
         tools_card = tk.Frame(parent, bg=COLORS["card_alt"], highlightbackground=COLORS["line"], highlightthickness=1)
         tools_card.pack(fill="x", padx=18)
@@ -1132,6 +1331,60 @@ class DiscordEnhancerStudio:
         write_output(payload, Path(selected))
         self.set_status(f"Saved payload to {selected}.", tone="success")
 
+    def _devtools_client(self) -> ChromeDevToolsClient:
+        try:
+            port = int(self.debug_port_var.get().strip())
+        except ValueError as exc:
+            raise RuntimeError("The DevTools port must be a valid number.") from exc
+        return ChromeDevToolsClient(self.debug_host_var.get(), port)
+
+    def inspect_discord_tabs(self) -> None:
+        try:
+            tabs = self._devtools_client().discord_tabs()
+        except Exception as exc:
+            self.set_status(f"Tab discovery failed: {exc}", tone="danger")
+            messagebox.showerror(APP_TITLE, f"Could not inspect Discord tabs.\n\n{exc}")
+            return
+
+        if not tabs:
+            self.set_status("No discord.com tabs were found.", tone="warning")
+            messagebox.showwarning(
+                APP_TITLE,
+                "No discord.com tabs were found.\n\n"
+                "Launch Chrome or another Chromium-based browser with:\n"
+                "--remote-debugging-port=9222\n\n"
+                "Then open discord.com and try again.",
+            )
+            return
+
+        lines = [f"{index + 1}. {tab.get('title', 'Untitled tab')} — {tab.get('url', '')}" for index, tab in enumerate(tabs)]
+        self.set_status(f"Found {len(tabs)} Discord tab(s).", tone="success")
+        messagebox.showinfo(APP_TITLE, "\n\n".join(lines))
+
+    def inject_first_discord_tab(self) -> None:
+        self.inject_discord_tabs(inject_all=False)
+
+    def inject_all_discord_tabs(self) -> None:
+        self.inject_discord_tabs(inject_all=True)
+
+    def inject_discord_tabs(self, inject_all: bool) -> None:
+        try:
+            count = self._devtools_client().inject_runtime(build_runtime_injection(self.settings), inject_all=inject_all)
+        except Exception as exc:
+            self.set_status(f"Injection failed: {exc}", tone="danger")
+            messagebox.showerror(
+                APP_TITLE,
+                "Live discord.com injection failed.\n\n"
+                f"{exc}\n\n"
+                "Make sure you are using a Chromium-based browser launched with a remote debugging port,\n"
+                "for example:\nchrome.exe --remote-debugging-port=9222",
+            )
+            return
+
+        target_text = "tabs" if inject_all else "tab"
+        self.set_status(f"Injected into {count} Discord {target_text}.", tone="success")
+        messagebox.showinfo(APP_TITLE, f"Successfully injected into {count} Discord {target_text}.")
+
     def open_discord_web(self) -> None:
         url = "https://discord.com/app"
         try:
@@ -1197,6 +1450,10 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--write-web", metavar="PATH", help="Write the web userscript export to a file.")
     parser.add_argument("--write-desktop-css", metavar="PATH", help="Write the desktop CSS export to a file.")
     parser.add_argument("--write-notes", metavar="PATH", help="Write install notes to a file.")
+    parser.add_argument("--inject-discord", action="store_true", help="Inject the current runtime into the first discord.com tab via Chrome DevTools.")
+    parser.add_argument("--inject-all-discord-tabs", action="store_true", help="Inject the current runtime into every discord.com tab via Chrome DevTools.")
+    parser.add_argument("--debug-host", default="127.0.0.1", help="Chrome DevTools host.")
+    parser.add_argument("--debug-port", type=int, default=9222, help="Chrome DevTools port.")
     parser.add_argument("--reset-settings", action="store_true", help="Reset stored settings before continuing.")
     return parser.parse_args(argv)
 
@@ -1230,6 +1487,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.write_notes:
         write_output(build_install_notes(), Path(args.write_notes))
         print(args.write_notes)
+        return 0
+
+    if args.inject_discord or args.inject_all_discord_tabs:
+        client = ChromeDevToolsClient(args.debug_host, args.debug_port)
+        count = client.inject_runtime(
+            build_runtime_injection(settings),
+            inject_all=args.inject_all_discord_tabs,
+        )
+        print(count)
         return 0
 
     root = tk.Tk()
