@@ -380,6 +380,7 @@
       const betaEnabled = this.isBetaEnabled();
       const visibleMode = betaEnabled ? this.data.selectedMode : 'Classic';
       const classicProgress = this.data.bestScore || 0;
+      const bankedCoins = this.data.coins || 0;
       this.mount.innerHTML = `
         <section class="xy-dodge-shell" data-beta="${betaEnabled}" aria-label="Xyrex Dodge">
           <section class="xy-dodge-hero">
@@ -596,7 +597,6 @@
       });
       if (tab === 'modes') this.tabContent.innerHTML = this.renderModesTab();
       if (tab === 'progression') this.tabContent.innerHTML = this.renderProgressionTab();
-      if (tab === 'loadout') this.tabContent.innerHTML = this.renderLoadoutTab();
       this.bindDynamicUi();
     }
 
