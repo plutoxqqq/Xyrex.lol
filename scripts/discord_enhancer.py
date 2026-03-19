@@ -1,191 +1,178 @@
-// ==UserScript==
-// @name         Discord Web Enhancer Panel
-// @namespace    https://discord.com/
-// @version      2.0.0
-// @description  Adds a polished control panel with persistent Discord web quality-of-life enhancements.
-// @author       You
-// @match        https://discord.com/channels/*
-// @match        https://discord.com/app
-// @grant        none
-// @run-at       document-idle
-// ==/UserScript==
+#!/usr/bin/env python3
+"""Discord Enhancer Control Center.
 
-(() => {
-  "use strict";
+This desktop application stores enhancer settings in JSON, provides a
+Voidware-inspired control panel, supports a Right Shift visibility keybind,
+and exports a companion Discord userscript that can be installed in a browser
+manager such as Tampermonkey.
 
-  const STORAGE_KEY = "__discord_enhancer_settings_v2__";
-  const PANEL_ID = "discord-enhancer-panel";
-  const STYLE_ID = "discord-enhancer-style";
-  const REOPEN_ID = "de-reopen-bubble";
-  const MODAL_ID = "de-modal-overlay";
-  const TOAST_ID = "de-toast";
+A pure Python desktop application cannot run directly inside discord.com on its
+own, so the practical integration path is to manage settings here and export
+an installable userscript that applies them in the browser.
+"""
 
-  const defaults = {
-    enabled: true,
-    hideTypingIndicator: false,
-    hideNitroUpsells: false,
-    hideGiftButton: false,
-    hideStickersButton: false,
-    hideEmojiButton: false,
-    hideAppsButton: false,
-    widenChat: false,
-    compactMode: false,
-    blurSpoilerMedia: false,
-    roundedMedia: true,
-    focusMode: false,
-    hideActiveNow: false,
-    hideMemberList: false,
-    hideProfileEffects: false,
-    hideAvatarDecorations: false,
-    darkenTheme: false,
-    inputGradient: true,
-    timestampOnHoverGlow: false,
-    mediaRadius: 16,
-    uiScale: 100,
-    panelCollapsed: false,
-    panelVisible: true,
-    panelX: 20,
-    panelY: 90
-  };
+from __future__ import annotations
 
-  const featureSections = [
+import argparse
+import json
+import os
+import platform
+import subprocess
+import sys
+import threading
+import time
+import tkinter as tk
+from pathlib import Path
+from tkinter import messagebox
+from typing import Any
+
+APP_TITLE = "Discord Enhancer Control Center"
+APP_VERSION = "3.0.0"
+RIGHT_SHIFT_POLL_SECONDS = 0.06
+BASE_DIR = Path(__file__).resolve().parent
+SETTINGS_PATH = BASE_DIR / "discord_enhancer_settings.json"
+OUTPUT_PATH = BASE_DIR / "discord_enhancer.user.js"
+WINDOW_WIDTH = 1180
+WINDOW_HEIGHT = 760
+RIGHT_SHIFT_VK = 0xA1
+
+VOIDWARE_COLORS = {
+    "bg": "#090b12",
+    "panel": "#101521",
+    "panel_alt": "#0d1220",
+    "card": "#111827",
+    "card_alt": "#0f1724",
+    "line": "#253047",
+    "text": "#f5f7ff",
+    "muted": "#91a0c0",
+    "accent": "#7c5cff",
+    "accent_2": "#38bdf8",
+    "success": "#22c55e",
+    "danger": "#fb7185",
+    "warning": "#f59e0b",
+}
+
+FEATURE_SECTIONS = [
     {
-      title: "Layout",
-      items: [
-        ["enabled", "Master enable", "Turns all enhancer tweaks on or off instantly."],
-        ["widenChat", "Widen chat", "Expands the message area for a roomier layout."],
-        ["compactMode", "Compact mode", "Tightens message spacing for denser reading."],
-        ["focusMode", "Focus mode", "Removes visual clutter around the main chat column."],
-        ["hideMemberList", "Hide member list", "Collapses the right sidebar member list."],
-        ["hideActiveNow", "Hide Active Now", "Hides the friends page activity sidebar."],
-        ["darkenTheme", "Darker surfaces", "Makes backgrounds cleaner and more consistent."],
-        ["inputGradient", "Polished input bar", "Adds a subtle gradient and stronger input framing."]
-      ]
+        "title": "Layout",
+        "items": [
+            ("enabled", "Master enable", "Turns the enhancer CSS on or off instantly."),
+            ("widen_chat", "Widen chat", "Expands the main message column for a roomier layout."),
+            ("compact_mode", "Compact mode", "Tightens message spacing for denser reading."),
+            ("focus_mode", "Focus mode", "Softens peripheral controls to keep chat central."),
+            ("hide_member_list", "Hide member list", "Collapses the right member sidebar."),
+            ("hide_active_now", "Hide Active Now", "Hides the activity column on the friends page."),
+            ("darken_theme", "Darker surfaces", "Applies deeper panels for a cleaner theme."),
+            ("input_gradient", "Polished input bar", "Adds stronger styling to the chat input area."),
+        ],
     },
     {
-      title: "Buttons and distractions",
-      items: [
-        ["hideTypingIndicator", "Hide typing indicator", "Removes the typing status line."],
-        ["hideNitroUpsells", "Hide Nitro prompts", "Suppresses Nitro, upgrade, and upsell UI."],
-        ["hideGiftButton", "Hide gift button", "Removes the gift action from the composer."],
-        ["hideStickersButton", "Hide sticker button", "Removes the sticker picker shortcut."],
-        ["hideEmojiButton", "Hide emoji button", "Removes the emoji picker shortcut."],
-        ["hideAppsButton", "Hide Apps button", "Removes the Apps launcher from chat."],
-        ["hideProfileEffects", "Hide profile effects", "Suppresses decorative profile effect layers."],
-        ["hideAvatarDecorations", "Hide avatar decorations", "Hides avatar frames and decorations."]
-      ]
+        "title": "Buttons and distractions",
+        "items": [
+            ("hide_typing_indicator", "Hide typing indicator", "Removes the typing status line."),
+            ("hide_nitro_upsells", "Hide Nitro prompts", "Suppresses upgrade and Nitro upsell surfaces."),
+            ("hide_gift_button", "Hide gift button", "Removes the gift action from the composer."),
+            ("hide_stickers_button", "Hide sticker button", "Removes the sticker picker shortcut."),
+            ("hide_emoji_button", "Hide emoji button", "Removes the emoji picker shortcut."),
+            ("hide_apps_button", "Hide Apps button", "Removes the Apps launcher from the composer."),
+            ("hide_profile_effects", "Hide profile effects", "Suppresses decorative profile effect layers."),
+            ("hide_avatar_decorations", "Hide avatar decorations", "Removes avatar decoration overlays."),
+        ],
     },
     {
-      title: "Media and polish",
-      items: [
-        ["blurSpoilerMedia", "Blur spoiler media", "Keeps spoiler-style media blurred until hovered."],
-        ["roundedMedia", "Round media corners", "Applies rounded corners to images and videos."],
-        ["timestampOnHoverGlow", "Timestamp highlight", "Adds a subtle hover highlight to timestamps."]
-      ]
-    }
-  ];
+        "title": "Media and polish",
+        "items": [
+            ("blur_spoiler_media", "Blur spoiler media", "Keeps spoiler-style media blurred until hover."),
+            ("rounded_media", "Round media corners", "Rounds image and video corners."),
+            ("timestamp_glow", "Timestamp highlight", "Adds a subtle timestamp highlight on hover."),
+            ("hide_help_button", "Hide help button", "Removes the top-bar help shortcut."),
+        ],
+    },
+]
 
-  let settings = loadSettings();
-  let styleEl = null;
-  let panelEl = null;
-  let mutationObserver = null;
-  let bodyObserver = null;
-  let rafHandle = 0;
-  let isDragging = false;
-  let dragOffsetX = 0;
-  let dragOffsetY = 0;
-  let currentToastTimer = 0;
+DEFAULT_SETTINGS: dict[str, Any] = {
+    "enabled": True,
+    "widen_chat": False,
+    "compact_mode": False,
+    "focus_mode": False,
+    "hide_member_list": False,
+    "hide_active_now": False,
+    "darken_theme": False,
+    "input_gradient": True,
+    "hide_typing_indicator": False,
+    "hide_nitro_upsells": False,
+    "hide_gift_button": False,
+    "hide_stickers_button": False,
+    "hide_emoji_button": False,
+    "hide_apps_button": False,
+    "hide_profile_effects": False,
+    "hide_avatar_decorations": False,
+    "blur_spoiler_media": False,
+    "rounded_media": True,
+    "timestamp_glow": False,
+    "hide_help_button": False,
+    "media_radius": 18,
+    "panel_scale": 100,
+    "panel_x": 24,
+    "panel_y": 92,
+    "panel_collapsed": False,
+    "panel_visible": True,
+}
 
-  function clamp(value, min, max, fallback) {
-    const numericValue = Number(value);
-    if (!Number.isFinite(numericValue)) return fallback;
-    return Math.min(max, Math.max(min, numericValue));
-  }
 
-  function loadSettings() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return { ...defaults };
-      const parsed = JSON.parse(raw);
-      return sanitizeSettings({ ...defaults, ...parsed });
-    } catch {
-      return { ...defaults };
-    }
-  }
+def clamp(value: Any, minimum: int, maximum: int, fallback: int) -> int:
+    try:
+        numeric_value = int(value)
+    except (TypeError, ValueError):
+        return fallback
+    return max(minimum, min(maximum, numeric_value))
 
-  function sanitizeSettings(candidate) {
-    const sanitized = { ...defaults, ...candidate };
-    Object.keys(defaults).forEach((key) => {
-      if (typeof defaults[key] === "boolean") {
-        sanitized[key] = Boolean(sanitized[key]);
-      }
-    });
 
-    sanitized.mediaRadius = clamp(sanitized.mediaRadius, 0, 40, defaults.mediaRadius);
-    sanitized.uiScale = clamp(sanitized.uiScale, 80, 125, defaults.uiScale);
-    sanitized.panelX = clamp(sanitized.panelX, 0, window.innerWidth || 1920, defaults.panelX);
-    sanitized.panelY = clamp(sanitized.panelY, 0, window.innerHeight || 1080, defaults.panelY);
-    return sanitized;
-  }
+def sanitize_settings(candidate: dict[str, Any]) -> dict[str, Any]:
+    settings = {**DEFAULT_SETTINGS, **candidate}
+    for key, default_value in DEFAULT_SETTINGS.items():
+        if isinstance(default_value, bool):
+            settings[key] = bool(settings[key])
+    settings["media_radius"] = clamp(settings.get("media_radius"), 0, 40, DEFAULT_SETTINGS["media_radius"])
+    settings["panel_scale"] = clamp(settings.get("panel_scale"), 80, 125, DEFAULT_SETTINGS["panel_scale"])
+    settings["panel_x"] = clamp(settings.get("panel_x"), 0, 3000, DEFAULT_SETTINGS["panel_x"])
+    settings["panel_y"] = clamp(settings.get("panel_y"), 0, 3000, DEFAULT_SETTINGS["panel_y"])
+    return settings
 
-  function saveSettings() {
-    settings = sanitizeSettings(settings);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-  }
 
-  function qs(selector, root = document) {
-    return root.querySelector(selector);
-  }
+def load_settings(path: Path = SETTINGS_PATH) -> dict[str, Any]:
+    if not path.exists():
+        return sanitize_settings(DEFAULT_SETTINGS)
+    try:
+        return sanitize_settings(json.loads(path.read_text(encoding="utf-8")))
+    except (json.JSONDecodeError, OSError):
+        return sanitize_settings(DEFAULT_SETTINGS)
 
-  function qsa(selector, root = document) {
-    return Array.from(root.querySelectorAll(selector));
-  }
 
-  function escapeHtml(value) {
-    return String(value)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/\"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-  }
+def save_settings(settings: dict[str, Any], path: Path = SETTINGS_PATH) -> None:
+    path.write_text(json.dumps(sanitize_settings(settings), indent=2), encoding="utf-8")
 
-  function scheduleRefresh() {
-    cancelAnimationFrame(rafHandle);
-    rafHandle = requestAnimationFrame(() => {
-      applyStyles();
-      syncPanelVisibility();
-      syncPanelInputs();
-      enforcePanelBounds();
-    });
-  }
 
-  function updateSetting(key, value, options = {}) {
-    settings[key] = value;
-    saveSettings();
+def build_feature_css(settings: dict[str, Any]) -> str:
+    if not settings["enabled"]:
+        return ""
 
-    if (options.render !== false) {
-      scheduleRefresh();
-    }
-  }
+    rules: list[str] = []
 
-  function generateFeatureCss() {
-    const featureCss = [];
+    def add(rule: str, enabled: bool) -> None:
+        if enabled:
+            rules.append(rule.strip())
 
-    if (!settings.enabled) {
-      return "";
-    }
-
-    if (settings.hideTypingIndicator) {
-      featureCss.push(`
+    add(
+        """
         [class*="typing"] {
           display: none !important;
         }
-      `);
-    }
-
-    if (settings.hideNitroUpsells) {
-      featureCss.push(`
+        """,
+        settings["hide_typing_indicator"],
+    )
+    add(
+        """
         a[href*="discord.com/nitro"],
         a[href*="/store"],
         [class*="premium"],
@@ -194,51 +181,58 @@
         [aria-label*="Nitro" i] {
           display: none !important;
         }
-      `);
-    }
-
-    if (settings.hideGiftButton) {
-      featureCss.push(`
+        """,
+        settings["hide_nitro_upsells"],
+    )
+    add(
+        """
         button[aria-label*="Gift" i],
         button[aria-label*="Send a gift" i],
         [aria-label*="Gift" i][role="button"] {
           display: none !important;
         }
-      `);
-    }
-
-    if (settings.hideStickersButton) {
-      featureCss.push(`
+        """,
+        settings["hide_gift_button"],
+    )
+    add(
+        """
         button[aria-label*="Sticker" i],
-        [aria-label*="Open sticker picker" i],
         [aria-label*="sticker" i][role="button"] {
           display: none !important;
         }
-      `);
-    }
-
-    if (settings.hideEmojiButton) {
-      featureCss.push(`
+        """,
+        settings["hide_stickers_button"],
+    )
+    add(
+        """
         button[aria-label*="emoji" i],
         [aria-label*="Open emoji picker" i],
         [aria-label*="expression picker" i] {
           display: none !important;
         }
-      `);
-    }
-
-    if (settings.hideAppsButton) {
-      featureCss.push(`
+        """,
+        settings["hide_emoji_button"],
+    )
+    add(
+        """
         button[aria-label*="Apps" i],
         button[aria-label*="App Launcher" i],
         [aria-label*="Apps" i][role="button"] {
           display: none !important;
         }
-      `);
-    }
-
-    if (settings.widenChat) {
-      featureCss.push(`
+        """,
+        settings["hide_apps_button"],
+    )
+    add(
+        """
+        [class*="toolbar"] [aria-label*="Help" i] {
+          display: none !important;
+        }
+        """,
+        settings["hide_help_button"],
+    )
+    add(
+        """
         main[class*="chatContent"],
         [class*="chatContent"] {
           width: 100% !important;
@@ -250,11 +244,11 @@
           width: 100% !important;
           flex: 1 1 auto !important;
         }
-      `);
-    }
-
-    if (settings.compactMode) {
-      featureCss.push(`
+        """,
+        settings["widen_chat"],
+    )
+    add(
+        """
         [class*="messageListItem"] {
           margin-top: 0 !important;
         }
@@ -268,19 +262,14 @@
           transform: scale(0.92);
           transform-origin: center top;
         }
-
-        [class*="markup"] {
-          line-height: 1.3 !important;
-        }
-      `);
-    }
-
-    if (settings.focusMode) {
-      featureCss.push(`
+        """,
+        settings["compact_mode"],
+    )
+    add(
+        """
         nav[aria-label="Servers sidebar"],
         [data-list-id="guildsnav"],
         [class*="toolbar"] [aria-label*="Inbox" i],
-        [class*="toolbar"] [aria-label*="Help" i],
         [class*="toolbar"] [aria-label*="Notification" i] {
           opacity: 0.72;
           transition: opacity 0.18s ease;
@@ -289,55 +278,52 @@
         nav[aria-label="Servers sidebar"]:hover,
         [data-list-id="guildsnav"]:hover,
         [class*="toolbar"] [aria-label*="Inbox" i]:hover,
-        [class*="toolbar"] [aria-label*="Help" i]:hover,
         [class*="toolbar"] [aria-label*="Notification" i]:hover {
           opacity: 1;
         }
-      `);
-    }
-
-    if (settings.hideActiveNow) {
-      featureCss.push(`
+        """,
+        settings["focus_mode"],
+    )
+    add(
+        """
+        [class*="membersWrap"],
+        aside[aria-label*="Member List" i] {
+          display: none !important;
+        }
+        """,
+        settings["hide_member_list"],
+    )
+    add(
+        """
         [class*="nowPlayingColumn"],
         [class*="activeNow"],
         aside[aria-label*="Active Now" i] {
           display: none !important;
         }
-      `);
-    }
-
-    if (settings.hideMemberList) {
-      featureCss.push(`
-        [class*="membersWrap"],
-        aside[aria-label*="Member List" i],
-        [class*="peopleList"] + [class*="nowPlayingColumn"] {
-          display: none !important;
-        }
-      `);
-    }
-
-    if (settings.hideProfileEffects) {
-      featureCss.push(`
+        """,
+        settings["hide_active_now"],
+    )
+    add(
+        """
         [class*="profileEffects"],
-        [class*="avatarDecorationHint"],
-        [class*="profileEffect"] {
+        [class*="profileEffect"],
+        [class*="avatarDecorationHint"] {
           display: none !important;
         }
-      `);
-    }
-
-    if (settings.hideAvatarDecorations) {
-      featureCss.push(`
+        """,
+        settings["hide_profile_effects"],
+    )
+    add(
+        """
         [class*="avatarDecoration"],
-        [class*="avatarStack"] svg,
         [mask*="avatar-decoration"] {
           display: none !important;
         }
-      `);
-    }
-
-    if (settings.blurSpoilerMedia) {
-      featureCss.push(`
+        """,
+        settings["hide_avatar_decorations"],
+    )
+    add(
+        """
         [class*="spoiler"] img,
         [class*="spoiler"] video,
         [class*="obscured"] img,
@@ -350,23 +336,23 @@
         [class*="spoiler"]:hover video,
         [class*="obscured"]:hover img,
         [class*="obscured"]:hover video {
-          filter: blur(0) saturate(1) !important;
+          filter: blur(0) !important;
         }
-      `);
-    }
-
-    if (settings.roundedMedia) {
-      featureCss.push(`
+        """,
+        settings["blur_spoiler_media"],
+    )
+    add(
+        f"""
         img,
         video,
-        [class*="imageWrapper"] {
-          border-radius: var(--de-media-radius) !important;
-        }
-      `);
-    }
-
-    if (settings.darkenTheme) {
-      featureCss.push(`
+        [class*="imageWrapper"] {{
+          border-radius: {settings['media_radius']}px !important;
+        }}
+        """,
+        settings["rounded_media"],
+    )
+    add(
+        """
         :root {
           --background-primary: #0f1117 !important;
           --background-secondary: #141824 !important;
@@ -374,11 +360,11 @@
           --background-tertiary: #0c0f17 !important;
           --channeltextarea-background: #121725 !important;
         }
-      `);
-    }
-
-    if (settings.inputGradient) {
-      featureCss.push(`
+        """,
+        settings["darken_theme"],
+    )
+    add(
+        """
         form [class*="channelTextArea"],
         form [class*="textArea"],
         [class*="channelTextArea"] {
@@ -387,11 +373,11 @@
           box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 12px 30px rgba(0, 0, 0, 0.16) !important;
           border-radius: 18px !important;
         }
-      `);
-    }
-
-    if (settings.timestampOnHoverGlow) {
-      featureCss.push(`
+        """,
+        settings["input_gradient"],
+    )
+    add(
+        """
         time {
           transition: color 0.18s ease, text-shadow 0.18s ease;
         }
@@ -401,950 +387,796 @@
           color: #dfe4ff !important;
           text-shadow: 0 0 12px rgba(88, 101, 242, 0.45);
         }
-      `);
-    }
+        """,
+        settings["timestamp_glow"],
+    )
 
-    return featureCss.join("\n");
-  }
+    return "\n\n".join(rules)
 
-  function applyStyles() {
-    const uiScale = clamp(settings.uiScale, 80, 125, defaults.uiScale);
-    const mediaRadius = clamp(settings.mediaRadius, 0, 40, defaults.mediaRadius);
 
-    if (!styleEl || !document.contains(styleEl)) {
-      styleEl = document.createElement("style");
-      styleEl.id = STYLE_ID;
-      document.documentElement.appendChild(styleEl);
-    }
+def build_userscript(settings: dict[str, Any]) -> str:
+    sanitized = sanitize_settings(settings)
+    embedded_settings = json.dumps(sanitized, indent=2)
+    feature_css = build_feature_css(sanitized)
+    scale_value = sanitized["panel_scale"] / 100
 
-    styleEl.textContent = `
-      :root {
-        --de-ui-scale: ${uiScale / 100};
-        --de-media-radius: ${mediaRadius}px;
-        --de-panel-bg: rgba(15, 18, 27, 0.94);
-        --de-panel-border: rgba(255, 255, 255, 0.1);
-        --de-panel-text: #f6f8ff;
-        --de-panel-muted: rgba(230, 235, 255, 0.68);
-        --de-panel-accent: #7c8cff;
-        --de-panel-accent-2: #8b5cf6;
-        --de-panel-success: #22c55e;
-        --de-panel-danger: #f43f5e;
-      }
+    return f'''// ==UserScript==
+// @name         Discord Enhancer Exported Panel
+// @namespace    https://discord.com/
+// @version      {APP_VERSION}
+// @description  Exported from the Python Discord Enhancer Control Center.
+// @author       OpenAI Codex
+// @match        https://discord.com/channels/*
+// @match        https://discord.com/app
+// @grant        none
+// @run-at       document-idle
+// ==/UserScript==
 
-      #${PANEL_ID} {
+(() => {{
+  "use strict";
+
+  const SETTINGS = {embedded_settings};
+  const PANEL_ID = "discord-enhancer-python-panel";
+  const STYLE_ID = "discord-enhancer-python-style";
+  const BUBBLE_ID = "discord-enhancer-python-bubble";
+  const STORAGE_KEY = "__discord_enhancer_python_export__";
+
+  function saveState(nextState) {{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
+  }}
+
+  function loadState() {{
+    try {{
+      return {{ ...SETTINGS, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{{}}") }};
+    }} catch {{
+      return {{ ...SETTINGS }};
+    }}
+  }}
+
+  let state = loadState();
+
+  function ensureStyle() {{
+    let style = document.getElementById(STYLE_ID);
+    if (!style) {{
+      style = document.createElement("style");
+      style.id = STYLE_ID;
+      document.documentElement.appendChild(style);
+    }}
+
+    style.textContent = `
+      :root {{
+        --de-export-scale: {scale_value};
+      }}
+
+      #${{PANEL_ID}} {{
         position: fixed;
-        left: ${settings.panelX}px;
-        top: ${settings.panelY}px;
-        width: 360px;
-        max-width: calc(100vw - 24px);
-        max-height: calc(100vh - 24px);
-        overflow: hidden;
+        left: ${{state.panel_x}}px;
+        top: ${{state.panel_y}}px;
+        width: 330px;
         z-index: 2147483644;
-        display: flex;
-        flex-direction: column;
-        background: radial-gradient(circle at top, rgba(124, 140, 255, 0.2), transparent 35%), var(--de-panel-bg);
-        color: var(--de-panel-text);
-        border: 1px solid var(--de-panel-border);
-        border-radius: 20px;
+        background: rgba(11, 14, 24, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 18px;
+        overflow: hidden;
+        color: #f6f8ff;
         box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
-        font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        backdrop-filter: blur(18px);
-        user-select: none;
-        transform: scale(var(--de-ui-scale));
+        backdrop-filter: blur(16px);
+        transform: scale(var(--de-export-scale));
         transform-origin: top left;
-      }
+        font-family: Inter, system-ui, sans-serif;
+      }}
 
-      #${PANEL_ID}[hidden] {
+      #${{PANEL_ID}}[hidden] {{
         display: none !important;
-      }
+      }}
 
-      #${PANEL_ID},
-      #${PANEL_ID} * {
+      #${{PANEL_ID}} * {{
         box-sizing: border-box;
-      }
+      }}
 
-      #${PANEL_ID} button,
-      #${PANEL_ID} input,
-      #${PANEL_ID} textarea {
-        font: inherit;
-      }
-
-      .de-header {
+      .de-export-head {{
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 12px;
         padding: 14px 16px;
-        cursor: move;
-        background: linear-gradient(135deg, rgba(88, 101, 242, 0.92), rgba(139, 92, 246, 0.92));
-      }
+        background: linear-gradient(135deg, #7c5cff, #38bdf8);
+      }}
 
-      .de-header-main {
-        min-width: 0;
-      }
-
-      .de-title {
+      .de-export-title {{
         margin: 0;
-        font-size: 16px;
+        font-size: 15px;
         font-weight: 800;
-        letter-spacing: 0.01em;
-      }
+      }}
 
-      .de-subtitle {
+      .de-export-note {{
         margin: 2px 0 0;
         font-size: 12px;
-        color: rgba(255, 255, 255, 0.82);
-      }
+        color: rgba(255, 255, 255, 0.84);
+      }}
 
-      .de-header-actions {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .de-icon-btn,
-      .de-action-btn,
-      .de-pill-btn {
+      .de-export-head button,
+      .de-export-body button {{
         border: 0;
-        color: var(--de-panel-text);
-        cursor: pointer;
-        transition: transform 0.16s ease, background 0.16s ease, opacity 0.16s ease;
-      }
-
-      .de-icon-btn:hover,
-      .de-action-btn:hover,
-      .de-pill-btn:hover {
-        transform: translateY(-1px);
-      }
-
-      .de-icon-btn {
-        width: 34px;
-        height: 34px;
         border-radius: 12px;
+        padding: 8px 11px;
+        color: #f6f8ff;
         background: rgba(255, 255, 255, 0.14);
-        font-size: 16px;
-        font-weight: 800;
-      }
-
-      .de-body {
-        display: ${settings.panelCollapsed ? "none" : "flex"};
-        flex-direction: column;
-        gap: 14px;
-        padding: 14px;
-        overflow: auto;
-      }
-
-      .de-status-card,
-      .de-section,
-      .de-tool-card {
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.035);
-      }
-
-      .de-status-card {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 12px;
-        padding: 12px 14px;
-        align-items: center;
-      }
-
-      .de-status-title {
-        margin: 0;
-        font-size: 14px;
+        cursor: pointer;
         font-weight: 700;
-      }
+      }}
 
-      .de-status-text {
-        margin: 3px 0 0;
+      .de-export-body {{
+        display: ${{state.panel_collapsed ? "none" : "block"}};
+        padding: 14px;
+      }}
+
+      .de-export-section + .de-export-section {{
+        margin-top: 14px;
+      }}
+
+      .de-export-section h3 {{
+        margin: 0 0 8px;
         font-size: 12px;
-        color: var(--de-panel-muted);
-      }
-
-      .de-master-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        border-radius: 999px;
-        padding: 8px 12px;
-        font-size: 12px;
-        font-weight: 800;
-        background: rgba(34, 197, 94, 0.14);
-        color: #bcffd0;
-      }
-
-      .de-master-chip[data-disabled="true"] {
-        background: rgba(244, 63, 94, 0.14);
-        color: #ffc2d0;
-      }
-
-      .de-section {
-        padding: 12px;
-      }
-
-      .de-section-title {
-        margin: 0 0 10px;
-        font-size: 13px;
-        font-weight: 800;
         text-transform: uppercase;
         letter-spacing: 0.08em;
-        color: rgba(230, 235, 255, 0.78);
-      }
+        color: rgba(255, 255, 255, 0.68);
+      }}
 
-      .de-feature-list {
+      .de-export-row {{
         display: flex;
-        flex-direction: column;
-        gap: 10px;
-      }
-
-      .de-feature-row {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 12px;
+        justify-content: space-between;
         align-items: center;
-      }
+        gap: 12px;
+        padding: 8px 0;
+      }}
 
-      .de-feature-label {
-        display: flex;
-        flex-direction: column;
-        gap: 3px;
-      }
+      .de-export-row strong {{
+        display: block;
+        font-size: 13px;
+      }}
 
-      .de-feature-title {
-        font-size: 14px;
-        font-weight: 700;
-      }
-
-      .de-feature-desc {
+      .de-export-row span {{
+        display: block;
+        margin-top: 2px;
         font-size: 12px;
-        color: var(--de-panel-muted);
-        line-height: 1.35;
-      }
+        color: rgba(255, 255, 255, 0.68);
+      }}
 
-      .de-toggle {
+      .de-export-toggle {{
         position: relative;
-        width: 46px;
-        height: 26px;
-        appearance: none;
-        border: 0;
+        width: 44px;
+        height: 24px;
         border-radius: 999px;
         background: rgba(255, 255, 255, 0.16);
-        cursor: pointer;
-        transition: background 0.16s ease;
-        flex: 0 0 auto;
-      }
+      }}
 
-      .de-toggle::after {
+      .de-export-toggle::after {{
         content: "";
         position: absolute;
         top: 3px;
         left: 3px;
-        width: 20px;
-        height: 20px;
+        width: 18px;
+        height: 18px;
         border-radius: 50%;
-        background: #ffffff;
-        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
-        transition: transform 0.16s ease;
-      }
+        background: #fff;
+      }}
 
-      .de-toggle:checked {
-        background: linear-gradient(135deg, var(--de-panel-success), #16a34a);
-      }
+      .de-export-toggle[data-on="true"] {{
+        background: #22c55e;
+      }}
 
-      .de-toggle:checked::after {
-        transform: translateX(20px);
-      }
+      .de-export-toggle[data-on="true"]::after {{
+        left: 23px;
+      }}
 
-      .de-slider-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-      }
-
-      .de-slider-card {
-        padding: 12px;
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px solid rgba(255, 255, 255, 0.06);
-      }
-
-      .de-slider-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 8px;
-      }
-
-      .de-slider-title {
-        font-size: 13px;
-        font-weight: 700;
-      }
-
-      .de-slider-value {
-        font-size: 12px;
-        color: var(--de-panel-muted);
-      }
-
-      .de-slider {
-        width: 100%;
-        accent-color: var(--de-panel-accent);
-        cursor: pointer;
-      }
-
-      .de-tool-grid,
-      .de-footer-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-      }
-
-      .de-action-btn,
-      .de-pill-btn {
-        border-radius: 14px;
-        padding: 11px 12px;
-        background: rgba(255, 255, 255, 0.08);
-        font-weight: 800;
-      }
-
-      .de-action-btn:hover,
-      .de-pill-btn:hover {
-        background: rgba(255, 255, 255, 0.14);
-      }
-
-      .de-pill-btn.primary {
-        background: linear-gradient(135deg, var(--de-panel-accent), var(--de-panel-accent-2));
-      }
-
-      .de-note {
-        font-size: 12px;
-        line-height: 1.45;
-        color: var(--de-panel-muted);
-        padding: 0 2px;
-      }
-
-      #${REOPEN_ID} {
+      #${{BUBBLE_ID}} {{
         position: fixed;
         right: 18px;
         bottom: 18px;
         z-index: 2147483643;
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
         border: 0;
         border-radius: 999px;
         padding: 12px 16px;
-        background: linear-gradient(135deg, rgba(88, 101, 242, 0.96), rgba(139, 92, 246, 0.96));
-        color: #ffffff;
+        background: linear-gradient(135deg, #7c5cff, #38bdf8);
+        color: #fff;
         font: 700 13px/1 Inter, system-ui, sans-serif;
         box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
         cursor: pointer;
-      }
+      }}
 
-      #${TOAST_ID} {
-        position: fixed;
-        left: 50%;
-        bottom: 24px;
-        transform: translateX(-50%);
-        z-index: 2147483645;
-        min-width: 220px;
-        max-width: min(92vw, 420px);
-        padding: 12px 16px;
-        border-radius: 14px;
-        background: rgba(17, 20, 31, 0.94);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        color: #f6f8ff;
-        font: 700 13px/1.4 Inter, system-ui, sans-serif;
-        box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
-      }
-
-      #${MODAL_ID} {
-        position: fixed;
-        inset: 0;
-        z-index: 2147483646;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
-        background: rgba(5, 7, 12, 0.75);
-        backdrop-filter: blur(10px);
-      }
-
-      .de-modal {
-        width: min(920px, 96vw);
-        max-height: 88vh;
-        overflow: auto;
-        border-radius: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        background: rgba(18, 21, 33, 0.98);
-        color: #f6f8ff;
-        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.48);
-        padding: 18px;
-        font-family: Inter, system-ui, sans-serif;
-      }
-
-      .de-modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 10px;
-      }
-
-      .de-modal-title {
-        margin: 0;
-        font-size: 20px;
-      }
-
-      .de-modal-subtitle {
-        margin: 0 0 14px;
-        font-size: 13px;
-        color: var(--de-panel-muted);
-      }
-
-      .de-chunk-card {
-        padding: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.03);
-      }
-
-      .de-chunk-card + .de-chunk-card {
-        margin-top: 12px;
-      }
-
-      .de-chunk-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 8px;
-      }
-
-      .de-chunk-meta {
-        font-size: 12px;
-        color: var(--de-panel-muted);
-      }
-
-      .de-chunk-textarea {
-        width: 100%;
-        min-height: 140px;
-        resize: vertical;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 14px;
-        background: rgba(10, 12, 20, 0.94);
-        color: #f6f8ff;
-        padding: 12px;
-      }
-
-      ${generateFeatureCss()}
+      {feature_css}
     `;
-  }
+  }}
 
-  function createPanel() {
-    if (panelEl && document.contains(panelEl)) {
-      panelEl.remove();
-    }
+  function renderPanel() {{
+    let panel = document.getElementById(PANEL_ID);
+    if (panel) {{
+      panel.remove();
+    }}
 
-    const panel = document.createElement("section");
+    panel = document.createElement("section");
     panel.id = PANEL_ID;
+    panel.hidden = !state.panel_visible;
     panel.innerHTML = `
-      <div class="de-header" id="de-drag-handle">
-        <div class="de-header-main">
-          <h2 class="de-title">Discord Enhancer</h2>
-          <p class="de-subtitle">Persistent live tweaks with zero reload required.</p>
+      <div class="de-export-head">
+        <div>
+          <h2 class="de-export-title">Discord Enhancer</h2>
+          <p class="de-export-note">Managed by the Python control center. Press Right Shift to toggle this panel.</p>
         </div>
-        <div class="de-header-actions">
-          <button class="de-icon-btn" id="de-collapse-btn" type="button" aria-label="${settings.panelCollapsed ? "Expand panel" : "Collapse panel"}">${settings.panelCollapsed ? "+" : "−"}</button>
-          <button class="de-icon-btn" id="de-hide-btn" type="button" aria-label="Hide panel">✕</button>
+        <div style="display:flex;gap:8px;">
+          <button id="de-export-collapse" type="button">${{state.panel_collapsed ? "+" : "−"}}</button>
+          <button id="de-export-hide" type="button">✕</button>
         </div>
       </div>
-      <div class="de-body" id="de-panel-body">
-        <div class="de-status-card">
-          <div>
-            <p class="de-status-title">Live enhancer state</p>
-            <p class="de-status-text">Every toggle saves instantly and reapplies automatically after reload.</p>
-          </div>
-          <div class="de-master-chip" id="de-master-chip" data-disabled="${settings.enabled ? "false" : "true"}">
-            ${settings.enabled ? "Enabled" : "Disabled"}
-          </div>
-        </div>
-        ${featureSections.map(renderSection).join("")}
-        <div class="de-section">
-          <h3 class="de-section-title">Fine tuning</h3>
-          <div class="de-slider-grid">
-            ${renderSliderCard("mediaRadius", "Media roundness", `${settings.mediaRadius}px`, 0, 40, 1)}
-            ${renderSliderCard("uiScale", "Panel scale", `${settings.uiScale}%`, 80, 125, 1)}
-          </div>
-        </div>
-        <div class="de-tool-card de-section">
-          <h3 class="de-section-title">Draft tools</h3>
-          <div class="de-tool-grid">
-            <button class="de-action-btn" id="de-split-btn" type="button">Split draft</button>
-            <button class="de-action-btn" id="de-download-btn" type="button">Download TXT</button>
-          </div>
-        </div>
-        <div class="de-section">
-          <h3 class="de-section-title">Panel</h3>
-          <div class="de-footer-grid">
-            <button class="de-pill-btn" id="de-reset-btn" type="button">Reset settings</button>
-            <button class="de-pill-btn primary" id="de-restore-btn" type="button">Center panel</button>
-          </div>
-        </div>
-        <div class="de-note">
-          The panel is draggable, fully persistent, and designed to avoid expensive DOM loops. Use the hide button to minimize it to a floating reopen chip.
-        </div>
+      <div class="de-export-body" id="de-export-body">
+        ${{renderRows()}}
       </div>
     `;
-
     document.body.appendChild(panel);
-    panelEl = panel;
-    bindPanelEvents();
-    syncPanelVisibility();
-    enforcePanelBounds();
-  }
 
-  function renderSection(section) {
-    return `
-      <div class="de-section">
-        <h3 class="de-section-title">${escapeHtml(section.title)}</h3>
-        <div class="de-feature-list">
-          ${section.items.map(([key, title, description]) => `
-            <div class="de-feature-row">
-              <label class="de-feature-label" for="de-toggle-${escapeHtml(key)}">
-                <span class="de-feature-title">${escapeHtml(title)}</span>
-                <span class="de-feature-desc">${escapeHtml(description)}</span>
-              </label>
-              <input class="de-toggle" id="de-toggle-${escapeHtml(key)}" data-key="${escapeHtml(key)}" type="checkbox" ${settings[key] ? "checked" : ""}>
-            </div>
-          `).join("")}
-        </div>
-      </div>
-    `;
-  }
+    panel.querySelector("#de-export-collapse")?.addEventListener("click", () => {{
+      state.panel_collapsed = !state.panel_collapsed;
+      saveState(state);
+      ensureStyle();
+      renderPanel();
+    }});
+    panel.querySelector("#de-export-hide")?.addEventListener("click", () => {{
+      state.panel_visible = false;
+      saveState(state);
+      syncVisibility();
+    }});
 
-  function renderSliderCard(key, title, valueText, min, max, step) {
-    return `
-      <div class="de-slider-card">
-        <div class="de-slider-head">
-          <span class="de-slider-title">${escapeHtml(title)}</span>
-          <span class="de-slider-value" id="de-${escapeHtml(key)}-value">${escapeHtml(valueText)}</span>
-        </div>
-        <input class="de-slider" data-slider="${escapeHtml(key)}" type="range" min="${min}" max="${max}" step="${step}" value="${settings[key]}">
-      </div>
-    `;
-  }
+    panel.querySelectorAll("[data-setting-key]").forEach((node) => {{
+      node.addEventListener("click", () => {{
+        const key = node.getAttribute("data-setting-key");
+        if (!key) return;
+        state[key] = !state[key];
+        saveState(state);
+        ensureStyle();
+        renderPanel();
+        syncVisibility();
+      }});
+    }});
+  }}
 
-  function bindPanelEvents() {
-    if (!panelEl) return;
-
-    qsa("input[data-key]", panelEl).forEach((input) => {
-      input.addEventListener("change", () => {
-        updateSetting(input.dataset.key, input.checked);
-      });
-    });
-
-    qsa("input[data-slider]", panelEl).forEach((slider) => {
-      slider.addEventListener("input", () => {
-        const key = slider.dataset.slider;
-        updateSetting(key, Number(slider.value));
-      });
-    });
-
-    qs("#de-collapse-btn", panelEl)?.addEventListener("click", () => {
-      updateSetting("panelCollapsed", !settings.panelCollapsed);
-    });
-
-    qs("#de-hide-btn", panelEl)?.addEventListener("click", () => {
-      updateSetting("panelVisible", false);
-      showToast("Enhancer hidden. Use the floating button to reopen it.");
-    });
-
-    qs("#de-reset-btn", panelEl)?.addEventListener("click", () => {
-      settings = { ...defaults, panelX: settings.panelX, panelY: settings.panelY, panelVisible: true };
-      saveSettings();
-      scheduleRefresh();
-      showToast("Enhancer settings reset.");
-    });
-
-    qs("#de-restore-btn", panelEl)?.addEventListener("click", () => {
-      settings.panelX = Math.max(12, Math.round((window.innerWidth - 360) / 2));
-      settings.panelY = 36;
-      settings.panelVisible = true;
-      saveSettings();
-      scheduleRefresh();
-      showToast("Panel position reset.");
-    });
-
-    qs("#de-split-btn", panelEl)?.addEventListener("click", openSplitDraftModal);
-    qs("#de-download-btn", panelEl)?.addEventListener("click", downloadDraftAsTxt);
-
-    const dragHandle = qs("#de-drag-handle", panelEl);
-    dragHandle?.addEventListener("mousedown", (event) => {
-      if (event.button !== 0) return;
-      if (event.target instanceof HTMLElement && event.target.closest("button")) return;
-      isDragging = true;
-      const rect = panelEl.getBoundingClientRect();
-      dragOffsetX = event.clientX - rect.left;
-      dragOffsetY = event.clientY - rect.top;
-      event.preventDefault();
-    });
-  }
-
-  function syncPanelInputs() {
-    if (!panelEl || !document.contains(panelEl)) return;
-
-    qsa("input[data-key]", panelEl).forEach((input) => {
-      const key = input.dataset.key;
-      const nextValue = Boolean(settings[key]);
-      if (input.checked !== nextValue) {
-        input.checked = nextValue;
-      }
-    });
-
-    qsa("input[data-slider]", panelEl).forEach((slider) => {
-      const key = slider.dataset.slider;
-      const nextValue = String(settings[key]);
-      if (slider.value !== nextValue) {
-        slider.value = nextValue;
-      }
-
-      const label = qs(`#de-${key}-value`, panelEl);
-      if (label) {
-        label.textContent = key === "uiScale" ? `${settings[key]}%` : `${settings[key]}px`;
-      }
-    });
-
-    const collapseButton = qs("#de-collapse-btn", panelEl);
-    if (collapseButton) {
-      collapseButton.textContent = settings.panelCollapsed ? "+" : "−";
-      collapseButton.setAttribute("aria-label", settings.panelCollapsed ? "Expand panel" : "Collapse panel");
-    }
-
-    const body = qs("#de-panel-body", panelEl);
-    if (body) {
-      body.style.display = settings.panelCollapsed ? "none" : "flex";
-    }
-
-    const chip = qs("#de-master-chip", panelEl);
-    if (chip) {
-      chip.textContent = settings.enabled ? "Enabled" : "Disabled";
-      chip.dataset.disabled = settings.enabled ? "false" : "true";
-    }
-  }
-
-  function syncPanelVisibility() {
-    if (!panelEl || !document.contains(panelEl)) return;
-    panelEl.hidden = !settings.panelVisible;
-    toggleReopenBubble(!settings.panelVisible);
-  }
-
-  function toggleReopenBubble(shouldShow) {
-    let reopenBubble = qs(`#${REOPEN_ID}`);
-
-    if (shouldShow) {
-      if (!reopenBubble) {
-        reopenBubble = document.createElement("button");
-        reopenBubble.id = REOPEN_ID;
-        reopenBubble.type = "button";
-        reopenBubble.innerHTML = "<span>✨</span><span>Open Enhancer</span>";
-        reopenBubble.addEventListener("click", () => {
-          updateSetting("panelVisible", true);
-          showToast("Enhancer reopened.");
-        });
-        document.body.appendChild(reopenBubble);
-      }
-      return;
-    }
-
-    reopenBubble?.remove();
-  }
-
-  function enforcePanelBounds() {
-    if (!panelEl || !document.contains(panelEl)) return;
-
-    const scale = clamp(settings.uiScale, 80, 125, defaults.uiScale) / 100;
-    const width = (panelEl.offsetWidth || 360) * scale;
-    const height = (panelEl.offsetHeight || 560) * scale;
-    const maxX = Math.max(0, window.innerWidth - width - 8);
-    const maxY = Math.max(0, window.innerHeight - height - 8);
-
-    settings.panelX = clamp(settings.panelX, 0, maxX, defaults.panelX);
-    settings.panelY = clamp(settings.panelY, 0, maxY, defaults.panelY);
-
-    panelEl.style.left = `${settings.panelX}px`;
-    panelEl.style.top = `${settings.panelY}px`;
-  }
-
-  function onPointerMove(event) {
-    if (!isDragging || !panelEl) return;
-
-    const scale = clamp(settings.uiScale, 80, 125, defaults.uiScale) / 100;
-    const nextX = event.clientX - dragOffsetX * scale;
-    const nextY = event.clientY - dragOffsetY * scale;
-
-    settings.panelX = Math.round(nextX);
-    settings.panelY = Math.round(nextY);
-    enforcePanelBounds();
-  }
-
-  function onPointerUp() {
-    if (!isDragging) return;
-    isDragging = false;
-    saveSettings();
-  }
-
-  function showToast(message) {
-    let toast = qs(`#${TOAST_ID}`);
-    if (!toast) {
-      toast = document.createElement("div");
-      toast.id = TOAST_ID;
-      document.body.appendChild(toast);
-    }
-
-    toast.textContent = message;
-    clearTimeout(currentToastTimer);
-    currentToastTimer = window.setTimeout(() => {
-      toast?.remove();
-    }, 2200);
-  }
-
-  function isVisible(element) {
-    if (!(element instanceof HTMLElement)) return false;
-    const rect = element.getBoundingClientRect();
-    const style = window.getComputedStyle(element);
-    return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
-  }
-
-  function getDraftEditor() {
-    const selectors = [
-      '[role="textbox"][contenteditable="true"]',
-      '[data-slate-editor="true"]',
-      'div[contenteditable="true"][aria-label*="message" i]',
-      'div[contenteditable="true"]'
+  function renderRows() {{
+    const sections = [
+      {{
+        title: "Core",
+        items: [
+          ["enabled", "Master enable", "Switch the exported enhancer on or off."],
+          ["widen_chat", "Widen chat", "Expands the main chat column."],
+          ["compact_mode", "Compact mode", "Tightens message spacing."],
+          ["hide_member_list", "Hide member list", "Collapses the member sidebar."],
+          ["hide_active_now", "Hide Active Now", "Hides the activity sidebar."],
+          ["hide_gift_button", "Hide gift button", "Removes the gift action."],
+          ["hide_stickers_button", "Hide sticker button", "Removes sticker access."],
+          ["hide_emoji_button", "Hide emoji button", "Removes emoji access."],
+        ]
+      }}
     ];
 
-    for (const selector of selectors) {
-      const candidates = qsa(selector);
-      const match = candidates.find((node) => isVisible(node) && !node.closest(`#${PANEL_ID}`));
-      if (match) {
-        return match;
-      }
-    }
-
-    return null;
-  }
-
-  function getDraftText() {
-    const editor = getDraftEditor();
-    if (!editor) return "";
-    return (editor.innerText || editor.textContent || "").replace(/\u00a0/g, " ");
-  }
-
-  function splitIntoChunks(text, maxLength = 2000) {
-    const normalizedText = text.replace(/\r/g, "").trim();
-    if (!normalizedText) return [];
-
-    const chunks = [];
-    let remaining = normalizedText;
-
-    while (remaining.length > maxLength) {
-      const preview = remaining.slice(0, maxLength);
-      let splitIndex = Math.max(
-        preview.lastIndexOf("\n\n"),
-        preview.lastIndexOf("\n"),
-        preview.lastIndexOf(". "),
-        preview.lastIndexOf("! "),
-        preview.lastIndexOf("? "),
-        preview.lastIndexOf(", "),
-        preview.lastIndexOf(" ")
-      );
-
-      if (splitIndex < Math.floor(maxLength * 0.55)) {
-        splitIndex = maxLength;
-      }
-
-      const chunk = remaining.slice(0, splitIndex).trim();
-      if (chunk) {
-        chunks.push(chunk);
-      }
-      remaining = remaining.slice(splitIndex).trimStart();
-    }
-
-    if (remaining) {
-      chunks.push(remaining);
-    }
-
-    return chunks;
-  }
-
-  function closeModal() {
-    qs(`#${MODAL_ID}`)?.remove();
-  }
-
-  function openSplitDraftModal() {
-    const draft = getDraftText();
-    if (!draft.trim()) {
-      showToast("No draft text found in the current message box.");
-      return;
-    }
-
-    closeModal();
-    const chunks = splitIntoChunks(draft, 2000);
-
-    const overlay = document.createElement("div");
-    overlay.id = MODAL_ID;
-    overlay.innerHTML = `
-      <div class="de-modal" role="dialog" aria-modal="true" aria-label="Split draft dialog">
-        <div class="de-modal-header">
-          <div>
-            <h2 class="de-modal-title">Split draft</h2>
-            <p class="de-modal-subtitle">${chunks.length} chunk${chunks.length === 1 ? "" : "s"} ready to copy in order.</p>
+    return sections.map((section) => `
+      <div class="de-export-section">
+        <h3>${{section.title}}</h3>
+        ${{section.items.map(([key, title, description]) => `
+          <div class="de-export-row">
+            <div>
+              <strong>${{title}}</strong>
+              <span>${{description}}</span>
+            </div>
+            <div class="de-export-toggle" data-setting-key="${{key}}" data-on="${{state[key] ? "true" : "false"}}"></div>
           </div>
-          <button class="de-pill-btn primary" id="de-modal-close" type="button">Close</button>
-        </div>
-        <div id="de-chunks-wrap"></div>
+        `).join("")}}
       </div>
-    `;
+    `).join("");
+  }}
 
-    const chunkWrap = qs("#de-chunks-wrap", overlay);
-    chunks.forEach((chunk, index) => {
-      const card = document.createElement("section");
-      card.className = "de-chunk-card";
-      card.innerHTML = `
-        <div class="de-chunk-header">
-          <div>
-            <strong>Part ${index + 1}</strong>
-            <div class="de-chunk-meta">${chunk.length} characters</div>
-          </div>
-          <button class="de-pill-btn" type="button" data-copy-index="${index}">Copy</button>
-        </div>
-        <textarea class="de-chunk-textarea" readonly>${escapeHtml(chunk)}</textarea>
-      `;
-      chunkWrap.appendChild(card);
-    });
+  function syncVisibility() {{
+    const panel = document.getElementById(PANEL_ID);
+    let bubble = document.getElementById(BUBBLE_ID);
 
-    document.body.appendChild(overlay);
+    if (panel) {{
+      panel.hidden = !state.panel_visible;
+    }}
 
-    qs("#de-modal-close", overlay)?.addEventListener("click", closeModal);
-    overlay.addEventListener("click", (event) => {
-      if (event.target === overlay) closeModal();
-    });
+    if (!state.panel_visible) {{
+      if (!bubble) {{
+        bubble = document.createElement("button");
+        bubble.id = BUBBLE_ID;
+        bubble.textContent = "Open Enhancer";
+        bubble.addEventListener("click", () => {{
+          state.panel_visible = true;
+          saveState(state);
+          syncVisibility();
+        }});
+        document.body.appendChild(bubble);
+      }}
+      return;
+    }}
 
-    qsa("button[data-copy-index]", overlay).forEach((button) => {
-      button.addEventListener("click", async () => {
-        const index = Number(button.getAttribute("data-copy-index"));
-        const originalLabel = button.textContent;
-        try {
-          await navigator.clipboard.writeText(chunks[index]);
-          button.textContent = "Copied";
-          showToast(`Copied part ${index + 1}.`);
-          window.setTimeout(() => {
-            button.textContent = originalLabel;
-          }, 1000);
-        } catch {
-          showToast("Clipboard copy failed.");
+    bubble?.remove();
+  }}
+
+  function togglePanelFromKey(event) {{
+    if (event.code !== "ShiftRight") return;
+    state.panel_visible = !state.panel_visible;
+    saveState(state);
+    syncVisibility();
+  }}
+
+  function boot() {{
+    if (!document.body) {{
+      requestAnimationFrame(boot);
+      return;
+    }}
+
+    ensureStyle();
+    renderPanel();
+    syncVisibility();
+    window.addEventListener("keydown", togglePanelFromKey, {{ passive: true }});
+  }}
+
+  boot();
+}})();
+'''
+
+
+def export_userscript(settings: dict[str, Any], destination: Path = OUTPUT_PATH) -> Path:
+    destination.write_text(build_userscript(settings), encoding="utf-8")
+    return destination
+
+
+class RightShiftWatcher:
+    def __init__(self, callback) -> None:
+        self.callback = callback
+        self.running = False
+        self.thread: threading.Thread | None = None
+        self._pressed = False
+
+    def start(self) -> None:
+        if platform.system() != "Windows":
+            return
+        if self.running:
+            return
+        self.running = True
+        self.thread = threading.Thread(target=self._run, daemon=True)
+        self.thread.start()
+
+    def stop(self) -> None:
+        self.running = False
+
+    def _run(self) -> None:
+        import ctypes
+
+        user32 = ctypes.windll.user32
+        while self.running:
+            is_pressed = bool(user32.GetAsyncKeyState(RIGHT_SHIFT_VK) & 0x8000)
+            if is_pressed and not self._pressed:
+                self.callback()
+            self._pressed = is_pressed
+            time.sleep(RIGHT_SHIFT_POLL_SECONDS)
+
+
+class VoidwareSwitch(tk.Canvas):
+    def __init__(self, master: tk.Misc, variable: tk.BooleanVar, command, **kwargs: Any) -> None:
+        super().__init__(master, width=56, height=28, highlightthickness=0, bd=0, **kwargs)
+        self.variable = variable
+        self.command = command
+        self.configure(bg=VOIDWARE_COLORS["card"])
+        self.bind("<Button-1>", self._toggle)
+        self.variable.trace_add("write", lambda *_: self.redraw())
+        self.redraw()
+
+    def _toggle(self, _event=None) -> None:
+        self.variable.set(not self.variable.get())
+        self.command()
+
+    def redraw(self) -> None:
+        self.delete("all")
+        is_on = self.variable.get()
+        track = VOIDWARE_COLORS["success"] if is_on else "#2f3b52"
+        knob_x = 30 if is_on else 2
+        self.create_rounded_rect(2, 4, 54, 24, 12, fill=track, outline=track)
+        self.create_oval(knob_x, 4, knob_x + 22, 26, fill="#ffffff", outline="#ffffff")
+
+    def create_rounded_rect(self, x1, y1, x2, y2, radius, **kwargs: Any):
+        points = [
+            x1 + radius,
+            y1,
+            x2 - radius,
+            y1,
+            x2,
+            y1,
+            x2,
+            y1 + radius,
+            x2,
+            y2 - radius,
+            x2,
+            y2,
+            x2 - radius,
+            y2,
+            x1 + radius,
+            y2,
+            x1,
+            y2,
+            x1,
+            y2 - radius,
+            x1,
+            y1 + radius,
+            x1,
+            y1,
+        ]
+        return self.create_polygon(points, smooth=True, **kwargs)
+
+
+class DiscordEnhancerApp:
+    def __init__(self, root: tk.Tk) -> None:
+        self.root = root
+        self.root.title(f"{APP_TITLE} v{APP_VERSION}")
+        self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
+        self.root.minsize(1100, 700)
+        self.root.configure(bg=VOIDWARE_COLORS["bg"])
+        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+
+        self.settings = load_settings()
+        self.status_var = tk.StringVar(value="Ready. Right Shift toggles the control center window.")
+        self.vars: dict[str, tk.BooleanVar] = {}
+        self.slider_vars: dict[str, tk.IntVar] = {}
+        self.hidden_by_hotkey = False
+        self.right_shift_watcher = RightShiftWatcher(self.queue_hotkey_toggle)
+
+        self._build_styles()
+        self._populate_controls()
+        self._build_layout()
+        self.refresh_export_preview()
+        self.root.bind("<KeyRelease-Shift_R>", lambda _event: self.toggle_visibility())
+        self.right_shift_watcher.start()
+
+    def _build_styles(self) -> None:
+        self.default_font = ("Segoe UI", 10)
+        self.title_font = ("Segoe UI Semibold", 12)
+        self.header_font = ("Segoe UI Semibold", 18)
+        self.mono_font = ("Cascadia Code", 10)
+
+    def _build_layout(self) -> None:
+        outer = tk.Frame(self.root, bg=VOIDWARE_COLORS["bg"])
+        outer.pack(fill="both", expand=True, padx=18, pady=18)
+
+        sidebar = tk.Frame(outer, bg=VOIDWARE_COLORS["panel"], width=250, highlightbackground=VOIDWARE_COLORS["line"], highlightthickness=1)
+        sidebar.pack(side="left", fill="y")
+        sidebar.pack_propagate(False)
+
+        content = tk.Frame(outer, bg=VOIDWARE_COLORS["bg"])
+        content.pack(side="left", fill="both", expand=True, padx=(18, 0))
+
+        self._build_sidebar(sidebar)
+        self._build_content(content)
+
+    def _build_sidebar(self, parent: tk.Frame) -> None:
+        hero = tk.Frame(parent, bg=VOIDWARE_COLORS["panel"])
+        hero.pack(fill="x", padx=16, pady=(16, 10))
+
+        badge = tk.Label(hero, text="VOIDWARE STYLE", bg=VOIDWARE_COLORS["panel"], fg=VOIDWARE_COLORS["accent_2"], font=("Segoe UI", 9, "bold"))
+        badge.pack(anchor="w")
+
+        title = tk.Label(hero, text="Discord Enhancer", bg=VOIDWARE_COLORS["panel"], fg=VOIDWARE_COLORS["text"], font=("Segoe UI Semibold", 21))
+        title.pack(anchor="w", pady=(4, 4))
+
+        subtitle = tk.Label(
+            hero,
+            text="Python control center for a Discord web userscript export.",
+            bg=VOIDWARE_COLORS["panel"],
+            fg=VOIDWARE_COLORS["muted"],
+            justify="left",
+            wraplength=210,
+            font=self.default_font,
+        )
+        subtitle.pack(anchor="w")
+
+        stats = tk.Frame(parent, bg=VOIDWARE_COLORS["card"], highlightbackground=VOIDWARE_COLORS["line"], highlightthickness=1)
+        stats.pack(fill="x", padx=16, pady=(10, 12))
+
+        tk.Label(stats, text="Keybind", bg=VOIDWARE_COLORS["card"], fg=VOIDWARE_COLORS["muted"], font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=12, pady=(10, 0))
+        tk.Label(stats, text="Right Shift", bg=VOIDWARE_COLORS["card"], fg=VOIDWARE_COLORS["text"], font=("Segoe UI Semibold", 14)).pack(anchor="w", padx=12)
+        tk.Label(stats, text="Toggles the Python window. The exported userscript also listens for Right Shift inside Discord.", bg=VOIDWARE_COLORS["card"], fg=VOIDWARE_COLORS["muted"], wraplength=210, justify="left", font=self.default_font).pack(anchor="w", padx=12, pady=(2, 12))
+
+        button_frame = tk.Frame(parent, bg=VOIDWARE_COLORS["panel"])
+        button_frame.pack(fill="x", padx=16, pady=(4, 12))
+
+        self._make_sidebar_button(button_frame, "Export userscript", self.export_userscript_file, primary=True).pack(fill="x")
+        self._make_sidebar_button(button_frame, "Copy userscript", self.copy_userscript, primary=False).pack(fill="x", pady=8)
+        self._make_sidebar_button(button_frame, "Open Discord Web", self.open_discord_web, primary=False).pack(fill="x")
+
+        footer = tk.Frame(parent, bg=VOIDWARE_COLORS["panel"])
+        footer.pack(side="bottom", fill="x", padx=16, pady=16)
+        tk.Label(footer, text="Integration note", bg=VOIDWARE_COLORS["panel"], fg=VOIDWARE_COLORS["accent_2"], font=("Segoe UI", 9, "bold")).pack(anchor="w")
+        tk.Label(
+            footer,
+            text="Python cannot patch discord.com by itself. This app manages settings and exports a browser userscript that does the actual in-page work.",
+            bg=VOIDWARE_COLORS["panel"],
+            fg=VOIDWARE_COLORS["muted"],
+            wraplength=210,
+            justify="left",
+            font=self.default_font,
+        ).pack(anchor="w", pady=(4, 0))
+
+    def _make_sidebar_button(self, parent: tk.Frame, text: str, command, primary: bool) -> tk.Button:
+        background = VOIDWARE_COLORS["accent"] if primary else VOIDWARE_COLORS["card"]
+        button = tk.Button(
+            parent,
+            text=text,
+            command=command,
+            relief="flat",
+            bd=0,
+            bg=background,
+            fg=VOIDWARE_COLORS["text"],
+            activebackground=VOIDWARE_COLORS["accent_2"] if primary else "#182235",
+            activeforeground=VOIDWARE_COLORS["text"],
+            font=("Segoe UI Semibold", 10),
+            padx=12,
+            pady=12,
+            cursor="hand2",
+        )
+        return button
+
+    def _build_content(self, parent: tk.Frame) -> None:
+        header_card = tk.Frame(parent, bg=VOIDWARE_COLORS["panel"], highlightbackground=VOIDWARE_COLORS["line"], highlightthickness=1)
+        header_card.pack(fill="x")
+
+        header_top = tk.Frame(header_card, bg=VOIDWARE_COLORS["panel"])
+        header_top.pack(fill="x", padx=18, pady=(16, 8))
+        tk.Label(header_top, text="Enhancer modules", bg=VOIDWARE_COLORS["panel"], fg=VOIDWARE_COLORS["text"], font=self.header_font).pack(anchor="w")
+        tk.Label(header_top, text="Live settings are saved instantly to JSON, then exported as a stable userscript payload.", bg=VOIDWARE_COLORS["panel"], fg=VOIDWARE_COLORS["muted"], font=self.default_font).pack(anchor="w", pady=(4, 0))
+
+        controls_wrap = tk.Frame(parent, bg=VOIDWARE_COLORS["bg"])
+        controls_wrap.pack(fill="both", expand=True, pady=(18, 0))
+
+        controls_column = tk.Frame(controls_wrap, bg=VOIDWARE_COLORS["bg"])
+        controls_column.pack(side="left", fill="both", expand=True)
+
+        preview_column = tk.Frame(controls_wrap, bg=VOIDWARE_COLORS["bg"], width=410)
+        preview_column.pack(side="left", fill="both", padx=(18, 0))
+        preview_column.pack_propagate(False)
+
+        canvas = tk.Canvas(controls_column, bg=VOIDWARE_COLORS["bg"], highlightthickness=0, bd=0)
+        scrollbar = tk.Scrollbar(controls_column, orient="vertical", command=canvas.yview)
+        self.scroll_inner = tk.Frame(canvas, bg=VOIDWARE_COLORS["bg"])
+        self.scroll_inner.bind("<Configure>", lambda _event: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.create_window((0, 0), window=self.scroll_inner, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        self._build_sections(self.scroll_inner)
+        self._build_preview(preview_column)
+
+        status_bar = tk.Frame(parent, bg=VOIDWARE_COLORS["panel_alt"], highlightbackground=VOIDWARE_COLORS["line"], highlightthickness=1)
+        status_bar.pack(fill="x", pady=(18, 0))
+        tk.Label(status_bar, textvariable=self.status_var, bg=VOIDWARE_COLORS["panel_alt"], fg=VOIDWARE_COLORS["muted"], font=self.default_font, anchor="w", padx=14, pady=10).pack(fill="x")
+
+    def _build_sections(self, parent: tk.Frame) -> None:
+        for section in FEATURE_SECTIONS:
+            card = tk.Frame(parent, bg=VOIDWARE_COLORS["card"], highlightbackground=VOIDWARE_COLORS["line"], highlightthickness=1)
+            card.pack(fill="x", pady=(0, 16))
+
+            tk.Label(card, text=section["title"], bg=VOIDWARE_COLORS["card"], fg=VOIDWARE_COLORS["text"], font=self.title_font).pack(anchor="w", padx=16, pady=(14, 4))
+            tk.Label(card, text="Tuned for Discord web with persistent export-ready settings.", bg=VOIDWARE_COLORS["card"], fg=VOIDWARE_COLORS["muted"], font=self.default_font).pack(anchor="w", padx=16, pady=(0, 10))
+
+            for key, title, description in section["items"]:
+                self._create_toggle_row(card, key, title, description)
+
+        sliders = tk.Frame(parent, bg=VOIDWARE_COLORS["card_alt"], highlightbackground=VOIDWARE_COLORS["line"], highlightthickness=1)
+        sliders.pack(fill="x", pady=(0, 16))
+        tk.Label(sliders, text="Fine tuning", bg=VOIDWARE_COLORS["card_alt"], fg=VOIDWARE_COLORS["text"], font=self.title_font).pack(anchor="w", padx=16, pady=(14, 12))
+        self._create_slider_row(sliders, "media_radius", "Media radius", 0, 40)
+        self._create_slider_row(sliders, "panel_scale", "Panel scale", 80, 125)
+
+        actions = tk.Frame(parent, bg=VOIDWARE_COLORS["card_alt"], highlightbackground=VOIDWARE_COLORS["line"], highlightthickness=1)
+        actions.pack(fill="x")
+        tk.Label(actions, text="Control actions", bg=VOIDWARE_COLORS["card_alt"], fg=VOIDWARE_COLORS["text"], font=self.title_font).pack(anchor="w", padx=16, pady=(14, 10))
+
+        button_row = tk.Frame(actions, bg=VOIDWARE_COLORS["card_alt"])
+        button_row.pack(fill="x", padx=16, pady=(0, 14))
+        self._make_action_button(button_row, "Reset to defaults", self.reset_defaults, warning=True).pack(side="left")
+        self._make_action_button(button_row, "Refresh preview", self.refresh_export_preview, warning=False).pack(side="left", padx=10)
+        self._make_action_button(button_row, "Export now", self.export_userscript_file, warning=False).pack(side="left")
+
+    def _make_action_button(self, parent: tk.Frame, text: str, command, warning: bool) -> tk.Button:
+        bg = VOIDWARE_COLORS["warning"] if warning else VOIDWARE_COLORS["accent"]
+        return tk.Button(
+            parent,
+            text=text,
+            command=command,
+            relief="flat",
+            bd=0,
+            bg=bg,
+            fg=VOIDWARE_COLORS["text"],
+            activebackground=VOIDWARE_COLORS["accent_2"],
+            activeforeground=VOIDWARE_COLORS["text"],
+            font=("Segoe UI Semibold", 10),
+            padx=12,
+            pady=10,
+            cursor="hand2",
+        )
+
+    def _build_preview(self, parent: tk.Frame) -> None:
+        preview_card = tk.Frame(parent, bg=VOIDWARE_COLORS["panel"], highlightbackground=VOIDWARE_COLORS["line"], highlightthickness=1)
+        preview_card.pack(fill="both", expand=True)
+        tk.Label(preview_card, text="Export preview", bg=VOIDWARE_COLORS["panel"], fg=VOIDWARE_COLORS["text"], font=self.title_font).pack(anchor="w", padx=16, pady=(14, 4))
+        tk.Label(preview_card, text="This is the installable userscript that the Python control center generates.", bg=VOIDWARE_COLORS["panel"], fg=VOIDWARE_COLORS["muted"], wraplength=360, justify="left", font=self.default_font).pack(anchor="w", padx=16)
+
+        self.preview = tk.Text(preview_card, wrap="none", bg="#0a0f1a", fg="#dce6ff", insertbackground="#dce6ff", relief="flat", bd=0, font=self.mono_font)
+        self.preview.pack(fill="both", expand=True, padx=16, pady=(14, 16))
+
+    def _populate_controls(self) -> None:
+        for key, value in self.settings.items():
+            if isinstance(value, bool) and key not in self.vars:
+                self.vars[key] = tk.BooleanVar(value=value)
+        self.slider_vars["media_radius"] = tk.IntVar(value=self.settings["media_radius"])
+        self.slider_vars["panel_scale"] = tk.IntVar(value=self.settings["panel_scale"])
+
+    def _create_toggle_row(self, parent: tk.Frame, key: str, title: str, description: str) -> None:
+        row = tk.Frame(parent, bg=VOIDWARE_COLORS["card"])
+        row.pack(fill="x", padx=16, pady=(0, 10))
+
+        text_wrap = tk.Frame(row, bg=VOIDWARE_COLORS["card"])
+        text_wrap.pack(side="left", fill="both", expand=True)
+        tk.Label(text_wrap, text=title, bg=VOIDWARE_COLORS["card"], fg=VOIDWARE_COLORS["text"], font=("Segoe UI Semibold", 11)).pack(anchor="w")
+        tk.Label(text_wrap, text=description, bg=VOIDWARE_COLORS["card"], fg=VOIDWARE_COLORS["muted"], wraplength=580, justify="left", font=self.default_font).pack(anchor="w", pady=(2, 0))
+
+        switch = VoidwareSwitch(row, self.vars[key], lambda item_key=key: self.on_toggle(item_key), bg=VOIDWARE_COLORS["card"])
+        switch.pack(side="right", padx=(12, 0))
+
+    def _create_slider_row(self, parent: tk.Frame, key: str, title: str, minimum: int, maximum: int) -> None:
+        row = tk.Frame(parent, bg=VOIDWARE_COLORS["card_alt"])
+        row.pack(fill="x", padx=16, pady=(0, 14))
+
+        header = tk.Frame(row, bg=VOIDWARE_COLORS["card_alt"])
+        header.pack(fill="x")
+        tk.Label(header, text=title, bg=VOIDWARE_COLORS["card_alt"], fg=VOIDWARE_COLORS["text"], font=("Segoe UI Semibold", 11)).pack(side="left")
+        suffix = "%" if key == "panel_scale" else "px"
+        value_label = tk.Label(header, text=f"{self.slider_vars[key].get()}{suffix}", bg=VOIDWARE_COLORS["card_alt"], fg=VOIDWARE_COLORS["accent_2"], font=("Segoe UI", 10, "bold"))
+        value_label.pack(side="right")
+
+        scale = tk.Scale(
+            row,
+            from_=minimum,
+            to=maximum,
+            orient="horizontal",
+            showvalue=False,
+            resolution=1,
+            variable=self.slider_vars[key],
+            command=lambda value, item_key=key, label=value_label: self.on_slider(item_key, label, value),
+            bg=VOIDWARE_COLORS["card_alt"],
+            fg=VOIDWARE_COLORS["text"],
+            troughcolor="#1d2940",
+            highlightthickness=0,
+            bd=0,
+            activebackground=VOIDWARE_COLORS["accent"],
+        )
+        scale.pack(fill="x", pady=(6, 0))
+
+    def on_toggle(self, key: str) -> None:
+        self.settings[key] = self.vars[key].get()
+        self.persist_state(f"Updated {key.replace('_', ' ')}.")
+
+    def on_slider(self, key: str, label: tk.Label, value: str) -> None:
+        self.settings[key] = int(float(value))
+        suffix = "%" if key == "panel_scale" else "px"
+        label.configure(text=f"{self.settings[key]}{suffix}")
+        self.persist_state(f"Adjusted {key.replace('_', ' ')}.")
+
+    def persist_state(self, message: str, refresh_preview: bool = True) -> None:
+        save_settings(self.settings)
+        if refresh_preview:
+            self.refresh_export_preview()
+        self.set_status(message)
+
+    def refresh_export_preview(self) -> None:
+        userscript = build_userscript(self.settings)
+        self.preview.delete("1.0", tk.END)
+        self.preview.insert("1.0", userscript)
+        self.set_status("Preview refreshed from current JSON-backed settings.")
+
+    def export_userscript_file(self) -> None:
+        destination = export_userscript(self.settings)
+        self.refresh_export_preview()
+        self.set_status(f"Exported userscript to {destination}.", tone="success")
+        messagebox.showinfo(APP_TITLE, f"Userscript exported to:\n{destination}")
+
+    def copy_userscript(self) -> None:
+        userscript = build_userscript(self.settings)
+        self.root.clipboard_clear()
+        self.root.clipboard_append(userscript)
+        self.set_status("Userscript copied to the clipboard.", tone="success")
+
+    def open_discord_web(self) -> None:
+        url = "https://discord.com/app"
+        try:
+            if platform.system() == "Windows":
+                os.startfile(url)  # type: ignore[attr-defined]
+            elif platform.system() == "Darwin":
+                subprocess.Popen(["open", url])
+            else:
+                subprocess.Popen(["xdg-open", url])
+            self.set_status("Opened Discord Web in your default browser.", tone="success")
+        except OSError as exc:
+            self.set_status(f"Failed to open Discord Web: {exc}", tone="danger")
+            messagebox.showerror(APP_TITLE, f"Could not open Discord Web.\n\n{exc}")
+
+    def reset_defaults(self) -> None:
+        self.settings = dict(DEFAULT_SETTINGS)
+        save_settings(self.settings)
+        for key, variable in self.vars.items():
+            variable.set(bool(self.settings[key]))
+        for key, variable in self.slider_vars.items():
+            variable.set(int(self.settings[key]))
+        self.refresh_export_preview()
+        self.set_status("Reset settings to defaults.", tone="warning")
+
+    def set_status(self, text: str, tone: str = "info") -> None:
+        prefix_map = {
+            "info": "INFO",
+            "success": "OK",
+            "warning": "WARN",
+            "danger": "ERROR",
         }
-      });
-    });
-  }
+        self.status_var.set(f"[{prefix_map.get(tone, 'INFO')}] {text}")
 
-  function downloadDraftAsTxt() {
-    const draft = getDraftText();
-    if (!draft.trim()) {
-      showToast("No draft text found in the current message box.");
-      return;
-    }
+    def queue_hotkey_toggle(self) -> None:
+        self.root.after(0, self.toggle_visibility)
 
-    const blob = new Blob([draft], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "discord-draft.txt";
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
-    showToast("Draft downloaded as TXT.");
-  }
+    def toggle_visibility(self) -> None:
+        if self.hidden_by_hotkey:
+            self.root.deiconify()
+            self.root.lift()
+            self.root.attributes("-topmost", True)
+            self.root.after(250, lambda: self.root.attributes("-topmost", False))
+            self.hidden_by_hotkey = False
+            self.set_status("Control center restored with Right Shift.", tone="success")
+            return
 
-  function observePage() {
-    mutationObserver?.disconnect();
-    mutationObserver = new MutationObserver(() => {
-      if (!document.body) return;
+        self.root.withdraw()
+        self.hidden_by_hotkey = True
 
-      if (!qs(`#${PANEL_ID}`) && settings.panelVisible) {
-        createPanel();
-      }
+    def on_close(self) -> None:
+        save_settings(self.settings)
+        self.right_shift_watcher.stop()
+        self.root.destroy()
 
-      if (!qs(`#${STYLE_ID}`)) {
-        applyStyles();
-      }
 
-      if (settings.panelVisible && !qs(`#${PANEL_ID}`)) {
-        createPanel();
-      }
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Discord Enhancer Control Center")
+    parser.add_argument("--export-only", action="store_true", help="Export the userscript and exit.")
+    parser.add_argument("--stdout", action="store_true", help="Print the generated userscript to stdout and exit.")
+    parser.add_argument("--reset-settings", action="store_true", help="Reset persisted settings before continuing.")
+    return parser.parse_args(argv)
 
-      if (!settings.panelVisible) {
-        toggleReopenBubble(true);
-      }
-    });
 
-    mutationObserver.observe(document.documentElement, {
-      childList: true,
-      subtree: true
-    });
-  }
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv or sys.argv[1:])
 
-  function ensureMounted() {
-    if (!document.body) {
-      requestAnimationFrame(ensureMounted);
-      return;
-    }
+    if args.reset_settings:
+        save_settings(DEFAULT_SETTINGS)
 
-    if (!styleEl || !document.contains(styleEl)) {
-      applyStyles();
-    }
+    settings = load_settings()
 
-    if (!panelEl || !document.contains(panelEl)) {
-      createPanel();
-    }
+    if args.stdout:
+        sys.stdout.write(build_userscript(settings))
+        return 0
 
-    scheduleRefresh();
-    observePage();
-  }
+    if args.export_only:
+        destination = export_userscript(settings)
+        print(destination)
+        return 0
 
-  function registerGlobalEvents() {
-    window.addEventListener("mousemove", onPointerMove, { passive: true });
-    window.addEventListener("mouseup", onPointerUp, { passive: true });
-    window.addEventListener("resize", () => {
-      enforcePanelBounds();
-      saveSettings();
-    });
-    window.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") {
-        closeModal();
-      }
-    });
+    root = tk.Tk()
+    app = DiscordEnhancerApp(root)
+    root.mainloop()
+    return 0
 
-    window.addEventListener("storage", (event) => {
-      if (event.key === STORAGE_KEY) {
-        settings = loadSettings();
-        scheduleRefresh();
-      }
-    });
 
-    bodyObserver?.disconnect();
-    bodyObserver = new MutationObserver(() => {
-      if (!qs(`#${PANEL_ID}`) && document.body) {
-        createPanel();
-      }
-    });
-
-    bodyObserver.observe(document.documentElement, { childList: true, subtree: false });
-  }
-
-  registerGlobalEvents();
-  ensureMounted();
-})();
+if __name__ == "__main__":
+    raise SystemExit(main())
