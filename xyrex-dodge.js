@@ -172,73 +172,80 @@
     const style = document.createElement('style');
     style.id = 'xyrex-dodge-beta-style';
     style.textContent = `
-      .xy-dodge-shell { color: ${THEMES.text}; font-family: Inter, system-ui, sans-serif; display: grid; gap: 16px; }
+      .xy-dodge-shell { color: ${THEMES.text}; font-family: Inter, system-ui, sans-serif; display: grid; gap: 12px; }
       .xy-dodge-shell * { box-sizing: border-box; }
       .xy-dodge-shell button, .xy-dodge-shell select { font: inherit; }
       .xy-dodge-shell button { cursor: pointer; }
+      .xy-dodge-shell[data-beta='false'] .xy-dodge-hero-copy,
+      .xy-dodge-shell[data-beta='false'] .xy-dodge-segmented,
+      .xy-dodge-shell[data-beta='false'] .xy-dodge-panel--mission,
+      .xy-dodge-shell[data-beta='false'] .xy-dodge-panel--beta,
+      .xy-dodge-shell[data-beta='false'] .xy-dodge-panel--overview { display: none; }
       .xy-dodge-hero, .xy-dodge-panel, .xy-dodge-board, .xy-dodge-modal-card {
         background: linear-gradient(180deg, ${THEMES.panelAlt}, ${THEMES.panel}); border: 1px solid ${THEMES.border};
-        border-radius: 22px; box-shadow: ${THEMES.cardShadow};
+        border-radius: 18px; box-shadow: ${THEMES.cardShadow};
       }
-      .xy-dodge-hero { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.9fr); gap: 16px; padding: 18px; }
-      .xy-dodge-heading { display: grid; gap: 10px; }
-      .xy-dodge-kicker { display: inline-flex; width: fit-content; padding: 6px 12px; border-radius: 999px; background: rgba(108,229,255,0.12); color: ${THEMES.accent}; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
-      .xy-dodge-heading h2 { margin: 0; font-size: clamp(28px, 4vw, 42px); }
-      .xy-dodge-heading p, .xy-dodge-copy, .xy-dodge-panel p { margin: 0; color: ${THEMES.subtext}; line-height: 1.5; }
-      .xy-dodge-stat-grid, .xy-dodge-quick-grid, .xy-dodge-mode-grid, .xy-dodge-shop-grid, .xy-dodge-meta-grid { display: grid; gap: 12px; }
-      .xy-dodge-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .xy-dodge-hero { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(240px, 0.85fr); gap: 12px; padding: 14px; }
+      .xy-dodge-heading { display: grid; gap: 8px; align-content: start; }
+      .xy-dodge-kicker { display: inline-flex; width: fit-content; padding: 5px 10px; border-radius: 999px; background: rgba(108,229,255,0.12); color: ${THEMES.accent}; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+      .xy-dodge-heading h2 { margin: 0; font-size: clamp(24px, 3vw, 34px); }
+      .xy-dodge-heading p, .xy-dodge-panel p { margin: 0; color: ${THEMES.subtext}; line-height: 1.45; font-size: 13px; }
+      .xy-dodge-stat-grid, .xy-dodge-quick-grid, .xy-dodge-mode-grid, .xy-dodge-shop-grid, .xy-dodge-meta-grid { display: grid; gap: 10px; }
+      .xy-dodge-stat-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
       .xy-dodge-chip, .xy-dodge-mode-card, .xy-dodge-mini-card, .xy-dodge-story-card, .xy-dodge-mission-card {
-        background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; padding: 14px;
+        background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 10px 12px;
       }
-      .xy-dodge-chip strong, .xy-dodge-mode-card strong, .xy-dodge-mini-card strong { display: block; font-size: 19px; margin-top: 6px; }
-      .xy-dodge-layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 0.9fr); gap: 16px; align-items: start; }
-      .xy-dodge-board { padding: 14px; display: grid; gap: 12px; }
-      .xy-dodge-toolbar, .xy-dodge-control-row, .xy-dodge-mobile-controls, .xy-dodge-segmented { display: flex; flex-wrap: wrap; gap: 10px; }
+      .xy-dodge-chip span, .xy-dodge-mini-card span { display:block; font-size:11px; color:${THEMES.subtext}; text-transform:uppercase; letter-spacing:.04em; }
+      .xy-dodge-chip strong, .xy-dodge-mode-card strong, .xy-dodge-mini-card strong { display: block; font-size: 17px; margin-top: 4px; }
+      .xy-dodge-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.78fr); gap: 12px; align-items: start; }
+      .xy-dodge-board { padding: 12px; display: grid; gap: 10px; }
+      .xy-dodge-toolbar, .xy-dodge-control-row, .xy-dodge-mobile-controls, .xy-dodge-segmented { display: flex; flex-wrap: wrap; gap: 8px; }
       .xy-dodge-toolbar { justify-content: space-between; align-items: center; }
-      .xy-dodge-badges { display: flex; flex-wrap: wrap; gap: 8px; }
-      .xy-dodge-badge { padding: 8px 12px; border-radius: 999px; background: rgba(141,132,255,0.12); color: ${THEMES.text}; font-size: 13px; }
-      .xy-dodge-canvas-wrap { position: relative; background: radial-gradient(circle at top, rgba(108,229,255,0.08), transparent 40%), ${THEMES.track}; border-radius: 20px; overflow: hidden; min-height: 320px; }
-      .xy-dodge-canvas { display: block; width: 100%; height: auto; aspect-ratio: 960 / 620; border-radius: 20px; }
-      .xy-dodge-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(2, 7, 17, 0.64); backdrop-filter: blur(6px); }
+      .xy-dodge-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+      .xy-dodge-badge { padding: 6px 10px; border-radius: 999px; background: rgba(141,132,255,0.12); color: ${THEMES.text}; font-size: 12px; }
+      .xy-dodge-canvas-wrap { position: relative; background: radial-gradient(circle at top, rgba(108,229,255,0.08), transparent 40%), ${THEMES.track}; border-radius: 16px; overflow: hidden; min-height: 250px; }
+      .xy-dodge-canvas { display: block; width: 100%; height: auto; aspect-ratio: 960 / 620; border-radius: 16px; }
+      .xy-dodge-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(2, 7, 17, 0.64); backdrop-filter: blur(6px); }
       .xy-dodge-overlay[hidden] { display: none; }
-      .xy-dodge-modal-card { max-width: 540px; width: min(100%, 540px); padding: 24px; }
-      .xy-dodge-side { display: grid; gap: 16px; }
-      .xy-dodge-panel { padding: 16px; display: grid; gap: 12px; }
-      .xy-dodge-panel h3, .xy-dodge-panel h4 { margin: 0; }
+      .xy-dodge-modal-card { max-width: 500px; width: min(100%, 500px); padding: 20px; }
+      .xy-dodge-side { display: grid; gap: 12px; }
+      .xy-dodge-panel { padding: 12px; display: grid; gap: 10px; }
+      .xy-dodge-panel h3, .xy-dodge-panel h4 { margin: 0; font-size: 16px; }
       .xy-dodge-button, .xy-dodge-select, .xy-dodge-mobile-controls button {
-        border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; background: rgba(255,255,255,0.06); color: ${THEMES.text};
-        min-height: 44px; padding: 10px 14px; transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+        border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; background: rgba(255,255,255,0.06); color: ${THEMES.text};
+        min-height: 38px; padding: 8px 12px; transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease, box-shadow 0.2s ease;
       }
       .xy-dodge-button:hover, .xy-dodge-select:hover, .xy-dodge-mobile-controls button:hover { transform: translateY(-1px); background: rgba(255,255,255,0.1); }
-      .xy-dodge-button--primary { background: linear-gradient(135deg, rgba(108,229,255,0.2), rgba(141,132,255,0.2)); border-color: rgba(108,229,255,0.24); }
+      .xy-dodge-button--primary { background: linear-gradient(135deg, rgba(108,229,255,0.22), rgba(141,132,255,0.18)); border-color: rgba(108,229,255,0.28); }
       .xy-dodge-button--danger { background: rgba(255,111,159,0.16); }
       .xy-dodge-button[disabled], .xy-dodge-select[disabled] { opacity: 0.55; cursor: not-allowed; transform: none; }
       .xy-dodge-mode-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .xy-dodge-mode-card[data-active='true'] { border-color: rgba(108,229,255,0.5); box-shadow: inset 0 0 0 1px rgba(108,229,255,0.28); }
+      .xy-dodge-mode-card[data-active='true'], .xy-dodge-segmented button[data-active='true'] { border-color: rgba(108,229,255,0.5); box-shadow: inset 0 0 0 1px rgba(108,229,255,0.22), 0 0 22px rgba(108,229,255,0.08); }
       .xy-dodge-story-card[data-locked='true'] { opacity: 0.65; }
-      .xy-dodge-progress { height: 10px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
-      .xy-dodge-progress > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, ${THEMES.accent}, ${THEMES.accent2}); }
-      .xy-dodge-mini-card small, .xy-dodge-panel small { color: ${THEMES.subtext}; }
-      .xy-dodge-note { color: ${THEMES.subtext}; font-size: 13px; }
+      .xy-dodge-progress { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
+      .xy-dodge-progress > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, ${THEMES.accent}, ${THEMES.accent2}); transition: width .25s ease; }
+      .xy-dodge-mini-card small, .xy-dodge-panel small { color: ${THEMES.subtext}; font-size: 12px; }
+      .xy-dodge-note { color: ${THEMES.subtext}; font-size: 12px; }
       .xy-dodge-mobile-controls { justify-content: center; }
       .xy-dodge-mobile-controls[hidden] { display: none; }
-      .xy-dodge-mobile-controls button { flex: 1; min-width: 120px; font-size: 20px; }
-      .xy-dodge-toast { padding: 10px 14px; border-radius: 14px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); }
+      .xy-dodge-mobile-controls button { flex: 1; min-width: 120px; font-size: 18px; }
+      .xy-dodge-toast { padding: 8px 12px; border-radius: 12px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); font-size: 13px; }
       .xy-dodge-toast[data-tone='warning'] { background: rgba(255, 209, 102, 0.13); }
       .xy-dodge-toast[data-tone='danger'] { background: rgba(255, 111, 159, 0.18); }
-      .xy-dodge-segmented { background: rgba(255,255,255,0.04); border-radius: 16px; padding: 6px; }
-      .xy-dodge-segmented button { flex: 1; min-width: 110px; }
-      .xy-dodge-segmented button[data-active='true'] { background: rgba(108,229,255,0.14); border-color: rgba(108,229,255,0.3); }
-      .xy-dodge-checklist { display: grid; gap: 8px; padding-left: 18px; margin: 0; color: ${THEMES.subtext}; }
-      @media (max-width: 1120px) { .xy-dodge-layout, .xy-dodge-hero { grid-template-columns: 1fr; } }
+      .xy-dodge-toast[data-tone='ok'] { animation: xyPulse 0.35s ease; }
+      .xy-dodge-segmented { background: rgba(255,255,255,0.04); border-radius: 14px; padding: 4px; }
+      .xy-dodge-segmented button { flex: 1; min-width: 88px; }
+      .xy-dodge-compact-grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:10px; }
+      @keyframes xyPulse { 0% { transform: scale(.98); } 100% { transform: scale(1); } }
+      @media (max-width: 1120px) { .xy-dodge-layout, .xy-dodge-hero { grid-template-columns: 1fr; } .xy-dodge-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
       @media (max-width: 720px) {
-        .xy-dodge-mode-grid, .xy-dodge-stat-grid { grid-template-columns: 1fr; }
-        .xy-dodge-shell { gap: 12px; }
-        .xy-dodge-panel, .xy-dodge-board, .xy-dodge-hero { padding: 14px; border-radius: 18px; }
+        .xy-dodge-mode-grid, .xy-dodge-stat-grid, .xy-dodge-compact-grid { grid-template-columns: 1fr; }
+        .xy-dodge-shell { gap: 10px; }
+        .xy-dodge-panel, .xy-dodge-board, .xy-dodge-hero { padding: 12px; border-radius: 16px; }
       }
       @media (orientation: landscape) and (max-width: 960px) {
-        .xy-dodge-layout { grid-template-columns: 1.15fr 0.85fr; }
-        .xy-dodge-canvas-wrap { min-height: 260px; }
+        .xy-dodge-layout { grid-template-columns: 1.22fr 0.78fr; }
+        .xy-dodge-canvas-wrap { min-height: 220px; }
       }
     `;
     document.head.appendChild(style);
@@ -353,26 +360,27 @@
 
     buildUi() {
       const betaEnabled = this.isBetaEnabled();
+      const visibleMode = betaEnabled ? this.data.selectedMode : 'Classic';
+      const classicProgress = this.data.bestScore || 0;
       this.mount.innerHTML = `
-        <section class="xy-dodge-shell" aria-label="Xyrex Dodge">
+        <section class="xy-dodge-shell" data-beta="${betaEnabled}" aria-label="Xyrex Dodge">
           <section class="xy-dodge-hero">
             <div class="xy-dodge-heading">
-              <span class="xy-dodge-kicker">${betaEnabled ? 'Beta overhaul active' : 'Classic Dodge mode'}</span>
+              <span class="xy-dodge-kicker">${betaEnabled ? 'Beta Features active' : 'Classic layout active'}</span>
               <h2>Xyrex Dodge</h2>
-              <p>${betaEnabled ? 'A full-feature mobile-inspired overhaul with story sectors, game modes, missions, clean responsive panels, and progression that stays contained in this single file.' : 'Enable Beta Features in Settings to access the full Dodge overhaul. Without beta, Dodge stays in its streamlined classic state.'}</p>
+              <p class="xy-dodge-hero-copy">The beta overhaul is now tighter and easier to read, with compact tabs, animations, and progression features that stay gated behind Beta Features.</p>
               <div class="xy-dodge-stat-grid">
                 <div class="xy-dodge-chip"><span>Bank</span><strong id="xyBank">0</strong></div>
-                <div class="xy-dodge-chip"><span>Best Score</span><strong id="xyBest">0</strong></div>
-                <div class="xy-dodge-chip"><span>Total Runs</span><strong id="xyRuns">0</strong></div>
-                <div class="xy-dodge-chip"><span>Longest Combo</span><strong id="xyComboBest">0</strong></div>
+                <div class="xy-dodge-chip"><span>Best</span><strong id="xyBest">0</strong></div>
+                <div class="xy-dodge-chip"><span>Runs</span><strong id="xyRuns">0</strong></div>
+                <div class="xy-dodge-chip"><span>Combo</span><strong id="xyComboBest">0</strong></div>
               </div>
             </div>
-            <div class="xy-dodge-panel">
-              <h3>Overview</h3>
+            <div class="xy-dodge-panel xy-dodge-panel--overview">
               <div class="xy-dodge-meta-grid">
-                <div class="xy-dodge-mini-card"><span>Mode</span><strong id="xyCurrentModeLabel">Classic</strong><small id="xyModeObjective">Survive and score.</small></div>
-                <div class="xy-dodge-mini-card"><span>AI Tokens</span><strong id="xyTokenCount">0</strong><small>Daily free tokens + purchased extras.</small></div>
-                <div class="xy-dodge-mini-card"><span>Story Progress</span><strong id="xyStoryProgressLabel">0 / ${STORY_CHAPTERS.length}</strong><small>Advance through sector objectives.</small></div>
+                <div class="xy-dodge-mini-card"><span>Mode</span><strong id="xyCurrentModeLabel">${visibleMode}</strong><small id="xyModeObjective">Survive and score.</small></div>
+                <div class="xy-dodge-mini-card"><span>AI Tokens</span><strong id="xyTokenCount">0</strong><small>Daily + purchased.</small></div>
+                <div class="xy-dodge-mini-card"><span>Story</span><strong id="xyStoryProgressLabel">0 / ${STORY_CHAPTERS.length}</strong><small>Sector progress.</small></div>
               </div>
               <div id="xyBetaNotice" class="xy-dodge-toast" data-tone="warning" ${betaEnabled ? 'hidden' : ''}>Beta Features are disabled. Turn them on in Settings to enable story mode, additional game modes, missions, and the new responsive interface.</div>
             </div>
@@ -381,13 +389,11 @@
           <section class="xy-dodge-layout">
             <section class="xy-dodge-board">
               <div class="xy-dodge-toolbar">
-                <div>
-                  <div class="xy-dodge-badges">
-                    <span class="xy-dodge-badge" id="xyRunScore">Score: 0</span>
-                    <span class="xy-dodge-badge" id="xyRunCoins">Coins: 0</span>
-                    <span class="xy-dodge-badge" id="xyRunCombo">Combo: 0</span>
-                    <span class="xy-dodge-badge" id="xyRunLives">Lives: 1</span>
-                  </div>
+                <div class="xy-dodge-badges">
+                  <span class="xy-dodge-badge" id="xyRunScore">Score: 0</span>
+                  <span class="xy-dodge-badge" id="xyRunCoins">Coins: 0</span>
+                  <span class="xy-dodge-badge" id="xyRunCombo">Combo: 0</span>
+                  <span class="xy-dodge-badge" id="xyRunLives">Lives: 1</span>
                 </div>
                 <div class="xy-dodge-control-row">
                   <button class="xy-dodge-button" id="xyPauseBtn" type="button">Pause</button>
@@ -402,27 +408,48 @@
                 <button type="button" class="xy-dodge-button" data-mobile-move="left">◀ Move Left</button>
                 <button type="button" class="xy-dodge-button" data-mobile-move="right">Move Right ▶</button>
               </div>
-              <div class="xy-dodge-segmented" id="xyTabRow">
-                <button class="xy-dodge-button" data-tab="modes" data-active="true" type="button">Modes</button>
-                <button class="xy-dodge-button" data-tab="progression" data-active="false" type="button">Progression</button>
-                <button class="xy-dodge-button" data-tab="loadout" data-active="false" type="button">Loadout</button>
-              </div>
-              <div id="xyTabContent"></div>
+              ${betaEnabled ? `
+                <div class="xy-dodge-segmented" id="xyTabRow">
+                  <button class="xy-dodge-button" data-tab="modes" data-active="true" type="button">Modes</button>
+                  <button class="xy-dodge-button" data-tab="progression" data-active="false" type="button">Progress</button>
+                  <button class="xy-dodge-button" data-tab="loadout" data-active="false" type="button">Loadout</button>
+                </div>
+                <div id="xyTabContent"></div>
+              ` : `
+                <div class="xy-dodge-panel">
+                  <div class="xy-dodge-compact-grid">
+                    <div class="xy-dodge-mini-card"><span>Progress boost</span><strong>${classicProgress}</strong><small>Your best score still powers long-term progression.</small></div>
+                    <div class="xy-dodge-mini-card"><span>Selected modifier</span><strong>${this.data.selectedModifier}</strong><small>Classic keeps progression boosts without the beta mode switcher.</small></div>
+                  </div>
+                </div>
+              `}
             </section>
 
             <aside class="xy-dodge-side">
               <section class="xy-dodge-panel">
                 <h3>Status</h3>
                 <div id="xyStatus" class="xy-dodge-toast">Ready</div>
-                <ul class="xy-dodge-checklist">
-                  <li>Desktop, portrait, and landscape layouts are supported.</li>
-                  <li>On touch devices, mobile controls appear automatically when Beta Features are enabled.</li>
-                  <li>Deleting this file removes the entire overhaul and restores the prior Dodge experience.</li>
-                </ul>
+                <small>${betaEnabled ? 'Compact beta layout enabled. Tabs, animations, and advanced progression are active.' : 'Beta Features are disabled, so Dodge stays on the compact classic layout with only progression boosts.'}</small>
+              </section>
+              <section class="xy-dodge-panel xy-dodge-panel--mission">
+                <h3>Mission</h3>
+                <div id="xyMissionCard"></div>
               </section>
               <section class="xy-dodge-panel">
-                <h3>Mission Board</h3>
-                <div id="xyMissionCard"></div>
+                <h3>Loadout</h3>
+                <div class="xy-dodge-compact-grid">
+                  <div>
+                    <small>Modifier</small>
+                    <select id="xyModifierSelect" class="xy-dodge-select">${Object.entries(MODIFIERS).map(([name, item]) => `<option value="${name}">${name}${item.price ? ` · ${item.price}c` : ''}</option>`).join('')}</select>
+                    <button id="xyBuyModifierBtn" class="xy-dodge-button xy-dodge-button--primary" type="button">Buy / Equip</button>
+                  </div>
+                  <div>
+                    <small>Powerup</small>
+                    <select id="xyPowerupSelect" class="xy-dodge-select">${Object.entries(POWERUPS).map(([name, item]) => `<option value="${name}">${name}${item.price ? ` · ${item.price}c` : ''}</option>`).join('')}</select>
+                    <button id="xyBuyPowerupBtn" class="xy-dodge-button xy-dodge-button--primary" type="button">Buy / Equip</button>
+                  </div>
+                </div>
+                <small id="xyLoadoutNote">Equip owned boosts here. Beta adds more mode-specific progression, but the classic layout keeps this area playable and compact.</small>
               </section>
               <section class="xy-dodge-panel">
                 <h3>Token Shop</h3>
@@ -431,9 +458,8 @@
                   <button class="xy-dodge-button xy-dodge-button--primary" type="button" data-token-pack="3" data-token-cost="150">150 coins → 3 tokens</button>
                   <button class="xy-dodge-button xy-dodge-button--primary" type="button" data-token-pack="7" data-token-cost="300">300 coins → 7 tokens</button>
                 </div>
-                <p class="xy-dodge-note">Tokens continue to work with existing AI-related Dodge features.</p>
               </section>
-              <section class="xy-dodge-panel" id="xyCheatCard" ${betaEnabled ? '' : 'hidden'}>
+              <section class="xy-dodge-panel xy-dodge-panel--beta" id="xyCheatCard" ${betaEnabled ? '' : 'hidden'}>
                 <h3>Beta Utilities</h3>
                 <label><input type="checkbox" data-cheat="autoplay" /> Auto Play</label>
                 <label><input type="checkbox" data-cheat="nodeath" /> No Death</label>
@@ -469,8 +495,12 @@
       this.missionCardEl = this.mount.querySelector('#xyMissionCard');
       this.cheatCard = this.mount.querySelector('#xyCheatCard');
       this.cheatInputs = Array.from(this.mount.querySelectorAll('[data-cheat]'));
+      this.modifierSelect = this.mount.querySelector('#xyModifierSelect');
+      this.powerupSelect = this.mount.querySelector('#xyPowerupSelect');
+      this.buyModifierBtn = this.mount.querySelector('#xyBuyModifierBtn');
+      this.buyPowerupBtn = this.mount.querySelector('#xyBuyPowerupBtn');
 
-      this.renderTab('modes');
+      if (betaEnabled && this.tabContent) this.renderTab('modes');
       this.registerUiListeners();
       this.syncUi();
       this.applyResponsiveState();
@@ -485,6 +515,20 @@
       this.mount.querySelectorAll('[data-tab]').forEach(button => {
         button.addEventListener('click', () => this.renderTab(button.dataset.tab || 'modes'));
       });
+      this.modifierSelect?.addEventListener('change', () => {
+        this.data.selectedModifier = this.modifierSelect.value;
+        this.saveData();
+        if (this.modifierDesc) this.modifierDesc.textContent = (MODIFIERS[this.data.selectedModifier] || MODIFIERS.Balanced).description;
+        this.syncLoadoutButtons();
+      });
+      this.powerupSelect?.addEventListener('change', () => {
+        this.data.selectedPowerup = this.powerupSelect.value;
+        this.saveData();
+        if (this.powerupDesc) this.powerupDesc.textContent = (POWERUPS[this.data.selectedPowerup] || POWERUPS.None).description;
+        this.syncLoadoutButtons();
+      });
+      this.buyModifierBtn?.addEventListener('click', () => this.buySelectedModifier());
+      this.buyPowerupBtn?.addEventListener('click', () => this.buySelectedPowerup());
       this.mobileControls.querySelectorAll('[data-mobile-move]').forEach(button => {
         const onPress = event => {
           event.preventDefault();
@@ -549,6 +593,7 @@
     }
 
     renderTab(tab) {
+      if (!this.isBetaEnabled() || !this.tabContent) return;
       this.activeTab = tab;
       this.mount.querySelectorAll('[data-tab]').forEach(button => {
         button.setAttribute('data-active', String(button.dataset.tab === tab));
@@ -641,12 +686,12 @@
         this.flashStatus(`${this.data.selectedMode} selected.`, 'ok');
       }));
 
-      this.modifierSelect = this.tabContent.querySelector('#xyModifierSelect');
-      this.powerupSelect = this.tabContent.querySelector('#xyPowerupSelect');
+      this.modifierSelect = this.tabContent.querySelector('#xyModifierSelect') || this.modifierSelect;
+      this.powerupSelect = this.tabContent.querySelector('#xyPowerupSelect') || this.powerupSelect;
       this.modifierDesc = this.tabContent.querySelector('#xyModifierDesc');
       this.powerupDesc = this.tabContent.querySelector('#xyPowerupDesc');
-      this.buyModifierBtn = this.tabContent.querySelector('#xyBuyModifierBtn');
-      this.buyPowerupBtn = this.tabContent.querySelector('#xyBuyPowerupBtn');
+      this.buyModifierBtn = this.tabContent.querySelector('#xyBuyModifierBtn') || this.buyModifierBtn;
+      this.buyPowerupBtn = this.tabContent.querySelector('#xyBuyPowerupBtn') || this.buyPowerupBtn;
 
       if (this.modifierSelect) {
         this.modifierSelect.value = this.data.selectedModifier;
@@ -676,8 +721,20 @@
       this.mobileControls.hidden = !mobileUiEnabled;
     }
 
+    syncLoadoutButtons() {
+      if (this.modifierSelect) this.modifierSelect.value = this.data.selectedModifier;
+      if (this.powerupSelect) this.powerupSelect.value = this.data.selectedPowerup;
+      const modifier = MODIFIERS[this.data.selectedModifier] || MODIFIERS.Balanced;
+      const powerup = POWERUPS[this.data.selectedPowerup] || POWERUPS.None;
+      if (this.modifierDesc) this.modifierDesc.textContent = modifier.description;
+      if (this.powerupDesc) this.powerupDesc.textContent = powerup.description;
+      if (this.buyModifierBtn) this.buyModifierBtn.textContent = this.data.ownedModifiers.includes(this.data.selectedModifier) ? 'Equipped / Owned' : `Buy for ${modifier.price} coins`;
+      if (this.buyPowerupBtn) this.buyPowerupBtn.textContent = this.data.selectedPowerup === 'None' || this.data.ownedPowerups.includes(this.data.selectedPowerup) ? 'Equipped / Owned' : `Buy for ${powerup.price} coins`;
+    }
+
     syncUi() {
-      const mode = GAME_MODES[this.data.selectedMode] || GAME_MODES.Classic;
+      const visibleModeName = this.isBetaEnabled() ? this.data.selectedMode : 'Classic';
+      const mode = GAME_MODES[visibleModeName] || GAME_MODES.Classic;
       this.bestEl.textContent = String(this.data.bestScore || 0);
       this.bankEl.textContent = String(this.data.coins || 0);
       this.runsEl.textContent = String(this.data.totalRuns || 0);
@@ -686,11 +743,12 @@
       this.runCoinsEl.textContent = `Coins: ${this.runCoins}`;
       this.runComboEl.textContent = `Combo: ${this.combo}`;
       this.runLivesEl.textContent = `Lives: ${this.lives || 1}`;
-      this.currentModeLabelEl.textContent = this.data.selectedMode;
-      this.modeObjectiveEl.textContent = mode.objective;
-      this.tokenCountEl.textContent = String(this.availableAiTokens());
-      this.storyProgressLabelEl.textContent = `${Math.min(this.data.storyProgress, STORY_CHAPTERS.length)} / ${STORY_CHAPTERS.length}`;
-      this.renderMissionCard();
+      if (this.currentModeLabelEl) this.currentModeLabelEl.textContent = visibleModeName;
+      if (this.modeObjectiveEl) this.modeObjectiveEl.textContent = mode.objective;
+      if (this.tokenCountEl) this.tokenCountEl.textContent = String(this.availableAiTokens());
+      if (this.storyProgressLabelEl) this.storyProgressLabelEl.textContent = `${Math.min(this.data.storyProgress, STORY_CHAPTERS.length)} / ${STORY_CHAPTERS.length}`;
+      if (this.missionCardEl && this.isBetaEnabled()) this.renderMissionCard();
+      this.syncLoadoutButtons();
       this.updateCheatUi();
     }
 
@@ -818,7 +876,8 @@
     }
 
     resetState() {
-      const mode = GAME_MODES[this.data.selectedMode] || GAME_MODES.Classic;
+      const visibleModeName = this.isBetaEnabled() ? this.data.selectedMode : 'Classic';
+      const mode = GAME_MODES[visibleModeName] || GAME_MODES.Classic;
       const modifier = MODIFIERS[this.data.selectedModifier] || MODIFIERS.Balanced;
       const ownedSelectedPowerup = this.data.selectedPowerup === 'None' || this.data.ownedPowerups.includes(this.data.selectedPowerup);
       this.modifier = modifier;
