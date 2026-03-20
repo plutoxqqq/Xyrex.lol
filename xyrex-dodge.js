@@ -20,61 +20,61 @@
   };
 
   const MODIFIERS = {
-    Balanced: { price: 0, description: 'A stable all-round setup for learning every mode.', playerSpeed: 1, coinBonus: 1, pressure: 1, waveBonus: 1 },
-    Swift: { price: 125, description: 'Sharper lane swaps and faster response windows.', playerSpeed: 1.2, coinBonus: 1, pressure: 1.08, waveBonus: 1 },
-    Fortune: { price: 180, description: 'Higher coin gains for efficient survival runs.', playerSpeed: 1, coinBonus: 1.35, pressure: 1.14, waveBonus: 1.08 },
-    Bulwark: { price: 220, description: 'Slower movement, safer pacing, stronger shield synergy.', playerSpeed: 0.9, coinBonus: 0.92, pressure: 0.92, waveBonus: 0.95 },
-    Chaos: { price: 260, description: 'Explosive scoring with intense obstacle pressure.', playerSpeed: 1.1, coinBonus: 1.6, pressure: 1.3, waveBonus: 1.2 },
+    Balanced: { price: 0, description: 'Standard handling and balanced rewards. Best for learning patterns without drawbacks.', playerSpeed: 1, coinBonus: 1, pressure: 1, waveBonus: 1 },
+    Swift: { price: 125, description: 'Increases lane-change speed by 20% so you can correct mistakes faster.', playerSpeed: 1.2, coinBonus: 1, pressure: 1.08, waveBonus: 1 },
+    Fortune: { price: 180, description: 'Raises coin income by 35%, but wave pressure rises slightly during longer runs.', playerSpeed: 1, coinBonus: 1.35, pressure: 1.14, waveBonus: 1.08 },
+    Bulwark: { price: 220, description: 'Reduces incoming pressure for safer runs, but your ship changes lanes more slowly.', playerSpeed: 0.9, coinBonus: 0.92, pressure: 0.92, waveBonus: 0.95 },
+    Chaos: { price: 260, description: 'Greatly boosts score and coin potential, but hazard speed and density ramp up harder.', playerSpeed: 1.1, coinBonus: 1.6, pressure: 1.3, waveBonus: 1.2 },
   };
 
   const POWERUPS = {
-    None: { price: 0, description: 'No active powerup.' },
-    Quickstep: { price: 200, description: 'Instant lane snapping for precise dodges.' },
-    'Shield Matrix': { price: 280, description: 'Start each run with one extra life.' },
-    'Lucky Drift': { price: 190, description: 'Boosts run coin gains by 20%.' },
-    'Time Bloom': { price: 320, description: 'Briefly slows the field after every perfect streak.' },
-    'Magnet Pulse': { price: 240, description: 'Nearby pickups drift into your lane.' },
+    None: { price: 0, description: 'No active powerup is equipped for this run.' },
+    Quickstep: { price: 200, description: 'Your ship snaps directly into the next lane instead of sliding across it.' },
+    'Shield Matrix': { price: 280, description: 'Each run starts with one extra life, letting you survive one additional collision.' },
+    'Lucky Drift': { price: 190, description: 'Raises coin rewards earned during the run by 20%.' },
+    'Time Bloom': { price: 320, description: 'Every 12 combo steps slightly slows active hazards for a short recovery window.' },
+    'Magnet Pulse': { price: 240, description: 'Nearby energy shards drift toward your lane, making pickups easier to secure.' },
   };
 
   const GAME_MODES = {
     Classic: {
-      description: 'Pure lane-dodge survival with steady difficulty ramping.',
+      description: 'Steady survival mode with predictable scaling and no special rule changes.',
       speed: 1,
       interval: 1,
       pickups: 0.45,
-      objective: 'Survive as long as possible and bank coins.',
+      objective: 'Survive as long as possible and earn coins from clean dodges.',
       modeScore: 1,
     },
     Blitz: {
-      description: 'Fast, dense waves with stronger score rewards.',
+      description: 'A faster ruleset with denser patterns, shorter gaps, and higher score payout.',
       speed: 1.22,
       interval: 0.78,
       pickups: 0.35,
-      objective: 'Push your reaction speed in short high-intensity sessions.',
+      objective: 'Chase short, high-pressure runs where fast reactions matter most.',
       modeScore: 1.35,
     },
     Gauntlet: {
-      description: 'Longer runs with elite hazard formations and reward spikes.',
+      description: 'Extended runs with harder formations that spike reward value as you stabilize.',
       speed: 1.08,
       interval: 0.92,
       pickups: 0.5,
-      objective: 'Clear elite waves and build long streaks.',
+      objective: 'Survive elite waves and maintain long combo chains.',
       modeScore: 1.5,
     },
     Harvest: {
-      description: 'More pickups, less raw pressure, and smoother farming routes.',
+      description: 'A lower-pressure route with more shard spawns and better farming potential.',
       speed: 0.95,
       interval: 1.08,
       pickups: 0.82,
-      objective: 'Farm coins and keep your combo active.',
+      objective: 'Collect extra shards, farm coins, and keep your combo active.',
       modeScore: 0.95,
     },
     Story: {
-      description: 'Progress through handcrafted sectors, objectives, and dialogue.',
+      description: 'Play through objective-based sectors with fixed goals and campaign rewards.',
       speed: 1,
       interval: 1,
       pickups: 0.55,
-      objective: 'Finish every sector objective to complete the campaign.',
+      objective: 'Complete each sector objective to finish the campaign path.',
       modeScore: 1.15,
     },
   };
@@ -109,11 +109,11 @@
     },
   ];
 
-  const MISSIONS = [
-    'Finish a run in any mode.',
-    'Collect three energy shards in one run.',
-    'Reach a combo streak of eight.',
-    'Use a powerup and finish above 20 score.',
+  const DAILY_OBJECTIVES = [
+    { id: 'daily-run', title: 'Finish 1 run', description: 'Complete a full run in any mode.', reward: 90, type: 'run' },
+    { id: 'daily-shards', title: 'Collect 3 shards', description: 'Collect at least 3 energy shards in a single run.', reward: 90, type: 'pickups', target: 3 },
+    { id: 'daily-combo', title: 'Reach a combo of 8', description: 'Build a combo streak of 8 or higher in one run.', reward: 90, type: 'combo', target: 8 },
+    { id: 'daily-powerup', title: 'Score 20 with a powerup', description: 'Finish a run at 20 score or higher while an owned powerup is equipped.', reward: 90, type: 'powerupScore', target: 20 },
   ];
 
   const DEFAULT_DATA = {
@@ -123,7 +123,7 @@
     totalRuns: 0,
     totalPickups: 0,
     longestCombo: 0,
-    missionsClaimed: [],
+    dailyObjective: null,
     ownedModifiers: ['Balanced'],
     selectedModifier: 'Balanced',
     ownedPowerups: [],
@@ -177,8 +177,6 @@
       .xy-dodge-shell button, .xy-dodge-shell select { font: inherit; }
       .xy-dodge-shell button { cursor: pointer; }
       .xy-dodge-shell[data-beta='false'] .xy-dodge-hero-copy,
-      .xy-dodge-shell[data-beta='false'] .xy-dodge-segmented,
-      .xy-dodge-shell[data-beta='false'] .xy-dodge-panel--mission,
       .xy-dodge-shell[data-beta='false'] .xy-dodge-panel--beta,
       .xy-dodge-shell[data-beta='false'] .xy-dodge-panel--overview { display: none; }
       .xy-dodge-hero, .xy-dodge-panel, .xy-dodge-board, .xy-dodge-modal-card {
@@ -200,6 +198,7 @@
       .xy-dodge-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.78fr); gap: 12px; align-items: start; }
       .xy-dodge-board { padding: 12px; display: grid; gap: 10px; }
       .xy-dodge-toolbar, .xy-dodge-control-row, .xy-dodge-mobile-controls, .xy-dodge-segmented { display: flex; flex-wrap: wrap; gap: 8px; }
+      .xy-dodge-control-row { align-items: center; }
       .xy-dodge-toolbar { justify-content: space-between; align-items: center; }
       .xy-dodge-badges { display: flex; flex-wrap: wrap; gap: 6px; }
       .xy-dodge-badge { padding: 6px 10px; border-radius: 999px; background: rgba(141,132,255,0.12); color: ${THEMES.text}; font-size: 12px; display:inline-flex; align-items:center; justify-content:center; text-align:center; min-height:30px; line-height:1.2; }
@@ -212,9 +211,10 @@
       .xy-dodge-panel { padding: 12px; display: grid; gap: 10px; }
       .xy-dodge-panel h3, .xy-dodge-panel h4 { margin: 0; font-size: 16px; }
       .xy-dodge-button, .xy-dodge-select, .xy-dodge-mobile-controls button {
-        border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; background: rgba(255,255,255,0.06); color: ${THEMES.text};
-        min-height: 38px; padding: 8px 12px; transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease, box-shadow 0.2s ease;
+        border: 1px solid rgba(154, 205, 255, 0.24); border-radius: 12px; background: linear-gradient(180deg, rgba(16, 31, 58, 0.96), rgba(10, 20, 40, 0.96)); color: ${THEMES.text};
+        min-height: 42px; padding: 10px 12px; transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease, box-shadow 0.2s ease; box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
       }
+      .xy-dodge-select { appearance: none; -webkit-appearance: none; background-image: linear-gradient(180deg, rgba(16, 31, 58, 0.98), rgba(10, 20, 40, 0.98)), linear-gradient(45deg, transparent 50%, ${THEMES.subtext} 50%), linear-gradient(135deg, ${THEMES.subtext} 50%, transparent 50%); background-repeat: no-repeat; background-position: 0 0, calc(100% - 18px) 50%, calc(100% - 12px) 50%; background-size: 100% 100%, 6px 6px, 6px 6px; padding-right: 34px; }
       .xy-dodge-button:hover, .xy-dodge-select:hover, .xy-dodge-mobile-controls button:hover { transform: translateY(-1px); background: rgba(255,255,255,0.1); }
       .xy-dodge-button--primary { background: linear-gradient(135deg, rgba(108,229,255,0.22), rgba(141,132,255,0.18)); border-color: rgba(108,229,255,0.28); }
       .xy-dodge-button--danger { background: rgba(255,111,159,0.16); }
@@ -228,6 +228,7 @@
       .xy-dodge-mini-card small, .xy-dodge-panel small { color: ${THEMES.subtext}; font-size: 12px; }
       .xy-dodge-note { color: ${THEMES.subtext}; font-size: 12px; }
       .xy-dodge-mobile-controls { justify-content: center; }
+      .xy-dodge-mobile-controls[data-visible='true'] { display: flex; }
       .xy-dodge-mobile-controls[hidden] { display: none; }
       .xy-dodge-mobile-controls button { flex: 1; min-width: 120px; font-size: 18px; }
       .xy-dodge-toast { padding: 8px 12px; border-radius: 12px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); font-size: 13px; }
@@ -240,6 +241,9 @@
       @keyframes xyPulse { 0% { transform: scale(.98); } 100% { transform: scale(1); } }
       @media (max-width: 1120px) { .xy-dodge-layout, .xy-dodge-hero { grid-template-columns: 1fr; } .xy-dodge-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
       @media (max-width: 720px) {
+        .xy-dodge-toolbar { flex-direction: column; align-items: stretch; }
+        .xy-dodge-control-row { width: 100%; flex-wrap: nowrap; }
+        .xy-dodge-control-row > * { flex: 1; }
         .xy-dodge-mode-grid, .xy-dodge-stat-grid, .xy-dodge-compact-grid, .xy-dodge-quick-grid { grid-template-columns: 1fr; }
         .xy-dodge-shell { gap: 10px; }
         .xy-dodge-panel, .xy-dodge-board, .xy-dodge-hero { padding: 12px; border-radius: 16px; }
@@ -267,7 +271,7 @@
       this.combo = 0;
       this.bestComboRun = 0;
       this.storyPickups = 0;
-      this.missionIndex = 0;
+      this.dailyObjective = null;
       this.spawnTimer = 0;
       this.pickupTimer = 0;
       this.particles = [];
@@ -276,6 +280,7 @@
       this.dialogueTimer = 0;
       this.storyChapter = this.resolveStoryChapter();
       this.ensureTokenState();
+      this.ensureDailyObjectiveState();
       injectStyles();
       this.buildUi();
       this.attachGlobalListeners();
@@ -292,7 +297,7 @@
         selectedModifier: MODIFIERS[loaded.selectedModifier] ? loaded.selectedModifier : 'Balanced',
         selectedPowerup: POWERUPS[loaded.selectedPowerup] ? loaded.selectedPowerup : 'None',
         selectedMode: GAME_MODES[loaded.selectedMode] ? loaded.selectedMode : 'Classic',
-        missionsClaimed: Array.isArray(loaded.missionsClaimed) ? loaded.missionsClaimed : [],
+        dailyObjective: loaded.dailyObjective && typeof loaded.dailyObjective === 'object' ? loaded.dailyObjective : null,
         storyRewardsClaimed: Array.isArray(loaded.storyRewardsClaimed) ? loaded.storyRewardsClaimed : [],
         activeCheats: Array.isArray(loaded.activeCheats) ? loaded.activeCheats.map(item => String(item).toLowerCase()) : [],
       };
@@ -369,6 +374,72 @@
       return this.activeCheatSet().size > 0;
     }
 
+    dailyObjectiveForDate(dayKey = localDayKey()) {
+      let hash = 0;
+      for (const char of dayKey) hash = ((hash * 31) + char.charCodeAt(0)) >>> 0;
+      return DAILY_OBJECTIVES[hash % DAILY_OBJECTIVES.length];
+    }
+
+    ensureDailyObjectiveState() {
+      const dayKey = localDayKey();
+      const objective = this.dailyObjectiveForDate(dayKey);
+      const stored = this.data.dailyObjective;
+      const needsReset = !stored || stored.date !== dayKey || stored.objectiveId !== objective.id;
+      if (needsReset) {
+        this.data.dailyObjective = {
+          date: dayKey,
+          objectiveId: objective.id,
+          completed: false,
+          rewarded: false,
+        };
+        this.saveData();
+      }
+      this.dailyObjective = { ...this.data.dailyObjective, meta: objective };
+      return this.dailyObjective;
+    }
+
+    completeDailyObjective() {
+      const state = this.ensureDailyObjectiveState();
+      if (state.completed) return false;
+      state.completed = true;
+      if (!state.rewarded) {
+        this.data.coins += state.meta.reward;
+        state.rewarded = true;
+      }
+      this.data.dailyObjective = {
+        date: state.date,
+        objectiveId: state.objectiveId,
+        completed: state.completed,
+        rewarded: state.rewarded,
+      };
+      this.dailyObjective = { ...state };
+      this.saveData();
+      this.syncUi();
+      this.flashStatus(`Daily objective completed: ${state.meta.title}.`, 'ok');
+      return true;
+    }
+
+    evaluateDailyObjective(runSummary = {}) {
+      const state = this.ensureDailyObjectiveState();
+      if (state.completed) return;
+      const { type, target = 0 } = state.meta;
+      const hasOwnedPowerup = this.data.selectedPowerup !== 'None' && this.data.ownedPowerups.includes(this.data.selectedPowerup);
+      const completed = (
+        (type === 'run' && Boolean(runSummary.finishedRun)) ||
+        (type === 'pickups' && (runSummary.pickups || 0) >= target) ||
+        (type === 'combo' && (runSummary.bestCombo || 0) >= target) ||
+        (type === 'powerupScore' && hasOwnedPowerup && (runSummary.score || 0) >= target)
+      );
+      if (completed) this.completeDailyObjective();
+    }
+
+    performLaneMove(direction) {
+      if (!this.player) return;
+      if (direction === 'left') this.player.targetLane = Math.max(0, this.player.targetLane - 1);
+      if (direction === 'right') this.player.targetLane = Math.min(BOARD.lanes - 1, this.player.targetLane + 1);
+    }
+
+
     buildUi() {
       const betaEnabled = this.isBetaEnabled();
       const visibleMode = betaEnabled ? this.data.selectedMode : 'Classic';
@@ -381,7 +452,7 @@
               <h2>Xyrex Dodge</h2>
               <p class="xy-dodge-hero-copy">The beta overhaul is now tighter and easier to read, with compact tabs, animations, and progression features that stay gated behind Beta Features.</p>
               <div class="xy-dodge-stat-grid">
-                <div class="xy-dodge-chip"><span>Bank</span><strong id="xyBank">0</strong></div>
+                <div class="xy-dodge-chip"><span>Coins</span><strong id="xyBank">0</strong></div>
                 <div class="xy-dodge-chip"><span>Best</span><strong id="xyBest">0</strong></div>
                 <div class="xy-dodge-chip"><span>Runs</span><strong id="xyRuns">0</strong></div>
                 <div class="xy-dodge-chip"><span>Combo</span><strong id="xyComboBest">0</strong></div>
@@ -419,21 +490,12 @@
                 <button type="button" class="xy-dodge-button" data-mobile-move="left">◀ Move Left</button>
                 <button type="button" class="xy-dodge-button" data-mobile-move="right">Move Right ▶</button>
               </div>
-              ${betaEnabled ? `
-                <div class="xy-dodge-segmented" id="xyTabRow">
-                  <button class="xy-dodge-button" data-tab="modes" data-active="true" type="button">Modes</button>
-                  <button class="xy-dodge-button" data-tab="progression" data-active="false" type="button">Progress</button>
-                  <button class="xy-dodge-button" data-tab="loadout" data-active="false" type="button">Loadout</button>
-                </div>
-                <div id="xyTabContent"></div>
-              ` : `
-                <div class="xy-dodge-panel">
-                  <div class="xy-dodge-compact-grid">
-                    <div class="xy-dodge-mini-card"><span>Progress boost</span><strong>${classicProgress}</strong><small>Your best score still powers long-term progression.</small></div>
-                    <div class="xy-dodge-mini-card"><span>Selected modifier</span><strong>${this.data.selectedModifier}</strong><small>Classic keeps progression boosts without the beta mode switcher.</small></div>
-                  </div>
-                </div>
-              `}
+              <div class="xy-dodge-segmented" id="xyTabRow">
+                <button class="xy-dodge-button" data-tab="modes" data-active="true" type="button">Modes</button>
+                <button class="xy-dodge-button" data-tab="progression" data-active="false" type="button">Progress</button>
+                <button class="xy-dodge-button" data-tab="loadout" data-active="false" type="button">Loadout</button>
+              </div>
+              <div id="xyTabContent"></div>
             </section>
 
             <aside class="xy-dodge-side">
@@ -443,24 +505,8 @@
                 <small>${betaEnabled ? 'Compact beta layout enabled. Tabs, animations, and advanced progression are active.' : 'Beta Features are disabled, so Dodge stays on the compact classic layout with only progression boosts.'}</small>
               </section>
               <section class="xy-dodge-panel xy-dodge-panel--mission">
-                <h3>Mission</h3>
+                <h3>Daily objective</h3>
                 <div id="xyMissionCard"></div>
-              </section>
-              <section class="xy-dodge-panel">
-                <h3>Loadout</h3>
-                <div class="xy-dodge-compact-grid">
-                  <div>
-                    <small>Modifier</small>
-                    <select id="xyModifierSelect" class="xy-dodge-select">${Object.entries(MODIFIERS).map(([name, item]) => `<option value="${name}">${name}${item.price ? ` · ${item.price}c` : ''}</option>`).join('')}</select>
-                    <button id="xyBuyModifierBtn" class="xy-dodge-button xy-dodge-button--primary" type="button">Buy / Equip</button>
-                  </div>
-                  <div>
-                    <small>Powerup</small>
-                    <select id="xyPowerupSelect" class="xy-dodge-select">${Object.entries(POWERUPS).map(([name, item]) => `<option value="${name}">${name}${item.price ? ` · ${item.price}c` : ''}</option>`).join('')}</select>
-                    <button id="xyBuyPowerupBtn" class="xy-dodge-button xy-dodge-button--primary" type="button">Buy / Equip</button>
-                  </div>
-                </div>
-                <small id="xyLoadoutNote">Equip owned boosts here. Beta adds more mode-specific progression, but the classic layout keeps this area playable and compact.</small>
               </section>
               <section class="xy-dodge-panel">
                 <h3>Token Shop</h3>
@@ -511,7 +557,7 @@
       this.buyModifierBtn = this.mount.querySelector('#xyBuyModifierBtn');
       this.buyPowerupBtn = this.mount.querySelector('#xyBuyPowerupBtn');
 
-      if (betaEnabled && this.tabContent) this.renderTab('modes');
+      if (this.tabContent) this.renderTab('modes');
       this.registerUiListeners();
       this.syncUi();
       this.applyResponsiveState();
@@ -529,12 +575,14 @@
       this.modifierSelect?.addEventListener('change', () => {
         this.data.selectedModifier = this.modifierSelect.value;
         this.saveData();
+        this.restart();
         if (this.modifierDesc) this.modifierDesc.textContent = (MODIFIERS[this.data.selectedModifier] || MODIFIERS.Balanced).description;
         this.syncLoadoutButtons();
       });
       this.powerupSelect?.addEventListener('change', () => {
         this.data.selectedPowerup = this.powerupSelect.value;
         this.saveData();
+        this.restart();
         if (this.powerupDesc) this.powerupDesc.textContent = (POWERUPS[this.data.selectedPowerup] || POWERUPS.None).description;
         this.syncLoadoutButtons();
       });
@@ -544,8 +592,7 @@
         const onPress = event => {
           event.preventDefault();
           const move = button.getAttribute('data-mobile-move');
-          if (move === 'left') this.keys.left = true;
-          if (move === 'right') this.keys.right = true;
+          this.performLaneMove(move);
         };
         button.addEventListener('pointerdown', onPress);
         button.addEventListener('touchstart', onPress, { passive: false });
@@ -569,11 +616,13 @@
         const formTarget = ['input', 'textarea', 'select', 'button'].includes(tag);
         if ((key === 'arrowleft' || key === 'a') && !formTarget) {
           event.preventDefault();
-          this.keys.left = true;
+          if (event.repeat) return;
+          this.performLaneMove('left');
         }
         if ((key === 'arrowright' || key === 'd') && !formTarget) {
           event.preventDefault();
-          this.keys.right = true;
+          if (event.repeat) return;
+          this.performLaneMove('right');
         }
         if (key === 'p' && !formTarget) {
           event.preventDefault();
@@ -584,11 +633,7 @@
           this.restart();
         }
       };
-      this.handleKeyUp = event => {
-        const key = event.key.toLowerCase();
-        if (key === 'arrowleft' || key === 'a') this.keys.left = false;
-        if (key === 'arrowright' || key === 'd') this.keys.right = false;
-      };
+      this.handleKeyUp = () => {};
     }
 
     attachGlobalListeners() {
@@ -599,12 +644,13 @@
         this.data = this.loadData();
         this.storyChapter = this.resolveStoryChapter();
         this.ensureTokenState();
+        this.ensureDailyObjectiveState();
         this.syncUi();
       });
     }
 
     renderTab(tab) {
-      if (!this.isBetaEnabled() || !this.tabContent) return;
+      if (!this.tabContent) return;
       this.activeTab = tab;
       this.mount.querySelectorAll('[data-tab]').forEach(button => {
         button.setAttribute('data-active', String(button.dataset.tab === tab));
@@ -620,13 +666,14 @@
       const cards = Object.entries(GAME_MODES)
         .filter(([name]) => betaEnabled || name === 'Classic')
         .map(([name, config]) => `
-          <button class="xy-dodge-mode-card xy-dodge-button" type="button" data-mode="${name}" data-active="${this.data.selectedMode === name}">
+          <button class="xy-dodge-mode-card xy-dodge-button" type="button" data-mode="${name}" data-active="${(betaEnabled ? this.data.selectedMode : 'Classic') === name}">
             <strong>${name}</strong>
             <p>${config.description}</p>
             <small>${config.objective}</small>
           </button>
         `).join('');
-      return `<div class="xy-dodge-mode-grid">${cards}</div>`;
+      const selected = GAME_MODES[betaEnabled ? this.data.selectedMode : 'Classic'] || GAME_MODES.Classic;
+      return `<div class="xy-dodge-panel"><p>${betaEnabled ? 'Switching modes instantly restarts the current run so the rules always stay accurate.' : 'Classic layout keeps only Classic mode active until Beta Features are enabled in Settings.'}</p></div><div class="xy-dodge-mode-grid">${cards}</div><div class="xy-dodge-panel"><strong>Current mode effect</strong><p>${selected.description}</p><small>${selected.objective}</small></div>`;
     }
 
     renderProgressionTab() {
@@ -649,11 +696,16 @@
       return `
         <div class="xy-dodge-panel" style="padding:0; background:none; border:none; box-shadow:none;">
           <div class="xy-dodge-story-card">
-            <strong>Story Campaign</strong>
-            <p>${this.isBetaEnabled() ? this.storyChapter.briefing : 'Enable Beta Features to unlock the story campaign.'}</p>
+            <strong>Progress overview</strong>
+            <p>${this.isBetaEnabled() ? this.storyChapter.briefing : 'Classic mode keeps your score, runs, and unlocks active while advanced progression stays disabled.'}</p>
             <div class="xy-dodge-progress"><span style="width:${((storyProgress) / STORY_CHAPTERS.length) * 100}%"></span></div>
           </div>
           ${storyCards}
+          <div class="xy-dodge-story-card">
+            <strong>Long-term progression</strong>
+            <p>Your best score is <strong>${this.data.bestScore || 0}</strong>, total runs are <strong>${this.data.totalRuns || 0}</strong>, and your best combo is <strong>${this.data.longestCombo || 0}</strong>.</p>
+            <small>${this.isBetaEnabled() ? 'Story sectors unlock in order and reward coins once.' : 'Enable Beta Features to unlock multi-mode progression and story sectors.'}</small>
+          </div>
         </div>
       `;
     }
@@ -669,16 +721,17 @@
       const currentModifier = MODIFIERS[this.data.selectedModifier] || MODIFIERS.Balanced;
       const currentPowerup = POWERUPS[this.data.selectedPowerup] || POWERUPS.None;
       return `
+        <div class="xy-dodge-panel"><strong>Current loadout effects</strong><p><strong>Modifier:</strong> ${currentModifier.description}</p><p><strong>Powerup:</strong> ${currentPowerup.description}</p><small>Switching your loadout restarts the run so the equipped effect applies immediately.</small></div>
         <div class="xy-dodge-quick-grid">
           <div class="xy-dodge-panel">
             <h4>Modifier</h4>
-            <select id="xyModifierSelect" class="xy-dodge-select" ${betaEnabled ? '' : 'disabled'}>${modifierOptions}</select>
+            <select id="xyModifierSelect" class="xy-dodge-select">${modifierOptions}</select>
             <p id="xyModifierDesc">${currentModifier.description}</p>
             <button id="xyBuyModifierBtn" class="xy-dodge-button xy-dodge-button--primary" type="button">${this.data.ownedModifiers.includes(this.data.selectedModifier) ? 'Owned' : `Buy for ${currentModifier.price} coins`}</button>
           </div>
           <div class="xy-dodge-panel">
             <h4>Powerup</h4>
-            <select id="xyPowerupSelect" class="xy-dodge-select" ${betaEnabled ? '' : 'disabled'}>${powerupOptions}</select>
+            <select id="xyPowerupSelect" class="xy-dodge-select">${powerupOptions}</select>
             <p id="xyPowerupDesc">${currentPowerup.description}</p>
             <button id="xyBuyPowerupBtn" class="xy-dodge-button xy-dodge-button--primary" type="button">${this.data.selectedPowerup === 'None' || this.data.ownedPowerups.includes(this.data.selectedPowerup) ? 'Owned / Equipped' : `Buy for ${currentPowerup.price} coins`}</button>
           </div>
@@ -692,6 +745,7 @@
         this.data.selectedMode = button.dataset.mode || 'Classic';
         this.saveData();
         this.storyChapter = this.resolveStoryChapter();
+        this.restart();
         this.renderTab('modes');
         this.syncUi();
         this.flashStatus(`${this.data.selectedMode} selected.`, 'ok');
@@ -709,6 +763,7 @@
         this.modifierSelect.addEventListener('change', () => {
           this.data.selectedModifier = this.modifierSelect.value;
           this.saveData();
+          this.restart();
           this.renderTab(this.activeTab || 'loadout');
           this.syncUi();
         });
@@ -718,6 +773,7 @@
         this.powerupSelect.addEventListener('change', () => {
           this.data.selectedPowerup = this.powerupSelect.value;
           this.saveData();
+          this.restart();
           this.renderTab(this.activeTab || 'loadout');
           this.syncUi();
         });
@@ -727,8 +783,9 @@
     }
 
     applyResponsiveState() {
-      const mobileUiEnabled = this.isTouchDevice() && this.isBetaEnabled();
+      const mobileUiEnabled = window.matchMedia('(max-width: 900px), (pointer: coarse)').matches || this.isTouchDevice();
       this.mobileControls.hidden = !mobileUiEnabled;
+      this.mobileControls.dataset.visible = String(mobileUiEnabled);
     }
 
     syncLoadoutButtons() {
@@ -745,6 +802,7 @@
     syncUi() {
       const visibleModeName = this.isBetaEnabled() ? this.data.selectedMode : 'Classic';
       const mode = GAME_MODES[visibleModeName] || GAME_MODES.Classic;
+      this.ensureDailyObjectiveState();
       this.bestEl.textContent = String(this.data.bestScore || 0);
       this.bankEl.textContent = String(this.data.coins || 0);
       this.runsEl.textContent = String(this.data.totalRuns || 0);
@@ -757,33 +815,28 @@
       if (this.modeObjectiveEl) this.modeObjectiveEl.textContent = mode.objective;
       if (this.tokenCountEl) this.tokenCountEl.textContent = String(this.availableAiTokens());
       if (this.storyProgressLabelEl) this.storyProgressLabelEl.textContent = `${Math.min(this.data.storyProgress, STORY_CHAPTERS.length)} / ${STORY_CHAPTERS.length}`;
-      if (this.missionCardEl && this.isBetaEnabled()) this.renderMissionCard();
+      if (this.missionCardEl) this.renderMissionCard();
       this.syncLoadoutButtons();
       this.updateCheatUi();
     }
 
     renderMissionCard() {
-      this.missionIndex = (this.data.totalRuns || 0) % MISSIONS.length;
-      const mission = MISSIONS[this.missionIndex];
-      const claimed = this.data.missionsClaimed.includes(this.missionIndex);
+      const state = this.ensureDailyObjectiveState();
+      const objective = state.meta;
+      const detailText = state.completed
+        ? 'Completed for today. A new objective will appear at local midnight.'
+        : 'Resets at midnight in the player’s local time zone.';
       this.missionCardEl.innerHTML = `
         <div class="xy-dodge-mission-card">
-          <strong>Daily-style objective</strong>
-          <p>${mission}</p>
+          <strong>${objective.title}</strong>
+          <p>${objective.description}</p>
           <div class="xy-dodge-control-row">
-            <span class="xy-dodge-badge">Reward: 90 coins</span>
-            <button class="xy-dodge-button" type="button" id="xyClaimMissionBtn" ${claimed ? 'disabled' : ''}>${claimed ? 'Already Claimed' : 'Claim reward'}</button>
+            <span class="xy-dodge-badge">Reward: ${objective.reward} coins</span>
+            <span class="xy-dodge-badge">${state.completed ? 'Completed' : 'In progress'}</span>
           </div>
+          <small>${detailText}</small>
         </div>
       `;
-      this.missionCardEl.querySelector('#xyClaimMissionBtn')?.addEventListener('click', () => {
-        if (claimed) return;
-        this.data.coins += 90;
-        this.data.missionsClaimed = [...new Set([...(this.data.missionsClaimed || []), this.missionIndex])];
-        this.saveData();
-        this.syncUi();
-        this.flashStatus('Mission reward claimed.', 'ok');
-      });
     }
 
     updateCheatUi() {
@@ -888,6 +941,7 @@
     resetState() {
       const visibleModeName = this.isBetaEnabled() ? this.data.selectedMode : 'Classic';
       const mode = GAME_MODES[visibleModeName] || GAME_MODES.Classic;
+      this.ensureDailyObjectiveState();
       const modifier = MODIFIERS[this.data.selectedModifier] || MODIFIERS.Balanced;
       const ownedSelectedPowerup = this.data.selectedPowerup === 'None' || this.data.ownedPowerups.includes(this.data.selectedPowerup);
       this.modifier = modifier;
@@ -1009,10 +1063,6 @@
         this.particles.push({ x: this.player.x, y: this.player.y + 4, vx: 0, vy: 0.18, life: 0.4, size: 8, color: 'rgba(108,229,255,0.22)' });
         if (this.particles.length > 120) this.particles.shift();
       }
-      if (this.keys.left) this.player.targetLane = Math.max(0, this.player.targetLane - 1);
-      if (this.keys.right) this.player.targetLane = Math.min(BOARD.lanes - 1, this.player.targetLane + 1);
-      this.keys.left = false;
-      this.keys.right = false;
       const laneWidth = BOARD.width / BOARD.lanes;
       const targetX = this.player.targetLane * laneWidth + laneWidth / 2;
       const quickstep = this.powerups.has('Quickstep');
@@ -1112,7 +1162,6 @@
         this.storyChapter = this.resolveStoryChapter();
         this.flashStatus(`Story chapter cleared: ${chapter.title}.`, 'ok');
       }
-      this.pickups = alive;
     }
 
     updateParticles(dt) {
@@ -1134,6 +1183,7 @@
       this.data.bestByMode[this.data.selectedMode] = Math.max(this.data.bestByMode[this.data.selectedMode] || 0, this.score);
       this.data.longestCombo = Math.max(this.data.longestCombo, this.bestComboRun);
       this.checkStoryProgress();
+      this.evaluateDailyObjective({ finishedRun: true, pickups: this.storyPickups, bestCombo: this.bestComboRun, score: this.score });
       this.data.coins += this.hasEnabledCheat() ? 0 : this.runCoins;
       this.saveData();
       this.syncUi();
