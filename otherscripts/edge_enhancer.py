@@ -1,262 +1,470 @@
-"""
-═══════════════════════════════════════════════════════════════════════════════
-                  EDGE ENHANCER v5.0 — EVERY MODULE ACTUALLY DOES SOMETHING
-═══════════════════════════════════════════════════════════════════════════════
-✅ FIXED & UPGRADED FOR JOSEPH
-• All 48 modules now perform REAL actions (no more placeholders)
-• pyautogui actions, clipboard, website opening, alerts, typing, file creation, etc.
-• Works even without Selenium installed
-• Safe launch, real detection, real hotkeys
-• Copy → Save as Reward Automater.py → Run
+"""Compact Xyrex-themed Edge utility with a responsive customtkinter UI.
 
-Just run it — every ▶ button and "Fire All" will visibly change your computer/Edge!
+This rewrite replaces the previous oversized interface with a smaller, safer,
+and more maintainable control panel. The application focuses on practical Edge
+helpers such as process detection, quick links, profile persistence, and
+copy-to-clipboard productivity actions.
 """
+
+from __future__ import annotations
+
+import json
+import subprocess
+import webbrowser
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import Callable
 
 import customtkinter as ctk
-import tkinter as tk
-from tkinter import messagebox, scrolledtext
-import threading
-import json
-import os
-from datetime import datetime
-import pyperclip
-import pyautogui
-import keyboard
 import psutil
-import random
-import webbrowser
-
-# Optional Selenium
-try:
-    from selenium import webdriver
-    from selenium.webdriver.edge.service import Service as EdgeService
-    from selenium.webdriver.edge.options import Options as EdgeOptions
-    from webdriver_manager.microsoft import EdgeChromiumDriverManager
-    SELENIUM_OK = True
-except:
-    SELENIUM_OK = False
+import pyperclip
+from tkinter import messagebox
 
 ctk.set_appearance_mode("dark")
-ctk.set_default_color_theme("green")
+ctk.set_default_color_theme("blue")
+
+THEME = {
+    "bg": "#06070d",
+    "bg_alt": "#0a0c14",
+    "panel": "#111426",
+    "panel_alt": "#12172b",
+    "card": "#161b33",
+    "border": "#2b3561",
+    "text": "#eef1ff",
+    "muted": "#aeb5d6",
+    "accent": "#8f9cff",
+    "accent_soft": "#b2bcff",
+    "success": "#5dd39e",
+    "warning": "#f0c36f",
+}
+
+APP_DIR = Path(__file__).resolve().parent
+STATE_FILE = APP_DIR / "edge_enhancer_state.json"
+LOG_LIMIT = 250
+
+
+@dataclass(frozen=True)
+class Module:
+    """Single quick action shown in the interface."""
+
+    key: str
+    title: str
+    category: str
+    summary: str
+    action_label: str
+    action: Callable[[], None]
+
 
 class EdgeEnhancer(ctk.CTk):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
-        self.title("🚀 Edge Enhancer v5.0 — EVERY MODULE DOES REAL THINGS • Joseph")
-        self.geometry("1380x880")
-        self.driver = None
+        self.title("Xyrex Edge Enhancer")
+        self.geometry("1120x720")
+        self.minsize(980, 620)
+        self.configure(fg_color=THEME["bg"])
 
-        self.build_modules()      # real functions first
-        self.build_gui()          # GUI second
-        self.after(400, self.auto_detect_edge)
-        self.log("🎉 v5.0 LOADED • Click any ▶ or Fire All — you will see real effects!")
+        self.modules: list[Module] = []
+        self.filtered_modules: list[Module] = []
+        self.module_cards: list[ctk.CTkFrame] = []
+        self.selected_module: Module | None = None
+        self.log_entries: list[str] = []
+        self.state = self.load_state()
 
-    def build_modules(self):
-        def open_site(url, name):
-            webbrowser.open(url)
-            pyperclip.copy(f"Opened {name} for Joseph")
-            self.log(f"🌐 Opened {name}")
+        self.configure_grid()
+        self.build_modules()
+        self.build_layout()
+        self.refresh_stats()
+        self.apply_filters()
+        self.log("Interface ready.")
 
-        self.modules = {
-            "🛡️ AdBlock Ultra + uBlock": {"icon": "🛡️", "active": True, "func": lambda: (webbrowser.open("https://chromewebstore.google.com/detail/ublock-origin"), self.log("🛡️ uBlock opened + copied install link"))},
-            "📑 Tab Sorcerer + Groups": {"icon": "📑", "active": True, "func": lambda: [webbrowser.open_new_tab(u) for u in ["https://chatgpt.com","https://github.com","https://news.ycombinator.com"]]},
-            "⏱️ Pomodoro + Site Block": {"icon": "⏱️", "active": True, "func": lambda: (pyautogui.alert("25 min Pomodoro started! Focus mode ON"), self.log("⏱️ Timer started"))},
-            "🌐 Instant Translator v2": {"icon": "🌐", "active": True, "func": lambda: (pyperclip.copy("Hola! This page is now translated by Edge Enhancer"), webbrowser.open("https://translate.google.com"))},
-            "📸 Screenshot + OCR": {"icon": "📸", "active": True, "func": lambda: (pyautogui.screenshot("enhancer_shot.png"), os.startfile("enhancer_shot.png") if os.name=="nt" else None, self.log("📸 Screenshot saved & opened"))},
-            "🤖 Copilot Turbo": {"icon": "🤖", "active": True, "func": lambda: (pyperclip.copy("Write a Python GUI for Joseph in Melbourne"), webbrowser.open("https://copilot.microsoft.com"))},
-            "⭐ Smart Bookmark": {"icon": "⭐", "active": True, "func": lambda: (open("bookmarks.txt","a").write(f"{datetime.now()} - Bing\n"), self.log("⭐ Bookmark saved to file"))},
-            "🌙 Theme Enforcer": {"icon": "🌙", "active": True, "func": lambda: pyautogui.hotkey('win','ctrl','shift','b')},  # fake dark mode trigger
-            "⚡ Speed Booster": {"icon": "⚡", "active": True, "func": lambda: (pyautogui.press('f5'), self.log("⚡ Page refreshed + cache hint"))},
-            "📝 Auto Form Filler": {"icon": "📝", "active": True, "func": lambda: (pyperclip.copy("Joseph Melbourne ver0016@gmail.com"), self.log("📝 Form data copied"))},
-            "🔗 URL Shortener + QR": {"icon": "🔗", "active": True, "func": lambda: (pyperclip.copy("https://tiny.one/joseph-reward"), self.log("🔗 Short link copied"))},
-            "📌 Floating Notes": {"icon": "📌", "active": True, "func": lambda: messagebox.showinfo("Note", "Meeting with school at 3pm • Saved")},
-            "🔒 Privacy Shield": {"icon": "🔒", "active": True, "func": lambda: (pyautogui.hotkey('ctrl','shift','delete'), self.log("🔒 Privacy tools opened"))},
-            "📖 Reading Mode": {"icon": "📖", "active": True, "func": lambda: webbrowser.open("https://en.wikipedia.org/wiki/Melbourne")},
-            "🗂️ Tab Manager Pro": {"icon": "🗂️", "active": True, "func": lambda: [webbrowser.open_new_tab("https://google.com") for _ in range(3)]},
-            "⬇️ Download Accelerator": {"icon": "⬇️", "active": True, "func": lambda: (pyperclip.copy("https://speedtest.net"), self.log("⬇️ Download link ready"))},
-            "💾 Session Saver": {"icon": "💾", "active": True, "func": lambda: (open("session_backup.txt","w").write("All tabs saved by Joseph"), self.log("💾 Session file created"))},
-            "🔍 AI Smart Search": {"icon": "🔍", "active": True, "func": lambda: webbrowser.open("https://www.bing.com/search?q=reward+automater+ideas")},
-            "📅 Calendar Inject": {"icon": "📅", "active": True, "func": lambda: messagebox.showinfo("Calendar", "Reminder added: Submit reward script tomorrow")},
-            "🌤️ Weather Overlay": {"icon": "🌤️", "active": True, "func": lambda: (pyperclip.copy("Melbourne 22°C • Sunny"), self.log("🌤️ Weather copied"))},
-            "📧 Email Notifier": {"icon": "📧", "active": True, "func": lambda: webbrowser.open("https://mail.google.com")},
-            "🎵 LoFi Music": {"icon": "🎵", "active": True, "func": lambda: webbrowser.open("https://www.youtube.com/watch?v=5qap5aO7eqU")},
-            "🛑 Social Detox": {"icon": "🛑", "active": True, "func": lambda: pyautogui.alert("Instagram & TikTok blocked for 60 minutes!")},
-            "📊 Productivity Score": {"icon": "📊", "active": True, "func": lambda: messagebox.showinfo("Score", "Your productivity is 96/100 🔥")},
-            "🧠 AI Page Summarizer": {"icon": "🧠", "active": True, "func": lambda: (pyperclip.copy("Summary: This script is now perfect."), self.log("🧠 Summary copied"))},
-            "💳 Price Drop Alert": {"icon": "💳", "active": True, "func": lambda: pyautogui.alert("Amazon item dropped $27!")},
-            "🔄 Multi Account Switcher": {"icon": "🔄", "active": True, "func": lambda: webbrowser.open("https://accounts.google.com")},
-            "📍 Location Spoofer": {"icon": "📍", "active": True, "func": lambda: (pyperclip.copy("Spoofed to Sydney"), self.log("📍 Location changed"))},
-            "🎨 Custom CSS": {"icon": "🎨", "active": True, "func": lambda: pyautogui.alert("Rainbow background applied to current tab!")},
-            "🖼️ Reverse Image Search": {"icon": "🖼️", "active": True, "func": lambda: webbrowser.open("https://lens.google.com")},
-            "📝 Task Sync": {"icon": "📝", "active": True, "func": lambda: (open("tasks.txt","a").write("Finish reward script\n"), self.log("📝 Task added"))},
-            "🚨 Panic Button": {"icon": "🚨", "active": True, "func": lambda: (pyautogui.hotkey('ctrl','alt','del'), self.log("🚨 Panic — all cleared"))},
-            "🍪 Cookie Monster": {"icon": "🍪", "active": True, "func": lambda: pyautogui.alert("All cookies deleted! 🍪")},
-            "📺 YouTube God Mode": {"icon": "📺", "active": True, "func": lambda: webbrowser.open("https://youtube.com")},
-            "🛒 Shopping Tracker": {"icon": "🛒", "active": True, "func": lambda: pyperclip.copy("Kmart reward points added")},
-            "🎙️ Voice Commands": {"icon": "🎙️", "active": True, "func": lambda: pyautogui.alert("Voice mode ready — say 'open reward folder'")},
-            "🔄 Auto Refresh": {"icon": "🔄", "active": True, "func": lambda: (pyautogui.press('f5'), pyautogui.press('f5'))},
-            "✉️ Email Composer": {"icon": "✉️", "active": True, "func": lambda: webbrowser.open("https://outlook.com")},
-            "🎲 Tab Roulette": {"icon": "🎲", "active": True, "func": lambda: webbrowser.open(random.choice(["https://reddit.com","https://x.com","https://wikipedia.org"]))},
-            "🌈 Rainbow Mode": {"icon": "🌈", "active": True, "func": lambda: pyautogui.alert("All text is now rainbow 🌈")},
-            "📈 Finance Ticker": {"icon": "📈", "active": True, "func": lambda: pyperclip.copy("ASX: +2.4% today")},
-            "🧩 Extension Toggle": {"icon": "🧩", "active": True, "func": lambda: pyautogui.alert("AdBlock + Dark Reader toggled ON")},
-            "📸 Full PDF Export": {"icon": "📸", "active": True, "func": lambda: (open("page.pdf","w").write("Exported by Edge Enhancer"), self.log("📸 PDF created"))},
-            "🤖 AI Prompt Vault": {"icon": "🤖", "active": True, "func": lambda: (pyperclip.copy("You are a helpful coding assistant named Grok"), self.log("🤖 Prompt loaded"))},
-            "🛡️ VPN Simulator": {"icon": "🛡️", "active": True, "func": lambda: pyautogui.alert("Connected to Melbourne VPN • IP hidden")},
-            "🔒 Password Vault": {"icon": "🔒", "active": True, "func": lambda: pyperclip.copy("Reward2026!Joseph")},
-            "📍 Geo Content": {"icon": "📍", "active": True, "func": lambda: webbrowser.open("https://www.vic.gov.au")},
-            "💾 Backup Session": {"icon": "💾", "active": True, "func": lambda: (open("full_backup.json","w").write('{"status":"saved"}'), self.log("💾 Full backup created"))},
+    def configure_grid(self) -> None:
+        self.grid_columnconfigure(0, weight=0)
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(2, weight=0)
+
+    def load_state(self) -> dict:
+        if not STATE_FILE.exists():
+            return {"last_category": "All", "search": ""}
+        try:
+            return json.loads(STATE_FILE.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            return {"last_category": "All", "search": ""}
+
+    def save_state(self) -> None:
+        payload = {
+            "last_category": self.category_var.get(),
+            "search": self.search_var.get().strip(),
+            "saved_at": datetime.now().isoformat(timespec="seconds"),
         }
+        STATE_FILE.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        self.log("Preferences saved.")
 
-    def build_gui(self):
-        top = ctk.CTkFrame(self, height=55)
-        top.pack(fill="x")
-        ctk.CTkLabel(top, text="EDGE ENHANCER v5.0 — EVERY BUTTON DOES REAL WORK", font=ctk.CTkFont(size=22, weight="bold")).pack(side="left", padx=15)
-        ctk.CTkButton(top, text="🔍 Detect Edge", command=self.auto_detect_edge).pack(side="left", padx=5)
-        ctk.CTkButton(top, text="🚀 Launch Real Edge", fg_color="#00cc66", command=self.launch_edge).pack(side="left", padx=5)
-        ctk.CTkButton(top, text="🔥 FIRE ALL ACTIVE", fg_color="#ff0066", command=self.fire_all_active).pack(side="left", padx=5)
+    def build_modules(self) -> None:
+        self.modules = [
+            Module(
+                key="launch",
+                title="Launch Edge",
+                category="Browser",
+                summary="Start Microsoft Edge directly or fall back to the default browser if Edge is unavailable.",
+                action_label="Launch",
+                action=self.launch_edge,
+            ),
+            Module(
+                key="detect",
+                title="Detect Edge Processes",
+                category="Browser",
+                summary="Scan running processes and report how many Edge instances are active.",
+                action_label="Scan",
+                action=self.detect_edge_processes,
+            ),
+            Module(
+                key="home",
+                title="Open Xyrex",
+                category="Quick Links",
+                summary="Open the main Xyrex.lol site in a browser tab.",
+                action_label="Open",
+                action=lambda: self.open_url("https://xyrex.lol", "Opened Xyrex.lol."),
+            ),
+            Module(
+                key="newui",
+                title="Open Xyrex New UI",
+                category="Quick Links",
+                summary="Open the new Xyrex interface for visual parity and quick reference.",
+                action_label="Open",
+                action=lambda: self.open_url("https://xyrex.lol/newui/", "Opened the Xyrex New UI."),
+            ),
+            Module(
+                key="extensions",
+                title="Open Edge Extensions",
+                category="Quick Links",
+                summary="Jump straight to the Edge extensions manager page.",
+                action_label="Open",
+                action=lambda: self.open_url("edge://extensions", "Requested the Edge extensions page."),
+            ),
+            Module(
+                key="settings",
+                title="Open Edge Settings",
+                category="Quick Links",
+                summary="Open the main Edge settings page to adjust profiles, privacy, or startup behavior.",
+                action_label="Open",
+                action=lambda: self.open_url("edge://settings", "Requested the Edge settings page."),
+            ),
+            Module(
+                key="privacy",
+                title="Privacy Review Checklist",
+                category="Productivity",
+                summary="Copy a concise privacy hardening checklist for Edge into the clipboard.",
+                action_label="Copy",
+                action=lambda: self.copy_text(
+                    "Privacy Review Checklist\n"
+                    "1. Review tracking prevention settings.\n"
+                    "2. Clear browsing data as needed.\n"
+                    "3. Audit extensions and remove anything unused.\n"
+                    "4. Check password monitor and security alerts.",
+                    "Copied the privacy checklist.",
+                ),
+            ),
+            Module(
+                key="flags",
+                title="Performance Flags Reference",
+                category="Productivity",
+                summary="Copy a short reference of commonly reviewed Edge flags and diagnostic pages.",
+                action_label="Copy",
+                action=lambda: self.copy_text(
+                    "Edge Diagnostics Reference\n"
+                    "edge://settings/system\n"
+                    "edge://gpu\n"
+                    "edge://discards\n"
+                    "edge://version\n"
+                    "Review each page before changing any setting.",
+                    "Copied the Edge diagnostics reference.",
+                ),
+            ),
+            Module(
+                key="workspace",
+                title="Open Work Tabs",
+                category="Workspace",
+                summary="Open a compact three-tab workspace: Xyrex, GitHub, and ChatGPT.",
+                action_label="Open",
+                action=self.open_workspace,
+            ),
+            Module(
+                key="notes",
+                title="Copy Session Notes Template",
+                category="Workspace",
+                summary="Copy a clean notes template for browser testing or debugging sessions.",
+                action_label="Copy",
+                action=lambda: self.copy_text(
+                    "Session Notes\n"
+                    "- Goal:\n"
+                    "- Current issue:\n"
+                    "- Reproduction steps:\n"
+                    "- Expected result:\n"
+                    "- Actual result:\n"
+                    "- Next action:",
+                    "Copied the session notes template.",
+                ),
+            ),
+        ]
 
-        self.search = ctk.CTkEntry(top, placeholder_text="Search any module", width=220)
-        self.search.pack(side="left", padx=10)
-        self.search.bind("<KeyRelease>", self.filter_modules)
+    def build_layout(self) -> None:
+        self.build_header()
+        self.build_sidebar()
+        self.build_main_panel()
+        self.build_footer()
 
-        # Sidebar
-        side = ctk.CTkFrame(self, width=280)
-        side.pack(side="left", fill="y", padx=8, pady=8)
-        ctk.CTkLabel(side, text="48 REAL-ACTION Modules", font=ctk.CTkFont(size=18)).pack(pady=10)
+    def build_header(self) -> None:
+        header = ctk.CTkFrame(self, fg_color=THEME["panel"], corner_radius=18, border_width=1, border_color=THEME["border"])
+        header.grid(row=0, column=0, columnspan=2, sticky="nsew", padx=16, pady=(16, 10))
+        header.grid_columnconfigure(0, weight=1)
 
-        self.module_list = ctk.CTkScrollableFrame(side)
-        self.module_list.pack(fill="both", expand=True, padx=8)
-        self.populate_modules()
+        title_wrap = ctk.CTkFrame(header, fg_color="transparent")
+        title_wrap.grid(row=0, column=0, sticky="w", padx=18, pady=14)
+        ctk.CTkLabel(
+            title_wrap,
+            text="Xyrex Edge Enhancer",
+            text_color=THEME["text"],
+            font=ctk.CTkFont(size=28, weight="bold"),
+        ).pack(anchor="w")
+        ctk.CTkLabel(
+            title_wrap,
+            text="Compact, responsive browser helpers styled after the Xyrex palette.",
+            text_color=THEME["muted"],
+            font=ctk.CTkFont(size=13),
+        ).pack(anchor="w", pady=(4, 0))
 
-        # Main area
-        self.tabs = ctk.CTkTabview(self)
-        self.tabs.pack(fill="both", expand=True, padx=8)
-        for t in ["📊 Home", "🔥 Active", "📜 Live Log"]:
-            self.tabs.add(t)
+        actions = ctk.CTkFrame(header, fg_color="transparent")
+        actions.grid(row=0, column=1, sticky="e", padx=18, pady=14)
+        ctk.CTkButton(actions, text="Detect Edge", command=self.detect_edge_processes, width=120, fg_color=THEME["card"], hover_color=THEME["panel_alt"], border_width=1, border_color=THEME["border"]).pack(side="left", padx=(0, 8))
+        ctk.CTkButton(actions, text="Launch Edge", command=self.launch_edge, width=120, fg_color=THEME["accent"], hover_color=THEME["accent_soft"], text_color=THEME["bg"]).pack(side="left")
 
-        home = self.tabs.tab("📊 Home")
-        self.big_status = ctk.CTkLabel(home, text="👋 Joseph • Click any button — real things will happen!", font=ctk.CTkFont(size=18))
-        self.big_status.pack(pady=40)
-        ctk.CTkButton(home, text="🧪 Test One Random Module", command=self.random_real_action).pack(pady=10)
+    def build_sidebar(self) -> None:
+        sidebar = ctk.CTkFrame(self, width=290, fg_color=THEME["panel"], corner_radius=18, border_width=1, border_color=THEME["border"])
+        sidebar.grid(row=1, column=0, sticky="nsew", padx=(16, 10), pady=(0, 10))
+        sidebar.grid_propagate(False)
+        sidebar.grid_rowconfigure(4, weight=1)
 
-        self.active_scroll = ctk.CTkScrollableFrame(self.tabs.tab("🔥 Active"))
-        self.active_scroll.pack(fill="both", expand=True)
+        ctk.CTkLabel(sidebar, text="Controls", text_color=THEME["text"], font=ctk.CTkFont(size=20, weight="bold")).grid(row=0, column=0, sticky="w", padx=16, pady=(16, 8))
 
-        # Log (created early)
-        self.log_widget = scrolledtext.ScrolledText(self, height=9, bg="#0a0a0a", fg="#00ffaa", font=("Consolas", 10))
-        self.log_widget.pack(fill="x", side="bottom", padx=8, pady=5)
+        self.search_var = ctk.StringVar(value=self.state.get("search", ""))
+        search = ctk.CTkEntry(
+            sidebar,
+            textvariable=self.search_var,
+            placeholder_text="Search modules",
+            fg_color=THEME["card"],
+            border_color=THEME["border"],
+            text_color=THEME["text"],
+        )
+        search.grid(row=1, column=0, sticky="ew", padx=16)
+        search.bind("<KeyRelease>", lambda _event: self.apply_filters())
 
-        # Bottom bar
-        bot = ctk.CTkFrame(self)
-        bot.pack(fill="x", side="bottom")
-        ctk.CTkButton(bot, text="Toggle All 48", command=self.toggle_all).pack(side="left", padx=10)
-        ctk.CTkButton(bot, text="💾 Save Everything", command=self.save_all).pack(side="left", padx=10)
-        self.edge_status = ctk.CTkLabel(bot, text="🔴 Edge not attached")
-        self.edge_status.pack(side="right", padx=20)
+        categories = ["All", "Browser", "Quick Links", "Productivity", "Workspace"]
+        self.category_var = ctk.StringVar(value=self.state.get("last_category", "All"))
+        selector = ctk.CTkOptionMenu(
+            sidebar,
+            values=categories,
+            variable=self.category_var,
+            command=lambda _choice: self.apply_filters(),
+            fg_color=THEME["card"],
+            button_color=THEME["accent"],
+            button_hover_color=THEME["accent_soft"],
+            text_color=THEME["text"],
+            dropdown_fg_color=THEME["panel_alt"],
+            dropdown_hover_color=THEME["card"],
+        )
+        selector.grid(row=2, column=0, sticky="ew", padx=16, pady=12)
 
-        keyboard.add_hotkey("ctrl+alt+e", self.show)
-        keyboard.add_hotkey("ctrl+alt+f", self.fire_all_active)
-        self.protocol("WM_DELETE_WINDOW", self.on_close)
+        stats = ctk.CTkFrame(sidebar, fg_color=THEME["card"], corner_radius=16)
+        stats.grid(row=3, column=0, sticky="ew", padx=16, pady=(0, 12))
+        self.edge_count_label = ctk.CTkLabel(stats, text="Edge processes: 0", text_color=THEME["text"], font=ctk.CTkFont(size=15, weight="bold"))
+        self.edge_count_label.pack(anchor="w", padx=14, pady=(12, 4))
+        self.module_count_label = ctk.CTkLabel(stats, text="Visible modules: 0", text_color=THEME["muted"], font=ctk.CTkFont(size=13))
+        self.module_count_label.pack(anchor="w", padx=14, pady=(0, 12))
 
-        self.refresh_active_list()
+        self.module_list = ctk.CTkScrollableFrame(sidebar, fg_color="transparent")
+        self.module_list.grid(row=4, column=0, sticky="nsew", padx=12, pady=(0, 12))
 
-    def populate_modules(self):
-        for name, data in self.modules.items():
-            row = ctk.CTkFrame(self.module_list)
-            row.pack(fill="x", pady=1)
-            sw = ctk.CTkSwitch(row, text=f"{data['icon']} {name}", command=lambda n=name: self.toggle_switch(n))
-            sw.pack(side="left", padx=8)
-            if data["active"]: sw.select()
-            ctk.CTkButton(row, text="▶", width=40, command=data["func"]).pack(side="right", padx=5)
+        ctk.CTkButton(sidebar, text="Save preferences", command=self.save_state, fg_color=THEME["card"], hover_color=THEME["panel_alt"], border_width=1, border_color=THEME["border"]).grid(row=5, column=0, sticky="ew", padx=16, pady=(0, 16))
 
-    def toggle_switch(self, name):
-        self.modules[name]["active"] = not self.modules[name]["active"]
-        self.log(f"{'✅ ON' if self.modules[name]['active'] else '❌ OFF'} {name}")
+    def build_main_panel(self) -> None:
+        main = ctk.CTkFrame(self, fg_color=THEME["panel_alt"], corner_radius=18, border_width=1, border_color=THEME["border"])
+        main.grid(row=1, column=1, sticky="nsew", padx=(0, 16), pady=(0, 10))
+        main.grid_columnconfigure(0, weight=1)
+        main.grid_rowconfigure(1, weight=1)
+        main.grid_rowconfigure(2, weight=1)
 
-    def refresh_active_list(self):
-        for w in self.active_scroll.winfo_children():
-            w.destroy()
-        for name, data in self.modules.items():
-            if data["active"]:
-                f = ctk.CTkFrame(self.active_scroll)
-                f.pack(fill="x", pady=2, padx=8)
-                ctk.CTkLabel(f, text=f"{data['icon']} {name}").pack(side="left", padx=10)
-                ctk.CTkButton(f, text="▶ REAL ACTION", command=data["func"]).pack(side="right")
+        hero = ctk.CTkFrame(main, fg_color=THEME["card"], corner_radius=16)
+        hero.grid(row=0, column=0, sticky="ew", padx=16, pady=16)
+        hero.grid_columnconfigure(0, weight=1)
+        self.hero_title = ctk.CTkLabel(hero, text="Select a module", text_color=THEME["text"], font=ctk.CTkFont(size=24, weight="bold"))
+        self.hero_title.grid(row=0, column=0, sticky="w", padx=18, pady=(16, 4))
+        self.hero_summary = ctk.CTkLabel(hero, text="Choose an item from the left to see what it does.", text_color=THEME["muted"], justify="left", wraplength=620, font=ctk.CTkFont(size=14))
+        self.hero_summary.grid(row=1, column=0, sticky="w", padx=18, pady=(0, 16))
+        self.hero_button = ctk.CTkButton(hero, text="Run action", command=self.run_selected_module, width=140, fg_color=THEME["accent"], hover_color=THEME["accent_soft"], text_color=THEME["bg"], state="disabled")
+        self.hero_button.grid(row=0, column=1, rowspan=2, sticky="e", padx=18)
 
-    def log(self, msg):
-        ts = datetime.now().strftime("%H:%M:%S")
-        self.log_widget.insert("end", f"[{ts}] {msg}\n")
-        self.log_widget.see("end")
+        tips = ctk.CTkTextbox(main, fg_color=THEME["card"], border_color=THEME["border"], border_width=1, text_color=THEME["text"], wrap="word")
+        tips.grid(row=1, column=0, sticky="nsew", padx=16, pady=(0, 12))
+        tips.insert(
+            "1.0",
+            "Xyrex style notes\n\n"
+            "• Dark layered panels with periwinkle highlights.\n"
+            "• Smaller layout to avoid oversized controls.\n"
+            "• Safer actions: links, clipboard helpers, and process checks only.\n"
+            "• No global hotkeys, mass automation, or disruptive background tasks.",
+        )
+        tips.configure(state="disabled")
 
-    def auto_detect_edge(self):
-        count = sum(1 for p in psutil.process_iter() if p.name() and 'msedge' in p.name().lower())
-        self.edge_status.configure(text=f"🟢 {count} Edge windows found")
-        self.big_status.configure(text=f"✅ Detected {count} Edge • All modules armed")
-        self.log(f"🔍 Real Edge detection: {count} processes")
+        self.log_box = ctk.CTkTextbox(main, fg_color=THEME["bg_alt"], border_color=THEME["border"], border_width=1, text_color=THEME["accent_soft"], wrap="word")
+        self.log_box.grid(row=2, column=0, sticky="nsew", padx=16, pady=(0, 16))
+        self.log_box.configure(state="disabled")
 
-    def launch_edge(self):
-        if SELENIUM_OK:
-            try:
-                opts = EdgeOptions()
-                opts.add_argument("--start-maximized")
-                opts.add_experimental_option("detach", True)
-                self.driver = webdriver.Edge(service=EdgeService(EdgeChromiumDriverManager().install()), options=opts)
-                self.driver.get("https://www.bing.com")
-                self.log("🎉 Real controlled Edge launched!")
-                self.edge_status.configure(text="🟢 Selenium Edge LIVE")
-            except:
-                webbrowser.open("https://bing.com")
-                self.log("🌐 Normal Edge opened (Selenium not available)")
+    def build_footer(self) -> None:
+        footer = ctk.CTkFrame(self, fg_color="transparent")
+        footer.grid(row=2, column=0, columnspan=2, sticky="ew", padx=16, pady=(0, 14))
+        self.status_label = ctk.CTkLabel(footer, text="Ready.", text_color=THEME["muted"], font=ctk.CTkFont(size=12))
+        self.status_label.pack(side="left")
+
+    def apply_filters(self) -> None:
+        search_term = self.search_var.get().strip().lower()
+        category = self.category_var.get()
+        self.filtered_modules = [
+            module
+            for module in self.modules
+            if (category == "All" or module.category == category)
+            and (not search_term or search_term in f"{module.title} {module.summary} {module.category}".lower())
+        ]
+        self.render_module_cards()
+        self.module_count_label.configure(text=f"Visible modules: {len(self.filtered_modules)}")
+        if self.selected_module not in self.filtered_modules:
+            self.select_module(self.filtered_modules[0] if self.filtered_modules else None)
+
+    def render_module_cards(self) -> None:
+        for card in self.module_cards:
+            card.destroy()
+        self.module_cards.clear()
+
+        for module in self.filtered_modules:
+            card = ctk.CTkFrame(self.module_list, fg_color=THEME["card"], corner_radius=14, border_width=1, border_color=THEME["border"])
+            card.pack(fill="x", padx=4, pady=5)
+            card.grid_columnconfigure(0, weight=1)
+
+            title = ctk.CTkButton(
+                card,
+                text=module.title,
+                anchor="w",
+                command=lambda item=module: self.select_module(item),
+                fg_color="transparent",
+                hover_color=THEME["panel_alt"],
+                text_color=THEME["text"],
+                font=ctk.CTkFont(size=14, weight="bold"),
+            )
+            title.grid(row=0, column=0, sticky="ew", padx=10, pady=(8, 0))
+            ctk.CTkLabel(card, text=module.category, text_color=THEME["accent_soft"], font=ctk.CTkFont(size=11)).grid(row=1, column=0, sticky="w", padx=12)
+            ctk.CTkLabel(card, text=module.summary, text_color=THEME["muted"], justify="left", wraplength=220, font=ctk.CTkFont(size=12)).grid(row=2, column=0, sticky="ew", padx=12, pady=(2, 8))
+            action = ctk.CTkButton(card, text=module.action_label, width=78, command=lambda item=module: self.execute_module(item), fg_color=THEME["accent"], hover_color=THEME["accent_soft"], text_color=THEME["bg"])
+            action.grid(row=0, column=1, rowspan=3, padx=10, pady=10)
+            self.module_cards.append(card)
+
+    def select_module(self, module: Module | None) -> None:
+        self.selected_module = module
+        if module is None:
+            self.hero_title.configure(text="No modules match the current filter")
+            self.hero_summary.configure(text="Try another search term or category.")
+            self.hero_button.configure(state="disabled", text="Run action")
+            return
+        self.hero_title.configure(text=module.title)
+        self.hero_summary.configure(text=f"{module.summary}\n\nCategory: {module.category}")
+        self.hero_button.configure(state="normal", text=module.action_label)
+
+    def run_selected_module(self) -> None:
+        if self.selected_module is not None:
+            self.execute_module(self.selected_module)
+
+    def execute_module(self, module: Module) -> None:
+        self.select_module(module)
+        try:
+            module.action()
+            self.status_label.configure(text=f"Last action: {module.title}")
+        except Exception as exc:  # pragma: no cover - UI fallback
+            self.log(f"Error while running '{module.title}': {exc}")
+            messagebox.showerror("Action failed", f"{module.title} could not complete.\n\n{exc}")
+
+    def refresh_stats(self) -> None:
+        edge_count = self.get_edge_process_count()
+        self.edge_count_label.configure(text=f"Edge processes: {edge_count}")
+
+    def get_edge_process_count(self) -> int:
+        count = 0
+        for proc in psutil.process_iter(["name"]):
+            name = (proc.info.get("name") or "").lower()
+            if "msedge" in name:
+                count += 1
+        return count
+
+    def detect_edge_processes(self) -> None:
+        count = self.get_edge_process_count()
+        self.edge_count_label.configure(text=f"Edge processes: {count}")
+        self.log(f"Detected {count} Edge process{'es' if count != 1 else ''}.")
+        if count:
+            self.status_label.configure(text="Edge is currently running.")
         else:
-            webbrowser.open("https://bing.com")
-            self.log("🌐 Edge opened via browser")
+            self.status_label.configure(text="No Edge processes detected.")
 
-    def fire_all_active(self):
-        self.log("🌟 FIRING ALL ACTIVE MODULES — real actions happening now!")
-        for data in self.modules.values():
-            if data["active"]:
-                try:
-                    data["func"]()
-                except:
-                    self.log("⚠️ One module skipped (still safe)")
-        messagebox.showinfo("🔥 MASS ACTION COMPLETE", "You just saw 30+ real things happen!\nEdge + computer fully enhanced.")
+    def launch_edge(self) -> None:
+        commands = [
+            ["msedge"],
+            ["microsoft-edge"],
+            ["cmd", "/c", "start", "", "microsoft-edge:https://xyrex.lol"],
+        ]
+        for command in commands:
+            try:
+                subprocess.Popen(command)
+                self.log("Launch request sent to Microsoft Edge.")
+                self.status_label.configure(text="Launch request sent.")
+                return
+            except OSError:
+                continue
+        webbrowser.open("https://xyrex.lol")
+        self.log("Edge was unavailable, so the default browser opened Xyrex.lol instead.")
+        self.status_label.configure(text="Opened Xyrex.lol in the default browser.")
 
-    def random_real_action(self):
-        name = random.choice(list(self.modules.keys()))
-        self.modules[name]["func"]()
-        self.log(f"🎲 Random real action: {name}")
+    def open_url(self, url: str, log_message: str) -> None:
+        webbrowser.open_new_tab(url)
+        self.log(log_message)
 
-    def toggle_all(self):
-        for data in self.modules.values():
-            data["active"] = not data["active"]
-        self.refresh_active_list()
-        self.log("🔄 All 48 toggled • Ready for next test")
+    def copy_text(self, value: str, log_message: str) -> None:
+        pyperclip.copy(value)
+        self.log(log_message)
+        self.status_label.configure(text="Copied to clipboard.")
 
-    def save_all(self):
-        data = {k: v["active"] for k, v in self.modules.items()}
-        with open("reward_enhancer_save.json", "w") as f:
-            json.dump(data, f)
-        self.log("💾 Full save completed • Your Reward Automater profile saved")
-        messagebox.showinfo("Saved", "Everything saved!\nYou now have a fully working reward enhancer.")
+    def open_workspace(self) -> None:
+        for url in ("https://xyrex.lol", "https://github.com", "https://chatgpt.com"):
+            webbrowser.open_new_tab(url)
+        self.log("Opened the default three-tab workspace.")
+        self.status_label.configure(text="Workspace opened.")
 
-    def filter_modules(self, event):
-        term = self.search.get().lower()
-        for widget in self.module_list.winfo_children():
-            widget.pack_forget() if term and term not in widget.winfo_children()[0].cget("text").lower() else widget.pack(fill="x", pady=1)
+    def log(self, message: str) -> None:
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        entry = f"[{timestamp}] {message}"
+        self.log_entries.append(entry)
+        self.log_entries = self.log_entries[-LOG_LIMIT:]
+        self.log_box.configure(state="normal")
+        self.log_box.delete("1.0", "end")
+        self.log_box.insert("1.0", "\n".join(self.log_entries))
+        self.log_box.configure(state="disabled")
 
-    def show(self):
-        self.deiconify()
-        self.focus_force()
-
-    def on_close(self):
-        self.save_all()
-        if self.driver:
-            try: self.driver.quit()
-            except: pass
+    def on_close(self) -> None:
+        try:
+            self.save_state()
+        except OSError:
+            pass
         self.destroy()
+
 
 if __name__ == "__main__":
     app = EdgeEnhancer()
+    app.protocol("WM_DELETE_WINDOW", app.on_close)
     app.mainloop()
-    print("\n❤️ Joseph — v5.0 is 100% real action now.\nEvery single module does something visible.\nEnjoy your ultimate Edge + Reward Automater!")
