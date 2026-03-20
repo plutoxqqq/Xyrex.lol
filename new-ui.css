@@ -373,7 +373,8 @@ body.new-ui-enabled .btn-danger {
 body.new-ui-enabled .filter-checkbox,
 body.new-ui-enabled .price-checkbox {
   border-color: color-mix(in srgb, var(--periwinkle-2) 58%, transparent);
-  background: color-mix(in srgb, var(--panel-2) 70%, var(--bg) 30%);
+  background: color-mix(in srgb, var(--panel-2) 84%, var(--bg) 16%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--periwinkle) 24%, transparent);
 }
 
 body.new-ui-enabled .filter-checkbox:checked,
@@ -414,14 +415,15 @@ body.new-ui-enabled .sidebar,
 body.new-ui-enabled .main-content,
 body.new-ui-enabled .script-textarea,
 body.new-ui-enabled .modal {
-  scrollbar-color: color-mix(in srgb, var(--periwinkle-2) 42%, transparent) transparent;
+  scrollbar-color: color-mix(in srgb, var(--periwinkle-2) 58%, transparent) color-mix(in srgb, var(--panel) 58%, transparent);
 }
 
 body.new-ui-enabled .sidebar::-webkit-scrollbar-thumb,
 body.new-ui-enabled .main-content::-webkit-scrollbar-thumb,
 body.new-ui-enabled .script-textarea::-webkit-scrollbar-thumb,
 body.new-ui-enabled .modal::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--periwinkle-2) 42%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--periwinkle-2) 76%, transparent), color-mix(in srgb, var(--periwinkle) 54%, transparent));
+  border: 2px solid color-mix(in srgb, var(--panel) 62%, transparent);
   border-radius: 999px;
 }
 

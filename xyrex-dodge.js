@@ -322,6 +322,8 @@
           selectedMode: GAME_MODES[remote.selectedMode] ? remote.selectedMode : this.data.selectedMode,
         };
         this.ensureTokenState();
+        this.previewModifier = this.data.selectedModifier;
+        this.previewPowerup = this.data.selectedPowerup;
         this.saveData();
         this.syncUi();
       } catch {
@@ -391,6 +393,7 @@
                 <div class="xy-dodge-mini-card"><span>AI Tokens</span><strong id="xyTokenCount">0</strong><small>Daily + purchased.</small></div>
                 <div class="xy-dodge-mini-card"><span>Story</span><strong id="xyStoryProgressLabel">0 / ${STORY_CHAPTERS.length}</strong><small>Sector progress.</small></div>
               </div>
+              <div id="xyBetaNotice" class="xy-dodge-toast" data-tone="warning" ${betaEnabled ? 'hidden' : ''}>Beta Features are disabled so turn them on in Settings to enable story mode additional game modes missions and the new responsive interface</div>
             </div>
           </section>
 
@@ -1109,6 +1112,7 @@
         this.storyChapter = this.resolveStoryChapter();
         this.flashStatus(`Story chapter cleared: ${chapter.title}.`, 'ok');
       }
+      this.pickups = alive;
     }
 
     updateParticles(dt) {
