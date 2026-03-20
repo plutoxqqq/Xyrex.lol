@@ -20,60 +20,61 @@
   };
 
   const MODIFIERS = {
-    Balanced: { price: 0, description: 'A stable all-round setup for every run', playerSpeed: 1, coinBonus: 1, pressure: 1, waveBonus: 1 },
-    'Rich Run': { price: 160, description: 'Higher coin gains for efficient survival runs', playerSpeed: 1, coinBonus: 1.35, pressure: 1.14, waveBonus: 1.08 },
-    Swift: { price: 125, description: 'Sharper lane swaps and faster response windows', playerSpeed: 1.1, coinBonus: 1, pressure: 1.06, waveBonus: 1 },
-    Zen: { price: 220, description: 'Slower movement with steadier pressure and safer pacing', playerSpeed: 0.9, coinBonus: 0.92, pressure: 0.92, waveBonus: 0.95 },
-    Challenger: { price: 260, description: 'Explosive scoring with intense obstacle pressure', playerSpeed: 1.05, coinBonus: 1.6, pressure: 1.3, waveBonus: 1.2 },
+    Balanced: { price: 0, description: 'A stable all-round setup for learning every mode.', playerSpeed: 1, coinBonus: 1, pressure: 1, waveBonus: 1 },
+    Swift: { price: 125, description: 'Sharper lane swaps and faster response windows.', playerSpeed: 1.2, coinBonus: 1, pressure: 1.08, waveBonus: 1 },
+    Fortune: { price: 180, description: 'Higher coin gains for efficient survival runs.', playerSpeed: 1, coinBonus: 1.35, pressure: 1.14, waveBonus: 1.08 },
+    Bulwark: { price: 220, description: 'Slower movement, safer pacing, stronger shield synergy.', playerSpeed: 0.9, coinBonus: 0.92, pressure: 0.92, waveBonus: 0.95 },
+    Chaos: { price: 260, description: 'Explosive scoring with intense obstacle pressure.', playerSpeed: 1.1, coinBonus: 1.6, pressure: 1.3, waveBonus: 1.2 },
   };
 
   const POWERUPS = {
-    None: { price: 0, description: 'No active powerup effects' },
-    Quickstep: { price: 200, description: 'Instant lane snapping for precise dodges' },
-    'Block Slowdown': { price: 240, description: 'Slows dynamic difficulty ramping to reduce pressure spikes' },
-    'Shield Matrix': { price: 280, description: 'Start each run with one extra life' },
-    'Lucky Drift': { price: 190, description: 'Boosts run coin gains by 20%' },
+    None: { price: 0, description: 'No active powerup.' },
+    Quickstep: { price: 200, description: 'Instant lane snapping for precise dodges.' },
+    'Shield Matrix': { price: 280, description: 'Start each run with one extra life.' },
+    'Lucky Drift': { price: 190, description: 'Boosts run coin gains by 20%.' },
+    'Time Bloom': { price: 320, description: 'Briefly slows the field after every perfect streak.' },
+    'Magnet Pulse': { price: 240, description: 'Nearby pickups drift into your lane.' },
   };
 
   const GAME_MODES = {
     Classic: {
-      description: 'Pure lane-dodge survival with steady difficulty ramping',
+      description: 'Pure lane-dodge survival with steady difficulty ramping.',
       speed: 1,
       interval: 1,
       pickups: 0.45,
-      objective: 'Survive as long as possible and bank coins',
+      objective: 'Survive as long as possible and bank coins.',
       modeScore: 1,
     },
     Blitz: {
-      description: 'Fast dense waves with stronger score rewards',
+      description: 'Fast, dense waves with stronger score rewards.',
       speed: 1.22,
       interval: 0.78,
       pickups: 0.35,
-      objective: 'Push your reaction speed in short high-intensity sessions',
+      objective: 'Push your reaction speed in short high-intensity sessions.',
       modeScore: 1.35,
     },
     Gauntlet: {
-      description: 'Longer runs with elite hazard formations and reward spikes',
+      description: 'Longer runs with elite hazard formations and reward spikes.',
       speed: 1.08,
       interval: 0.92,
       pickups: 0.5,
-      objective: 'Clear elite waves and survive longer patterns',
+      objective: 'Clear elite waves and build long streaks.',
       modeScore: 1.5,
     },
     Harvest: {
-      description: 'More pickups less raw pressure and smoother farming routes',
+      description: 'More pickups, less raw pressure, and smoother farming routes.',
       speed: 0.95,
       interval: 1.08,
       pickups: 0.82,
-      objective: 'Farm coins and keep momentum high',
+      objective: 'Farm coins and keep your combo active.',
       modeScore: 0.95,
     },
     Story: {
-      description: 'Progress through handcrafted sectors objectives and dialogue',
+      description: 'Progress through handcrafted sectors, objectives, and dialogue.',
       speed: 1,
       interval: 1,
       pickups: 0.55,
-      objective: 'Finish every sector objective to complete the campaign',
+      objective: 'Finish every sector objective to complete the campaign.',
       modeScore: 1.15,
     },
   };
@@ -82,8 +83,8 @@
     {
       id: 'sector-01',
       title: 'Sector One: Wake Protocol',
-      briefing: 'The arena core is unstable so survive long enough to restore the first lane beacon',
-      objectiveLabel: 'Reach 25 score and collect 4 shards',
+      briefing: 'The arena core is unstable. Survive long enough to restore the first lane beacon.',
+      objectiveLabel: 'Reach 25 score and collect 4 shards.',
       targetScore: 25,
       targetPickups: 4,
       reward: 120,
@@ -91,17 +92,17 @@
     {
       id: 'sector-02',
       title: 'Sector Two: Crosswind Array',
-      briefing: 'Cross-lane turbulence is corrupting the route planner so hold a stable route under pressure',
-      objectiveLabel: 'Reach 40 score and collect 5 shards',
+      briefing: 'Cross-lane turbulence is corrupting the route planner. Maintain a clean combo under pressure.',
+      objectiveLabel: 'Reach 40 score and keep a combo streak of 10.',
       targetScore: 40,
-      targetPickups: 5,
+      targetCombo: 10,
       reward: 180,
     },
     {
       id: 'sector-03',
       title: 'Sector Three: Final Echo',
-      briefing: 'The final echo wall is closing so finish the run with a high score burst and a preserved shield',
-      objectiveLabel: 'Reach 60 score and finish with at least 1 life',
+      briefing: 'The final echo wall is closing. Finish the run with a high-score burst and a preserved shield.',
+      objectiveLabel: 'Reach 60 score and finish with at least 1 life.',
       targetScore: 60,
       requireLife: true,
       reward: 260,
@@ -109,10 +110,10 @@
   ];
 
   const MISSIONS = [
-    'Finish a run in any mode',
-    'Collect three energy shards in one run',
-    'Reach 18 score in one run',
-    'Use a powerup and finish above 20 score',
+    'Finish a run in any mode.',
+    'Collect three energy shards in one run.',
+    'Reach a combo streak of eight.',
+    'Use a powerup and finish above 20 score.',
   ];
 
   const DEFAULT_DATA = {
@@ -122,14 +123,7 @@
     totalRuns: 0,
     totalPickups: 0,
     longestCombo: 0,
-    missionsClaimed: {},
-    dailyProgress: {
-      dayKey: '',
-      runs: 0,
-      pickups: 0,
-      bestScore: 0,
-      usedPowerup: false,
-    },
+    missionsClaimed: [],
     ownedModifiers: ['Balanced'],
     selectedModifier: 'Balanced',
     ownedPowerups: [],
@@ -183,17 +177,18 @@
       .xy-dodge-shell button, .xy-dodge-shell select { font: inherit; }
       .xy-dodge-shell button { cursor: pointer; }
       .xy-dodge-shell[data-beta='false'] .xy-dodge-hero-copy,
+      .xy-dodge-shell[data-beta='false'] .xy-dodge-segmented,
+      .xy-dodge-shell[data-beta='false'] .xy-dodge-panel--mission,
       .xy-dodge-shell[data-beta='false'] .xy-dodge-panel--beta,
-      .xy-dodge-shell[data-beta='false'] .xy-dodge-panel--overview,
-      .xy-dodge-shell[data-beta='false'] .xy-dodge-kicker { display: none; }
+      .xy-dodge-shell[data-beta='false'] .xy-dodge-panel--overview { display: none; }
       .xy-dodge-hero, .xy-dodge-panel, .xy-dodge-board, .xy-dodge-modal-card {
         background: linear-gradient(180deg, ${THEMES.panelAlt}, ${THEMES.panel}); border: 1px solid ${THEMES.border};
         border-radius: 18px; box-shadow: ${THEMES.cardShadow};
       }
-      .xy-dodge-hero { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(240px, 0.8fr); gap: 12px; padding: 10px 14px; }
+      .xy-dodge-hero { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(240px, 0.85fr); gap: 12px; padding: 14px; }
       .xy-dodge-heading { display: grid; gap: 8px; align-content: start; }
       .xy-dodge-kicker { display: inline-flex; width: fit-content; padding: 5px 10px; border-radius: 999px; background: rgba(108,229,255,0.12); color: ${THEMES.accent}; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
-      .xy-dodge-heading h2 { margin: 0; font-size: clamp(24px, 3vw, 34px); line-height: 1.05; }
+      .xy-dodge-heading h2 { margin: 0; font-size: clamp(24px, 3vw, 34px); }
       .xy-dodge-heading p, .xy-dodge-panel p { margin: 0; color: ${THEMES.subtext}; line-height: 1.45; font-size: 13px; }
       .xy-dodge-stat-grid, .xy-dodge-quick-grid, .xy-dodge-mode-grid, .xy-dodge-shop-grid, .xy-dodge-meta-grid { display: grid; gap: 10px; }
       .xy-dodge-stat-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -202,29 +197,30 @@
       }
       .xy-dodge-chip span, .xy-dodge-mini-card span { display:block; font-size:11px; color:${THEMES.subtext}; text-transform:uppercase; letter-spacing:.04em; }
       .xy-dodge-chip strong, .xy-dodge-mode-card strong, .xy-dodge-mini-card strong { display: block; font-size: 17px; margin-top: 4px; }
-      .xy-dodge-layout { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.74fr); gap: 12px; align-items: start; }
-      .xy-dodge-board { padding: 12px; display: grid; gap: 10px; min-width: 0; }
+      .xy-dodge-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.78fr); gap: 12px; align-items: start; }
+      .xy-dodge-board { padding: 12px; display: grid; gap: 10px; }
       .xy-dodge-toolbar, .xy-dodge-control-row, .xy-dodge-mobile-controls, .xy-dodge-segmented { display: flex; flex-wrap: wrap; gap: 8px; }
       .xy-dodge-toolbar { justify-content: space-between; align-items: center; }
       .xy-dodge-badges { display: flex; flex-wrap: wrap; gap: 6px; }
-      .xy-dodge-badge { padding: 6px 10px; border-radius: 999px; background: rgba(141,132,255,0.12); color: ${THEMES.text}; font-size: 12px; }
+      .xy-dodge-badge { padding: 6px 10px; border-radius: 999px; background: rgba(141,132,255,0.12); color: ${THEMES.text}; font-size: 12px; display:inline-flex; align-items:center; justify-content:center; text-align:center; min-height:30px; line-height:1.2; }
       .xy-dodge-canvas-wrap { position: relative; background: radial-gradient(circle at top, rgba(108,229,255,0.08), transparent 40%), ${THEMES.track}; border-radius: 16px; overflow: hidden; min-height: 250px; }
       .xy-dodge-canvas { display: block; width: 100%; height: auto; aspect-ratio: 960 / 620; border-radius: 16px; }
       .xy-dodge-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(2, 7, 17, 0.64); backdrop-filter: blur(6px); }
       .xy-dodge-overlay[hidden] { display: none; }
       .xy-dodge-modal-card { max-width: 500px; width: min(100%, 500px); padding: 20px; }
-      .xy-dodge-side { display: grid; gap: 12px; min-width: 0; align-content: start; }
-      .xy-dodge-panel { padding: 12px; display: grid; gap: 10px; min-width: 0; overflow: hidden; }
+      .xy-dodge-side { display: grid; gap: 12px; }
+      .xy-dodge-panel { padding: 12px; display: grid; gap: 10px; }
       .xy-dodge-panel h3, .xy-dodge-panel h4 { margin: 0; font-size: 16px; }
       .xy-dodge-button, .xy-dodge-select, .xy-dodge-mobile-controls button {
-        border: 1px solid rgba(108,229,255,0.18); border-radius: 12px; background: rgba(14, 22, 44, 0.98); color: ${THEMES.text};
-        min-height: 38px; min-width: 0; width: 100%; padding: 8px 12px; transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease, box-shadow 0.2s ease;
+        border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; background: rgba(255,255,255,0.06); color: ${THEMES.text};
+        min-height: 38px; padding: 8px 12px; transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease, box-shadow 0.2s ease;
       }
-      .xy-dodge-button:hover, .xy-dodge-select:hover, .xy-dodge-mobile-controls button:hover { transform: translateY(-1px); background: rgba(22, 34, 67, 0.98); }
+      .xy-dodge-button:hover, .xy-dodge-select:hover, .xy-dodge-mobile-controls button:hover { transform: translateY(-1px); background: rgba(255,255,255,0.1); }
       .xy-dodge-button--primary { background: linear-gradient(135deg, rgba(108,229,255,0.22), rgba(141,132,255,0.18)); border-color: rgba(108,229,255,0.28); }
       .xy-dodge-button--danger { background: rgba(255,111,159,0.16); }
       .xy-dodge-button[disabled], .xy-dodge-select[disabled] { opacity: 0.55; cursor: not-allowed; transform: none; }
       .xy-dodge-mode-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .xy-dodge-quick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .xy-dodge-mode-card[data-active='true'], .xy-dodge-segmented button[data-active='true'] { border-color: rgba(108,229,255,0.5); box-shadow: inset 0 0 0 1px rgba(108,229,255,0.22), 0 0 22px rgba(108,229,255,0.08); }
       .xy-dodge-story-card[data-locked='true'] { opacity: 0.65; }
       .xy-dodge-progress { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
@@ -234,15 +230,6 @@
       .xy-dodge-mobile-controls { justify-content: center; }
       .xy-dodge-mobile-controls[hidden] { display: none; }
       .xy-dodge-mobile-controls button { flex: 1; min-width: 120px; font-size: 18px; }
-      .xy-dodge-select { appearance: none; -webkit-appearance:none; color-scheme: dark; background-image: linear-gradient(45deg, transparent 50%, ${THEMES.subtext} 50%), linear-gradient(135deg, ${THEMES.subtext} 50%, transparent 50%); background-position: calc(100% - 18px) calc(50% - 3px), calc(100% - 12px) calc(50% - 3px); background-size: 6px 6px, 6px 6px; background-repeat: no-repeat; padding-right: 32px; }
-      .xy-dodge-select option { background: #111a34; color: ${THEMES.text}; }
-      .xy-dodge-select:focus { outline: 2px solid rgba(108,229,255,0.3); outline-offset: 2px; box-shadow: 0 0 0 3px rgba(108,229,255,0.14); }
-      .xy-dodge-panel input[type='checkbox'] { appearance:none; -webkit-appearance:none; width:16px; height:16px; margin:0 8px 0 0; border:1px solid rgba(141,156,255,0.72); border-radius:4px; background:rgba(16,24,49,0.96); box-shadow:inset 0 0 0 1px rgba(108,229,255,0.12); vertical-align:middle; position:relative; }
-      .xy-dodge-panel input[type='checkbox']:checked { background:${THEMES.accent2}; border-color:${THEMES.accent}; }
-      .xy-dodge-panel input[type='checkbox']:checked::after { content:'✓'; position:absolute; left:3px; top:-1px; color:#061121; font-size:11px; font-weight:800; }
-      .xy-dodge-panel label { display:flex; align-items:center; color:${THEMES.subtext}; }
-      .xy-dodge-control-row > .xy-dodge-button { width: auto; flex: 1 1 0; }
-      .xy-dodge-shell-classic .xy-dodge-mini-card strong { font-size: 18px; }
       .xy-dodge-toast { padding: 8px 12px; border-radius: 12px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); font-size: 13px; }
       .xy-dodge-toast[data-tone='warning'] { background: rgba(255, 209, 102, 0.13); }
       .xy-dodge-toast[data-tone='danger'] { background: rgba(255, 111, 159, 0.18); }
@@ -253,7 +240,7 @@
       @keyframes xyPulse { 0% { transform: scale(.98); } 100% { transform: scale(1); } }
       @media (max-width: 1120px) { .xy-dodge-layout, .xy-dodge-hero { grid-template-columns: 1fr; } .xy-dodge-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
       @media (max-width: 720px) {
-        .xy-dodge-mode-grid, .xy-dodge-stat-grid, .xy-dodge-compact-grid { grid-template-columns: 1fr; }
+        .xy-dodge-mode-grid, .xy-dodge-stat-grid, .xy-dodge-compact-grid, .xy-dodge-quick-grid { grid-template-columns: 1fr; }
         .xy-dodge-shell { gap: 10px; }
         .xy-dodge-panel, .xy-dodge-board, .xy-dodge-hero { padding: 12px; border-radius: 16px; }
       }
@@ -281,8 +268,6 @@
       this.bestComboRun = 0;
       this.storyPickups = 0;
       this.missionIndex = 0;
-      this.previewModifier = this.data.selectedModifier;
-      this.previewPowerup = this.data.selectedPowerup;
       this.spawnTimer = 0;
       this.pickupTimer = 0;
       this.particles = [];
@@ -307,7 +292,7 @@
         selectedModifier: MODIFIERS[loaded.selectedModifier] ? loaded.selectedModifier : 'Balanced',
         selectedPowerup: POWERUPS[loaded.selectedPowerup] ? loaded.selectedPowerup : 'None',
         selectedMode: GAME_MODES[loaded.selectedMode] ? loaded.selectedMode : 'Classic',
-        missionsClaimed: loaded.missionsClaimed && typeof loaded.missionsClaimed === 'object' ? loaded.missionsClaimed : {},
+        missionsClaimed: Array.isArray(loaded.missionsClaimed) ? loaded.missionsClaimed : [],
         storyRewardsClaimed: Array.isArray(loaded.storyRewardsClaimed) ? loaded.storyRewardsClaimed : [],
         activeCheats: Array.isArray(loaded.activeCheats) ? loaded.activeCheats.map(item => String(item).toLowerCase()) : [],
       };
@@ -367,6 +352,14 @@
     isBetaEnabled() {
       return betaFeaturesEnabled();
     }
+    isTouchDevice() {
+      const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+      const noHover = window.matchMedia('(hover: none)').matches;
+      const touchPoints = (navigator.maxTouchPoints || 0) > 0;
+      const mobileAgent = /android|iphone|ipad|ipod|tablet/i.test(navigator.userAgent || '');
+      return coarsePointer && noHover && touchPoints && mobileAgent;
+    }
+
 
     activeCheatSet() {
       return new Set((this.data.activeCheats || []).map(item => String(item).toLowerCase()).filter(Boolean));
@@ -380,26 +373,25 @@
       const betaEnabled = this.isBetaEnabled();
       const visibleMode = betaEnabled ? this.data.selectedMode : 'Classic';
       const classicProgress = this.data.bestScore || 0;
-      const bankedCoins = this.data.coins || 0;
       this.mount.innerHTML = `
         <section class="xy-dodge-shell" data-beta="${betaEnabled}" aria-label="Xyrex Dodge">
           <section class="xy-dodge-hero">
             <div class="xy-dodge-heading">
               <span class="xy-dodge-kicker">${betaEnabled ? 'Beta Features active' : 'Classic layout active'}</span>
               <h2>Xyrex Dodge</h2>
-              <p class="xy-dodge-hero-copy">The beta overhaul is now tighter and easier to read with compact tabs animations and progression features that stay gated behind Beta Features</p>
+              <p class="xy-dodge-hero-copy">The beta overhaul is now tighter and easier to read, with compact tabs, animations, and progression features that stay gated behind Beta Features.</p>
               <div class="xy-dodge-stat-grid">
-                <div class="xy-dodge-chip"><span>Coins</span><strong id="xyBank">0</strong></div>
+                <div class="xy-dodge-chip"><span>Bank</span><strong id="xyBank">0</strong></div>
                 <div class="xy-dodge-chip"><span>Best</span><strong id="xyBest">0</strong></div>
                 <div class="xy-dodge-chip"><span>Runs</span><strong id="xyRuns">0</strong></div>
-                <div class="xy-dodge-chip"><span>Powerup</span><strong id="xyPowerupLabel">${this.data.selectedPowerup}</strong></div>
+                <div class="xy-dodge-chip"><span>Combo</span><strong id="xyComboBest">0</strong></div>
               </div>
             </div>
             <div class="xy-dodge-panel xy-dodge-panel--overview">
               <div class="xy-dodge-meta-grid">
-                <div class="xy-dodge-mini-card"><span>Mode</span><strong id="xyCurrentModeLabel">${visibleMode}</strong><small id="xyModeObjective">Survive and score</small></div>
-                <div class="xy-dodge-mini-card"><span>AI Tokens</span><strong id="xyTokenCount">0</strong><small>Daily + purchased</small></div>
-                <div class="xy-dodge-mini-card"><span>Story</span><strong id="xyStoryProgressLabel">0 / ${STORY_CHAPTERS.length}</strong><small>Sector progress</small></div>
+                <div class="xy-dodge-mini-card"><span>Mode</span><strong id="xyCurrentModeLabel">${visibleMode}</strong><small id="xyModeObjective">Survive and score.</small></div>
+                <div class="xy-dodge-mini-card"><span>AI Tokens</span><strong id="xyTokenCount">0</strong><small>Daily + purchased.</small></div>
+                <div class="xy-dodge-mini-card"><span>Story</span><strong id="xyStoryProgressLabel">0 / ${STORY_CHAPTERS.length}</strong><small>Sector progress.</small></div>
               </div>
               <div id="xyBetaNotice" class="xy-dodge-toast" data-tone="warning" ${betaEnabled ? 'hidden' : ''}>Beta Features are disabled so turn them on in Settings to enable story mode additional game modes missions and the new responsive interface</div>
             </div>
@@ -411,6 +403,7 @@
                 <div class="xy-dodge-badges">
                   <span class="xy-dodge-badge" id="xyRunScore">Score: 0</span>
                   <span class="xy-dodge-badge" id="xyRunCoins">Coins: 0</span>
+                  <span class="xy-dodge-badge" id="xyRunCombo">Combo: 0</span>
                   <span class="xy-dodge-badge" id="xyRunLives">Lives: 1</span>
                 </div>
                 <div class="xy-dodge-control-row">
@@ -426,23 +419,48 @@
                 <button type="button" class="xy-dodge-button" data-mobile-move="left">◀ Move Left</button>
                 <button type="button" class="xy-dodge-button" data-mobile-move="right">Move Right ▶</button>
               </div>
-              <div class="xy-dodge-segmented" id="xyTabRow">
-                <button class="xy-dodge-button" data-tab="modes" data-active="true" type="button">Modes</button>
-                <button class="xy-dodge-button" data-tab="progression" data-active="false" type="button">Progress</button>
-                <button class="xy-dodge-button" data-tab="loadout" data-active="false" type="button">Loadout</button>
-              </div>
-              <div id="xyTabContent"></div>
+              ${betaEnabled ? `
+                <div class="xy-dodge-segmented" id="xyTabRow">
+                  <button class="xy-dodge-button" data-tab="modes" data-active="true" type="button">Modes</button>
+                  <button class="xy-dodge-button" data-tab="progression" data-active="false" type="button">Progress</button>
+                  <button class="xy-dodge-button" data-tab="loadout" data-active="false" type="button">Loadout</button>
+                </div>
+                <div id="xyTabContent"></div>
+              ` : `
+                <div class="xy-dodge-panel">
+                  <div class="xy-dodge-compact-grid">
+                    <div class="xy-dodge-mini-card"><span>Progress boost</span><strong>${classicProgress}</strong><small>Your best score still powers long-term progression.</small></div>
+                    <div class="xy-dodge-mini-card"><span>Selected modifier</span><strong>${this.data.selectedModifier}</strong><small>Classic keeps progression boosts without the beta mode switcher.</small></div>
+                  </div>
+                </div>
+              `}
             </section>
 
             <aside class="xy-dodge-side">
               <section class="xy-dodge-panel">
                 <h3>Status</h3>
                 <div id="xyStatus" class="xy-dodge-toast">Ready</div>
-                <small>${betaEnabled ? 'Compact beta layout enabled with advanced progression' : 'Beta Features are disabled so Dodge stays on the classic layout'}</small>
+                <small>${betaEnabled ? 'Compact beta layout enabled. Tabs, animations, and advanced progression are active.' : 'Beta Features are disabled, so Dodge stays on the compact classic layout with only progression boosts.'}</small>
               </section>
               <section class="xy-dodge-panel xy-dodge-panel--mission">
                 <h3>Mission</h3>
                 <div id="xyMissionCard"></div>
+              </section>
+              <section class="xy-dodge-panel">
+                <h3>Loadout</h3>
+                <div class="xy-dodge-compact-grid">
+                  <div>
+                    <small>Modifier</small>
+                    <select id="xyModifierSelect" class="xy-dodge-select">${Object.entries(MODIFIERS).map(([name, item]) => `<option value="${name}">${name}${item.price ? ` · ${item.price}c` : ''}</option>`).join('')}</select>
+                    <button id="xyBuyModifierBtn" class="xy-dodge-button xy-dodge-button--primary" type="button">Buy / Equip</button>
+                  </div>
+                  <div>
+                    <small>Powerup</small>
+                    <select id="xyPowerupSelect" class="xy-dodge-select">${Object.entries(POWERUPS).map(([name, item]) => `<option value="${name}">${name}${item.price ? ` · ${item.price}c` : ''}</option>`).join('')}</select>
+                    <button id="xyBuyPowerupBtn" class="xy-dodge-button xy-dodge-button--primary" type="button">Buy / Equip</button>
+                  </div>
+                </div>
+                <small id="xyLoadoutNote">Equip owned boosts here. Beta adds more mode-specific progression, but the classic layout keeps this area playable and compact.</small>
               </section>
               <section class="xy-dodge-panel">
                 <h3>Token Shop</h3>
@@ -458,7 +476,7 @@
                 <label><input type="checkbox" data-cheat="nodeath" /> No Death</label>
                 <label><input type="checkbox" data-cheat="slowtime" /> Slow Time</label>
                 <label><input type="checkbox" data-cheat="ghost" /> Ghost Trail</label>
-                <small>Coins are disabled while utilities are active</small>
+                <small>Coins are disabled while utilities are active.</small>
               </section>
             </aside>
           </section>
@@ -475,9 +493,10 @@
       this.bestEl = this.mount.querySelector('#xyBest');
       this.bankEl = this.mount.querySelector('#xyBank');
       this.runsEl = this.mount.querySelector('#xyRuns');
-      this.powerupLabelEl = this.mount.querySelector('#xyPowerupLabel');
+      this.comboBestEl = this.mount.querySelector('#xyComboBest');
       this.runScoreEl = this.mount.querySelector('#xyRunScore');
       this.runCoinsEl = this.mount.querySelector('#xyRunCoins');
+      this.runComboEl = this.mount.querySelector('#xyRunCombo');
       this.runLivesEl = this.mount.querySelector('#xyRunLives');
       this.currentModeLabelEl = this.mount.querySelector('#xyCurrentModeLabel');
       this.modeObjectiveEl = this.mount.querySelector('#xyModeObjective');
@@ -492,9 +511,7 @@
       this.buyModifierBtn = this.mount.querySelector('#xyBuyModifierBtn');
       this.buyPowerupBtn = this.mount.querySelector('#xyBuyPowerupBtn');
 
-      if (this.tabContent) this.renderTab('modes');
-      this.previewModifier = this.data.selectedModifier;
-      this.previewPowerup = this.data.selectedPowerup;
+      if (betaEnabled && this.tabContent) this.renderTab('modes');
       this.registerUiListeners();
       this.syncUi();
       this.applyResponsiveState();
@@ -510,13 +527,15 @@
         button.addEventListener('click', () => this.renderTab(button.dataset.tab || 'modes'));
       });
       this.modifierSelect?.addEventListener('change', () => {
-        this.previewModifier = this.modifierSelect.value;
-        if (this.modifierDesc) this.modifierDesc.textContent = (MODIFIERS[this.previewModifier] || MODIFIERS.Balanced).description;
+        this.data.selectedModifier = this.modifierSelect.value;
+        this.saveData();
+        if (this.modifierDesc) this.modifierDesc.textContent = (MODIFIERS[this.data.selectedModifier] || MODIFIERS.Balanced).description;
         this.syncLoadoutButtons();
       });
       this.powerupSelect?.addEventListener('change', () => {
-        this.previewPowerup = this.powerupSelect.value;
-        if (this.powerupDesc) this.powerupDesc.textContent = (POWERUPS[this.previewPowerup] || POWERUPS.None).description;
+        this.data.selectedPowerup = this.powerupSelect.value;
+        this.saveData();
+        if (this.powerupDesc) this.powerupDesc.textContent = (POWERUPS[this.data.selectedPowerup] || POWERUPS.None).description;
         this.syncLoadoutButtons();
       });
       this.buyModifierBtn?.addEventListener('click', () => this.buySelectedModifier());
@@ -525,7 +544,8 @@
         const onPress = event => {
           event.preventDefault();
           const move = button.getAttribute('data-mobile-move');
-          this.queueMove(move);
+          if (move === 'left') this.keys.left = true;
+          if (move === 'right') this.keys.right = true;
         };
         button.addEventListener('pointerdown', onPress);
         button.addEventListener('touchstart', onPress, { passive: false });
@@ -548,14 +568,12 @@
         const tag = (event.target?.tagName || '').toLowerCase();
         const formTarget = ['input', 'textarea', 'select', 'button'].includes(tag);
         if ((key === 'arrowleft' || key === 'a') && !formTarget) {
-          if (event.repeat) return;
           event.preventDefault();
-          this.queueMove('left');
+          this.keys.left = true;
         }
         if ((key === 'arrowright' || key === 'd') && !formTarget) {
-          if (event.repeat) return;
           event.preventDefault();
-          this.queueMove('right');
+          this.keys.right = true;
         }
         if (key === 'p' && !formTarget) {
           event.preventDefault();
@@ -566,37 +584,34 @@
           this.restart();
         }
       };
-      this.handleKeyUp = () => {};
-    }
-
-    queueMove(direction) {
-      if (!this.running || this.paused || this.gameOver) return;
-      if (direction === 'left') this.moveQueue.push(-1);
-      if (direction === 'right') this.moveQueue.push(1);
+      this.handleKeyUp = event => {
+        const key = event.key.toLowerCase();
+        if (key === 'arrowleft' || key === 'a') this.keys.left = false;
+        if (key === 'arrowright' || key === 'd') this.keys.right = false;
+      };
     }
 
     attachGlobalListeners() {
-      this.moveQueue = [];
+      this.keys = { left: false, right: false };
       this.onResize = () => this.applyResponsiveState();
       window.addEventListener('resize', this.onResize);
       window.XyrexAccountScope?.onAccountChange?.(() => {
         this.data = this.loadData();
         this.storyChapter = this.resolveStoryChapter();
         this.ensureTokenState();
-        this.previewModifier = this.data.selectedModifier;
-        this.previewPowerup = this.data.selectedPowerup;
         this.syncUi();
       });
     }
 
     renderTab(tab) {
-      if (!this.tabContent) return;
+      if (!this.isBetaEnabled() || !this.tabContent) return;
       this.activeTab = tab;
       this.mount.querySelectorAll('[data-tab]').forEach(button => {
         button.setAttribute('data-active', String(button.dataset.tab === tab));
       });
       if (tab === 'modes') this.tabContent.innerHTML = this.renderModesTab();
       if (tab === 'progression') this.tabContent.innerHTML = this.renderProgressionTab();
+      if (tab === 'loadout') this.tabContent.innerHTML = this.renderLoadoutTab();
       this.bindDynamicUi();
     }
 
@@ -607,11 +622,11 @@
         .map(([name, config]) => `
           <button class="xy-dodge-mode-card xy-dodge-button" type="button" data-mode="${name}" data-active="${this.data.selectedMode === name}">
             <strong>${name}</strong>
-            <p>${config.description.replace(/\.$/, '')}</p>
-            <small>${config.objective.replace(/\.$/, '')}</small>
+            <p>${config.description}</p>
+            <small>${config.objective}</small>
           </button>
         `).join('');
-      return `<div class="xy-dodge-mode-grid">${cards}</div>${betaEnabled ? '' : '<div class="xy-dodge-panel"><strong>Classic mode only</strong><p>Enable Beta Features to unlock Blitz Gauntlet Harvest and Story modes</p></div>'}`;
+      return `<div class="xy-dodge-mode-grid">${cards}</div>`;
     }
 
     renderProgressionTab() {
@@ -622,8 +637,8 @@
         return `
           <div class="xy-dodge-story-card" data-locked="${locked}">
             <strong>${chapter.title}</strong>
-            <p>${chapter.briefing.replace(/\.$/, '')}</p>
-            <small>${chapter.objectiveLabel.replace(/\.$/, '')}</small>
+            <p>${chapter.briefing}</p>
+            <small>${chapter.objectiveLabel}</small>
             <div class="xy-dodge-control-row">
               <span class="xy-dodge-badge">Reward: ${chapter.reward} coins</span>
               <span class="xy-dodge-badge">${completed ? 'Completed' : locked ? 'Locked' : 'Available'}</span>
@@ -631,20 +646,11 @@
           </div>
         `;
       }).join('');
-      if (!this.isBetaEnabled()) {
-        return `
-          <div class="xy-dodge-panel">
-            <strong>Classic progression</strong>
-            <p>Your best score is ${this.data.bestScore || 0} and your coins total ${this.data.coins || 0}</p>
-            <small>Enable Beta Features to unlock Story progression and daily objectives</small>
-          </div>
-        `;
-      }
       return `
         <div class="xy-dodge-panel" style="padding:0; background:none; border:none; box-shadow:none;">
           <div class="xy-dodge-story-card">
             <strong>Story Campaign</strong>
-            <p>${this.storyChapter.briefing}</p>
+            <p>${this.isBetaEnabled() ? this.storyChapter.briefing : 'Enable Beta Features to unlock the story campaign.'}</p>
             <div class="xy-dodge-progress"><span style="width:${((storyProgress) / STORY_CHAPTERS.length) * 100}%"></span></div>
           </div>
           ${storyCards}
@@ -660,28 +666,21 @@
       const powerupOptions = Object.entries(POWERUPS).map(([name, item]) => `
         <option value="${name}">${name}${item.price ? ` · ${item.price}c` : ''}</option>
       `).join('');
-      const currentModifier = MODIFIERS[this.previewModifier] || MODIFIERS.Balanced;
-      const currentPowerup = POWERUPS[this.previewPowerup] || POWERUPS.None;
+      const currentModifier = MODIFIERS[this.data.selectedModifier] || MODIFIERS.Balanced;
+      const currentPowerup = POWERUPS[this.data.selectedPowerup] || POWERUPS.None;
       return `
-        <div class="xy-dodge-panel">
-          <strong>Loadout overview</strong>
-          <p>Choose a modifier for run pacing and a powerup for a direct gameplay effect</p>
-          <small>Owned gear can be equipped instantly while locked gear must be purchased first</small>
-        </div>
         <div class="xy-dodge-quick-grid">
           <div class="xy-dodge-panel">
             <h4>Modifier</h4>
-            <select id="xyModifierSelect" class="xy-dodge-select">${modifierOptions}</select>
+            <select id="xyModifierSelect" class="xy-dodge-select" ${betaEnabled ? '' : 'disabled'}>${modifierOptions}</select>
             <p id="xyModifierDesc">${currentModifier.description}</p>
-            <small>Effect: adjusts movement pressure and coin gain for the whole run</small>
-            <button id="xyBuyModifierBtn" class="xy-dodge-button xy-dodge-button--primary" type="button">${this.data.ownedModifiers.includes(this.previewModifier) ? (this.data.selectedModifier === this.previewModifier ? 'Equipped' : 'Equip') : `Buy for ${currentModifier.price} coins`}</button>
+            <button id="xyBuyModifierBtn" class="xy-dodge-button xy-dodge-button--primary" type="button">${this.data.ownedModifiers.includes(this.data.selectedModifier) ? 'Owned' : `Buy for ${currentModifier.price} coins`}</button>
           </div>
           <div class="xy-dodge-panel">
             <h4>Powerup</h4>
-            <select id="xyPowerupSelect" class="xy-dodge-select">${powerupOptions}</select>
+            <select id="xyPowerupSelect" class="xy-dodge-select" ${betaEnabled ? '' : 'disabled'}>${powerupOptions}</select>
             <p id="xyPowerupDesc">${currentPowerup.description}</p>
-            <small>Effect: applies a direct run bonus when equipped</small>
-            <button id="xyBuyPowerupBtn" class="xy-dodge-button xy-dodge-button--primary" type="button">${this.previewPowerup === 'None' || this.data.ownedPowerups.includes(this.previewPowerup) ? (this.data.selectedPowerup === this.previewPowerup ? 'Equipped' : 'Equip') : `Buy for ${currentPowerup.price} coins`}</button>
+            <button id="xyBuyPowerupBtn" class="xy-dodge-button xy-dodge-button--primary" type="button">${this.data.selectedPowerup === 'None' || this.data.ownedPowerups.includes(this.data.selectedPowerup) ? 'Owned / Equipped' : `Buy for ${currentPowerup.price} coins`}</button>
           </div>
         </div>
       `;
@@ -695,8 +694,7 @@
         this.storyChapter = this.resolveStoryChapter();
         this.renderTab('modes');
         this.syncUi();
-        this.flashStatus(`${this.data.selectedMode} selected`, 'ok');
-        if (this.running) this.restart();
+        this.flashStatus(`${this.data.selectedMode} selected.`, 'ok');
       }));
 
       this.modifierSelect = this.tabContent.querySelector('#xyModifierSelect') || this.modifierSelect;
@@ -707,18 +705,20 @@
       this.buyPowerupBtn = this.tabContent.querySelector('#xyBuyPowerupBtn') || this.buyPowerupBtn;
 
       if (this.modifierSelect) {
-        this.modifierSelect.value = this.previewModifier;
+        this.modifierSelect.value = this.data.selectedModifier;
         this.modifierSelect.addEventListener('change', () => {
-          this.previewModifier = this.modifierSelect.value;
-          this.renderTab('loadout');
+          this.data.selectedModifier = this.modifierSelect.value;
+          this.saveData();
+          this.renderTab(this.activeTab || 'loadout');
           this.syncUi();
         });
       }
       if (this.powerupSelect) {
-        this.powerupSelect.value = this.previewPowerup;
+        this.powerupSelect.value = this.data.selectedPowerup;
         this.powerupSelect.addEventListener('change', () => {
-          this.previewPowerup = this.powerupSelect.value;
-          this.renderTab('loadout');
+          this.data.selectedPowerup = this.powerupSelect.value;
+          this.saveData();
+          this.renderTab(this.activeTab || 'loadout');
           this.syncUi();
         });
       }
@@ -727,19 +727,19 @@
     }
 
     applyResponsiveState() {
-      const touchDevice = window.matchMedia('(pointer: coarse)').matches || (navigator.maxTouchPoints || 0) > 0 || window.innerWidth <= 900;
-      this.mobileControls.hidden = !touchDevice;
+      const mobileUiEnabled = this.isTouchDevice() && this.isBetaEnabled();
+      this.mobileControls.hidden = !mobileUiEnabled;
     }
 
     syncLoadoutButtons() {
-      if (this.modifierSelect) this.modifierSelect.value = this.previewModifier;
-      if (this.powerupSelect) this.powerupSelect.value = this.previewPowerup;
-      const modifier = MODIFIERS[this.previewModifier] || MODIFIERS.Balanced;
-      const powerup = POWERUPS[this.previewPowerup] || POWERUPS.None;
+      if (this.modifierSelect) this.modifierSelect.value = this.data.selectedModifier;
+      if (this.powerupSelect) this.powerupSelect.value = this.data.selectedPowerup;
+      const modifier = MODIFIERS[this.data.selectedModifier] || MODIFIERS.Balanced;
+      const powerup = POWERUPS[this.data.selectedPowerup] || POWERUPS.None;
       if (this.modifierDesc) this.modifierDesc.textContent = modifier.description;
       if (this.powerupDesc) this.powerupDesc.textContent = powerup.description;
-      if (this.buyModifierBtn) this.buyModifierBtn.textContent = this.data.ownedModifiers.includes(this.previewModifier) ? (this.data.selectedModifier === this.previewModifier ? 'Equipped' : 'Equip') : `Buy for ${modifier.price} coins`;
-      if (this.buyPowerupBtn) this.buyPowerupBtn.textContent = this.previewPowerup === 'None' || this.data.ownedPowerups.includes(this.previewPowerup) ? (this.data.selectedPowerup === this.previewPowerup ? 'Equipped' : 'Equip') : `Buy for ${powerup.price} coins`;
+      if (this.buyModifierBtn) this.buyModifierBtn.textContent = this.data.ownedModifiers.includes(this.data.selectedModifier) ? 'Equipped / Owned' : `Buy for ${modifier.price} coins`;
+      if (this.buyPowerupBtn) this.buyPowerupBtn.textContent = this.data.selectedPowerup === 'None' || this.data.ownedPowerups.includes(this.data.selectedPowerup) ? 'Equipped / Owned' : `Buy for ${powerup.price} coins`;
     }
 
     syncUi() {
@@ -748,64 +748,41 @@
       this.bestEl.textContent = String(this.data.bestScore || 0);
       this.bankEl.textContent = String(this.data.coins || 0);
       this.runsEl.textContent = String(this.data.totalRuns || 0);
-      if (this.powerupLabelEl) this.powerupLabelEl.textContent = this.data.selectedPowerup;
+      this.comboBestEl.textContent = String(this.data.longestCombo || 0);
       this.runScoreEl.textContent = `Score: ${this.score}`;
       this.runCoinsEl.textContent = `Coins: ${this.runCoins}`;
+      this.runComboEl.textContent = `Combo: ${this.combo}`;
       this.runLivesEl.textContent = `Lives: ${this.lives || 1}`;
       if (this.currentModeLabelEl) this.currentModeLabelEl.textContent = visibleModeName;
       if (this.modeObjectiveEl) this.modeObjectiveEl.textContent = mode.objective;
       if (this.tokenCountEl) this.tokenCountEl.textContent = String(this.availableAiTokens());
       if (this.storyProgressLabelEl) this.storyProgressLabelEl.textContent = `${Math.min(this.data.storyProgress, STORY_CHAPTERS.length)} / ${STORY_CHAPTERS.length}`;
-      if (this.missionCardEl) this.renderMissionCard();
+      if (this.missionCardEl && this.isBetaEnabled()) this.renderMissionCard();
       this.syncLoadoutButtons();
       this.updateCheatUi();
     }
 
-
-    ensureDailyProgress() {
-      const today = localDayKey();
-      const progress = this.data.dailyProgress || {};
-      if (progress.dayKey !== today) {
-        this.data.dailyProgress = { dayKey: today, runs: 0, pickups: 0, bestScore: 0, usedPowerup: false };
-        this.saveData();
-      }
-      return this.data.dailyProgress;
-    }
-
-    currentMissionState() {
-      const today = localDayKey();
-      const progress = this.ensureDailyProgress();
-      this.missionIndex = [...today].reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % MISSIONS.length;
-      const mission = MISSIONS[this.missionIndex];
-      const completed = (
-        (this.missionIndex === 0 && progress.runs >= 1) ||
-        (this.missionIndex === 1 && progress.pickups >= 3) ||
-        (this.missionIndex === 2 && progress.bestScore >= 18) ||
-        (this.missionIndex === 3 && progress.usedPowerup && progress.bestScore >= 20)
-      );
-      const claimed = Boolean(this.data.missionsClaimed?.[today]);
-      return { today, mission, completed, claimed };
-    }
-
     renderMissionCard() {
-      const { today, mission, completed, claimed } = this.currentMissionState();
+      this.missionIndex = (this.data.totalRuns || 0) % MISSIONS.length;
+      const mission = MISSIONS[this.missionIndex];
+      const claimed = this.data.missionsClaimed.includes(this.missionIndex);
       this.missionCardEl.innerHTML = `
         <div class="xy-dodge-mission-card">
-          <strong>Daily objective</strong>
+          <strong>Daily-style objective</strong>
           <p>${mission}</p>
           <div class="xy-dodge-control-row">
             <span class="xy-dodge-badge">Reward: 90 coins</span>
-            <button class="xy-dodge-button" type="button" id="xyClaimMissionBtn" ${(!completed || claimed) ? 'disabled' : ''}>${claimed ? 'Completed' : completed ? 'Claim reward' : 'In progress'}</button>
+            <button class="xy-dodge-button" type="button" id="xyClaimMissionBtn" ${claimed ? 'disabled' : ''}>${claimed ? 'Already Claimed' : 'Claim reward'}</button>
           </div>
         </div>
       `;
       this.missionCardEl.querySelector('#xyClaimMissionBtn')?.addEventListener('click', () => {
-        if (!completed || claimed) return;
+        if (claimed) return;
         this.data.coins += 90;
-        this.data.missionsClaimed = { ...(this.data.missionsClaimed || {}), [today]: true };
+        this.data.missionsClaimed = [...new Set([...(this.data.missionsClaimed || []), this.missionIndex])];
         this.saveData();
         this.syncUi();
-        this.flashStatus('Mission reward claimed', 'ok');
+        this.flashStatus('Mission reward claimed.', 'ok');
       });
     }
 
@@ -824,75 +801,62 @@
       this.statusEl.dataset.tone = tone === 'danger' ? 'danger' : tone === 'warning' ? 'warning' : 'ok';
       clearTimeout(this.statusTimer);
       this.statusTimer = setTimeout(() => {
-        this.statusEl.textContent = this.gameOver ? 'Run ended' : this.paused ? 'Paused' : 'Ready';
+        this.statusEl.textContent = this.gameOver ? 'Run ended.' : this.paused ? 'Paused.' : 'Ready.';
         this.statusEl.dataset.tone = 'ok';
       }, 1400);
     }
 
     buySelectedModifier() {
-      const modifierName = this.previewModifier;
-      const modifier = MODIFIERS[modifierName] || MODIFIERS.Balanced;
-      if (this.data.ownedModifiers.includes(modifierName)) {
-        this.data.selectedModifier = modifierName;
-        this.saveData();
-        this.syncUi();
-        this.flashStatus(`${modifierName} equipped`, 'ok');
+      const modifier = MODIFIERS[this.data.selectedModifier] || MODIFIERS.Balanced;
+      if (this.data.ownedModifiers.includes(this.data.selectedModifier)) {
+        this.flashStatus('Modifier already owned.', 'warning');
         return;
       }
       if (this.data.coins < modifier.price) {
-        this.flashStatus('Not enough coins', 'warning');
+        this.flashStatus('Not enough coins.', 'warning');
         return;
       }
       this.data.coins -= modifier.price;
-      this.data.ownedModifiers.push(modifierName);
-      this.data.selectedModifier = modifierName;
+      this.data.ownedModifiers.push(this.data.selectedModifier);
       this.saveData();
       this.renderTab('loadout');
       this.syncUi();
-      this.flashStatus(`${modifierName} unlocked and equipped`, 'ok');
+      this.flashStatus(`${this.data.selectedModifier} unlocked.`, 'ok');
     }
 
     buySelectedPowerup() {
-      const powerupName = this.previewPowerup;
-      const powerup = POWERUPS[powerupName] || POWERUPS.None;
-      if (powerupName === 'None') {
-        this.data.selectedPowerup = 'None';
-        this.saveData();
-        this.syncUi();
-        this.flashStatus('No powerup equipped', 'ok');
+      const powerup = POWERUPS[this.data.selectedPowerup] || POWERUPS.None;
+      if (this.data.selectedPowerup === 'None') {
+        this.flashStatus('No purchase needed for None.', 'warning');
         return;
       }
-      if (this.data.ownedPowerups.includes(powerupName)) {
-        this.data.selectedPowerup = powerupName;
-        this.saveData();
-        this.syncUi();
-        this.flashStatus(`${powerupName} equipped`, 'ok');
+      if (this.data.ownedPowerups.includes(this.data.selectedPowerup)) {
+        this.flashStatus('Powerup already owned.', 'warning');
         return;
       }
       if (this.data.coins < powerup.price) {
-        this.flashStatus('Not enough coins', 'warning');
+        this.flashStatus('Not enough coins.', 'warning');
         return;
       }
       this.data.coins -= powerup.price;
-      this.data.ownedPowerups.push(powerupName);
-      this.data.selectedPowerup = powerupName;
+      this.data.ownedPowerups.push(this.data.selectedPowerup);
       this.saveData();
       this.renderTab('loadout');
       this.syncUi();
-      this.flashStatus(`${powerupName} unlocked and equipped`, 'ok');
+      this.flashStatus(`${this.data.selectedPowerup} unlocked.`, 'ok');
     }
 
     buyTokenPack(amount, cost) {
       if (!Number.isFinite(amount) || !Number.isFinite(cost) || amount <= 0 || cost <= 0) return;
       if (this.data.coins < cost) {
-        this.flashStatus('Not enough coins for tokens', 'warning');
+        this.flashStatus('Not enough coins for tokens.', 'warning');
         return;
       }
       this.data.coins -= cost;
       this.data.aiPurchasedTokens += amount;
       this.saveData();
       this.syncUi();
-      this.flashStatus(`Purchased ${amount} AI token${amount > 1 ? 's' : ''}`, 'ok');
+      this.flashStatus(`Purchased ${amount} AI token${amount > 1 ? 's' : ''}.`, 'ok');
     }
 
     start() {
@@ -950,7 +914,7 @@
       this.overlay.innerHTML = '';
       this.pauseBtn.textContent = 'Pause';
       this.syncUi();
-      this.flashStatus(`${this.mode === GAME_MODES.Classic ? 'Classic' : this.data.selectedMode} run started`, 'ok');
+      this.flashStatus(`${this.data.selectedMode} run started.`, 'ok');
     }
 
     restart() {
@@ -961,20 +925,18 @@
       if (!this.running || this.gameOver) return;
       this.paused = !this.paused;
       this.pauseBtn.textContent = this.paused ? 'Resume' : 'Pause';
-      this.flashStatus(this.paused ? 'Paused' : 'Resumed', this.paused ? 'warning' : 'ok');
+      this.flashStatus(this.paused ? 'Paused.' : 'Resumed.', this.paused ? 'warning' : 'ok');
     }
 
     currentSpeed(elapsed) {
       const cheatSlow = this.activeCheatSet().has('slowtime') ? 0.65 : 1;
-      const slowdown = this.powerups.has('Block Slowdown') ? 0.74 : 1;
-      return clamp((3.4 + elapsed * 0.1 + this.score * 0.016) * this.mode.speed * this.modifier.pressure * cheatSlow * slowdown, 2.8, 18);
+      return clamp((3.4 + elapsed * 0.1 + this.score * 0.016) * this.mode.speed * this.modifier.pressure * cheatSlow, 2.8, 18);
     }
 
     currentSpawnInterval(elapsed) {
       const cheatSlow = this.activeCheatSet().has('slowtime') ? 1.25 : 1;
-      const slowdown = this.powerups.has('Block Slowdown') ? 1.28 : 1;
       const modeModifier = this.mode.interval;
-      return clamp((1.15 - elapsed * 0.0022 - this.score * 0.0011) * modeModifier * cheatSlow * slowdown, 0.22, 1.6);
+      return clamp((1.15 - elapsed * 0.0022 - this.score * 0.0011) * modeModifier * cheatSlow, 0.22, 1.6);
     }
 
     lanePressure() {
@@ -995,7 +957,7 @@
     }
 
     choosePattern() {
-      const patterns = [[0], [1], [2], [3], [4], [5], [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [0, 2], [1, 3], [2, 4], [3, 5], [0, 3], [1, 4], [2, 5], [0, 1, 3], [1, 2, 4], [2, 3, 5], [0, 2, 4], [1, 3, 5], [0, 1, 4], [1, 4, 5], [0, 2, 5], [0, 3, 4], [1, 2, 5]];
+      const patterns = [[0], [1], [2], [3], [4], [5], [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [0, 2], [1, 3], [2, 4], [3, 5], [0, 3], [1, 4], [2, 5], [0, 1, 3], [1, 2, 4], [2, 3, 5], [0, 2, 4], [1, 3, 5]];
       const safe = this.safeLanes();
       const pressure = this.lanePressure();
       const currentLane = this.player.targetLane;
@@ -1005,14 +967,9 @@
         const futureSafe = [...Array(BOARD.lanes).keys()].filter(lane => !pattern.includes(lane));
         if (!futureSafe.length) continue;
         let score = pattern.length * (0.55 + this.mode.modeScore * 0.2);
-        const openPairs = futureSafe.slice().sort((a, b) => a - b).filter((lane, index, arr) => index > 0 && lane === arr[index - 1] + 1).length;
-        const predictablePivot = futureSafe.length === 2 && Math.abs(futureSafe[0] - futureSafe[1]) === 1;
-        for (const lane of pattern) score += Math.max(0, 2.6 - pressure[lane]) + Math.abs(lane - currentLane) * 0.45;
+        for (const lane of pattern) score += Math.max(0, 2.4 - pressure[lane]) + Math.abs(lane - currentLane) * 0.35;
         if (safe.length && safe.every(lane => pattern.includes(lane))) score -= 40;
-        if (predictablePivot) score -= 12;
-        score -= openPairs * 4;
-        score += Math.abs((this.lastOpenLane ?? currentLane) - futureSafe[0]) * 0.6;
-        score += Math.random() * 0.3;
+        score += Math.random() * 0.5;
         if (score > bestScore) {
           bestScore = score;
           bestPattern = pattern;
@@ -1029,13 +986,10 @@
       pattern.forEach(lane => {
         this.blocks.push({ lane, x: lane * laneWidth + 12, y: -48, w: laneWidth - 24, h: 36, speed, color: lane % 2 ? THEMES.danger : THEMES.accent2 });
       });
-      const openLanes = [...Array(BOARD.lanes).keys()].filter(lane => !pattern.includes(lane));
-      this.lastOpenLane = openLanes.length ? pick(openLanes) : this.lastOpenLane;
-      const pickupChance = clamp(this.mode.pickups + Math.min(0.22, this.level * 0.015), 0.5, 0.96);
-      if (openLanes.length && Math.random() < pickupChance) {
-        const lane = this.lastOpenLane ?? openLanes[0];
-        const size = 12;
-        this.pickups.push({ lane, x: lane * laneWidth + laneWidth / 2, y: -30, size, speed, targetX: lane * laneWidth + laneWidth / 2 });
+      if (this.isBetaEnabled() && Math.random() < this.mode.pickups) {
+        const openLanes = [...Array(BOARD.lanes).keys()].filter(lane => !pattern.includes(lane));
+        const lane = pick(openLanes.length ? openLanes : [2]);
+        this.pickups.push({ lane, x: lane * laneWidth + laneWidth / 2, y: -30, size: 11, speed: speed * 0.82 });
       }
     }
 
@@ -1051,10 +1005,14 @@
           }, safe[0]);
         }
       }
-      while (this.moveQueue.length) {
-        const delta = this.moveQueue.shift();
-        this.player.targetLane = clamp(this.player.targetLane + delta, 0, BOARD.lanes - 1);
+      if (cheats.has('ghost')) {
+        this.particles.push({ x: this.player.x, y: this.player.y + 4, vx: 0, vy: 0.18, life: 0.4, size: 8, color: 'rgba(108,229,255,0.22)' });
+        if (this.particles.length > 120) this.particles.shift();
       }
+      if (this.keys.left) this.player.targetLane = Math.max(0, this.player.targetLane - 1);
+      if (this.keys.right) this.player.targetLane = Math.min(BOARD.lanes - 1, this.player.targetLane + 1);
+      this.keys.left = false;
+      this.keys.right = false;
       const laneWidth = BOARD.width / BOARD.lanes;
       const targetX = this.player.targetLane * laneWidth + laneWidth / 2;
       const quickstep = this.powerups.has('Quickstep');
@@ -1075,22 +1033,22 @@
 
     collectPickup() {
       this.storyPickups += 1;
+      this.combo += 2;
+      this.bestComboRun = Math.max(this.bestComboRun, this.combo);
       this.data.totalPickups += 1;
-      const progress = this.ensureDailyProgress();
-      progress.pickups += 1;
       if (!this.hasEnabledCheat()) this.runCoins += this.powerups.has('Lucky Drift') ? 3 : 2;
-      this.flashStatus('Energy shard collected', 'ok');
+      this.flashStatus('Energy shard collected.', 'ok');
     }
 
     handleCollision() {
       if (this.activeCheatSet().has('nodeath')) {
-        this.flashStatus('No Death blocked the hit', 'warning');
+        this.flashStatus('No Death blocked the hit.', 'warning');
         return;
       }
       if (this.lives > 1) {
         this.lives -= 1;
         this.blocks = this.blocks.filter(block => block.y < this.player.y - 70 || block.y > this.player.y + 70);
-        this.flashStatus('Shield consumed keep going', 'warning');
+        this.flashStatus('Shield consumed. Keep going.', 'warning');
         return;
       }
       this.endRun();
@@ -1107,6 +1065,8 @@
         }
         if (block.y > BOARD.height) {
           this.score += Math.max(1, Math.round(this.mode.modeScore));
+          this.combo += 1;
+          this.bestComboRun = Math.max(this.bestComboRun, this.combo);
           if (!this.hasEnabledCheat()) {
             const baseReward = Math.max(1, Math.round(this.modifier.coinBonus * this.mode.modeScore));
             const luckyReward = this.powerups.has('Lucky Drift') ? Math.ceil(baseReward * 1.2) : baseReward;
@@ -1123,7 +1083,9 @@
       const alive = [];
       for (const pickup of this.pickups) {
         pickup.y += pickup.speed * dt * 60;
-        pickup.x += (pickup.targetX - pickup.x) * 0.2;
+        if (this.powerups.has('Magnet Pulse')) {
+          pickup.x += (this.player.x - pickup.x) * 0.04;
+        }
         if (this.intersectsPlayer(pickup)) {
           this.collectPickup();
           continue;
@@ -1139,26 +1101,35 @@
       if (!chapter) return;
       const scoreMet = this.score >= (chapter.targetScore || 0);
       const pickupsMet = !chapter.targetPickups || this.storyPickups >= chapter.targetPickups;
+      const comboMet = !chapter.targetCombo || this.bestComboRun >= chapter.targetCombo;
       const lifeMet = !chapter.requireLife || this.lives >= 1;
-      if (scoreMet && pickupsMet && lifeMet) {
+      if (scoreMet && pickupsMet && comboMet && lifeMet) {
         if (!this.data.storyRewardsClaimed.includes(chapter.id)) {
           this.data.coins += chapter.reward;
           this.data.storyRewardsClaimed.push(chapter.id);
         }
         this.data.storyProgress = Math.min(STORY_CHAPTERS.length, (this.data.storyProgress || 0) + 1);
         this.storyChapter = this.resolveStoryChapter();
-        this.flashStatus(`Story chapter cleared: ${chapter.title}`, 'ok');
+        this.flashStatus(`Story chapter cleared: ${chapter.title}.`, 'ok');
       }
+      this.pickups = alive;
+    }
+
+    updateParticles(dt) {
+      this.particles = this.particles
+        .map(particle => ({
+          ...particle,
+          x: particle.x + (particle.vx || 0),
+          y: particle.y + (particle.vy || 0) * dt * 60,
+          life: particle.life - dt,
+        }))
+        .filter(particle => particle.life > 0);
     }
 
     endRun() {
       if (this.gameOver) return;
       this.gameOver = true;
       this.data.totalRuns += 1;
-      const progress = this.ensureDailyProgress();
-      progress.runs += 1;
-      progress.bestScore = Math.max(progress.bestScore || 0, this.score);
-      progress.usedPowerup = progress.usedPowerup || (this.data.selectedPowerup !== 'None' && this.powerups.size > 0);
       this.data.bestScore = Math.max(this.data.bestScore, this.score);
       this.data.bestByMode[this.data.selectedMode] = Math.max(this.data.bestByMode[this.data.selectedMode] || 0, this.score);
       this.data.longestCombo = Math.max(this.data.longestCombo, this.bestComboRun);
@@ -1170,10 +1141,10 @@
       this.overlay.innerHTML = `
         <div class="xy-dodge-modal-card">
           <h3>Run complete</h3>
-          <p>Mode: <strong>${this.mode === GAME_MODES.Classic ? 'Classic' : this.data.selectedMode}</strong></p>
+          <p>Mode: <strong>${this.data.selectedMode}</strong></p>
           <p>Score: <strong>${this.score}</strong></p>
           <p>Coins earned: <strong>${this.hasEnabledCheat() ? 0 : this.runCoins}</strong></p>
-          <p>Pickups: <strong>${this.storyPickups}</strong></p>
+          <p>Pickups: <strong>${this.storyPickups}</strong> · Best combo: <strong>${this.bestComboRun}</strong></p>
           <button class="xy-dodge-button xy-dodge-button--primary" id="xyOverlayRestartBtn" type="button">Play again</button>
         </div>
       `;
@@ -1242,13 +1213,21 @@
         ctx.lineWidth = 2;
         ctx.stroke();
       });
+      this.particles.forEach(particle => {
+        ctx.globalAlpha = Math.max(0, particle.life);
+        ctx.beginPath();
+        ctx.fillStyle = particle.color || 'rgba(108,229,255,0.25)';
+        ctx.arc(particle.x, particle.y, particle.size || 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
 
       const playerX = this.player.x - this.player.w / 2;
       const playerY = this.player.y - this.player.h / 2;
       this.drawRoundedRect(ctx, playerX - 2, playerY - 2, this.player.w + 4, this.player.h + 4, 9, 'rgba(0,0,0,0.38)');
       this.drawRoundedRect(ctx, playerX, playerY, this.player.w, this.player.h, 9, 'rgba(108,229,255,0.95)', 'rgba(233,252,255,0.96)');
 
-      if (this.mode === GAME_MODES.Story && this.isBetaEnabled()) {
+      if (this.data.selectedMode === 'Story' && this.isBetaEnabled()) {
         ctx.fillStyle = 'rgba(255,255,255,0.8)';
         ctx.font = 'bold 18px Inter, system-ui, sans-serif';
         ctx.fillText(this.storyChapter.title, 24, 34);
@@ -1272,8 +1251,11 @@
         this.updatePlayer();
         this.updateBlocks(dt);
         this.updatePickups(dt);
-
+        if (this.powerups.has('Time Bloom') && this.combo > 0 && this.combo % 12 === 0) {
+          this.blocks.forEach(block => { block.speed *= 0.995; });
+        }
       }
+      this.updateParticles(dt);
       this.draw();
       this.syncUi();
       this.rafId = requestAnimationFrame(this.loop);
