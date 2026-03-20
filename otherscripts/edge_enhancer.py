@@ -69,7 +69,7 @@ class EdgeEnhancer(ctk.CTk):
         self.module_cards: list[ctk.CTkFrame] = []
         self.selected_module: Module | None = None
         self.log_entries: list[str] = []
-        self.state = self.load_state()
+        self.preferences = self.load_state()
 
         self.configure_grid()
         self.build_modules()
@@ -248,7 +248,7 @@ class EdgeEnhancer(ctk.CTk):
 
         ctk.CTkLabel(sidebar, text="Controls", text_color=THEME["text"], font=ctk.CTkFont(size=20, weight="bold")).grid(row=0, column=0, sticky="w", padx=16, pady=(16, 8))
 
-        self.search_var = ctk.StringVar(value=self.state.get("search", ""))
+        self.search_var = ctk.StringVar(value=self.preferences.get("search", ""))
         search = ctk.CTkEntry(
             sidebar,
             textvariable=self.search_var,
@@ -261,7 +261,7 @@ class EdgeEnhancer(ctk.CTk):
         search.bind("<KeyRelease>", lambda _event: self.apply_filters())
 
         categories = ["All", "Browser", "Quick Links", "Productivity", "Workspace"]
-        self.category_var = ctk.StringVar(value=self.state.get("last_category", "All"))
+        self.category_var = ctk.StringVar(value=self.preferences.get("last_category", "All"))
         selector = ctk.CTkOptionMenu(
             sidebar,
             values=categories,
