@@ -204,7 +204,7 @@
       .xy-dodge-stat-grid, .xy-dodge-quick-grid, .xy-dodge-mode-grid, .xy-dodge-shop-grid, .xy-dodge-meta-grid { display: grid; gap: 10px; }
       .xy-dodge-stat-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
       .xy-dodge-chip, .xy-dodge-mode-card, .xy-dodge-mini-card, .xy-dodge-story-card, .xy-dodge-mission-card, .xy-dodge-loadout-option {
-        background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 10px 12px;
+        background: ${withAlpha(THEMES.panelAlt, 0.7, 'rgba(255,255,255,0.04)')}; border: 1px solid ${withAlpha(THEMES.accent2, 0.24, 'rgba(255,255,255,0.08)')}; border-radius: 14px; padding: 10px 12px;
       }
       .xy-dodge-chip span, .xy-dodge-mini-card span { display:block; font-size:11px; color:${THEMES.subtext}; text-transform:uppercase; letter-spacing:.04em; }
       .xy-dodge-chip strong, .xy-dodge-mode-card strong, .xy-dodge-mini-card strong { display: block; font-size: 17px; margin-top: 4px; }
@@ -214,8 +214,8 @@
       .xy-dodge-control-row { align-items: center; }
       .xy-dodge-toolbar { justify-content: space-between; align-items: center; }
       .xy-dodge-badges { display: flex; flex-wrap: wrap; gap: 6px; }
-      .xy-dodge-badge { padding: 6px 10px; border-radius: 999px; background: rgba(141,132,255,0.12); color: ${THEMES.text}; font-size: 12px; display:inline-flex; align-items:center; justify-content:center; text-align:center; min-height:30px; line-height:1.2; }
-      .xy-dodge-canvas-wrap { position: relative; background: radial-gradient(circle at top, rgba(108,229,255,0.08), transparent 40%), ${THEMES.track}; border-radius: 16px; overflow: hidden; min-height: 250px; }
+      .xy-dodge-badge { padding: 6px 10px; border-radius: 999px; background: ${withAlpha(THEMES.accent2, 0.18, 'rgba(141,132,255,0.12)')}; color: ${THEMES.text}; font-size: 12px; display:inline-flex; align-items:center; justify-content:center; text-align:center; min-height:30px; line-height:1.2; }
+      .xy-dodge-canvas-wrap { position: relative; background: radial-gradient(circle at top, ${withAlpha(THEMES.accent, 0.16, 'rgba(108,229,255,0.08)')}, transparent 40%), ${THEMES.track}; border-radius: 16px; overflow: hidden; min-height: 250px; }
       .xy-dodge-canvas { display: block; width: 100%; height: auto; aspect-ratio: 960 / 620; border-radius: 16px; }
       .xy-dodge-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(2, 7, 17, 0.64); backdrop-filter: blur(6px); }
       .xy-dodge-overlay[hidden] { display: none; }
@@ -224,17 +224,17 @@
       .xy-dodge-panel { padding: 12px; display: grid; gap: 10px; }
       .xy-dodge-panel h3, .xy-dodge-panel h4 { margin: 0; font-size: 16px; }
       .xy-dodge-button, .xy-dodge-select, .xy-dodge-mobile-controls button {
-        border: 1px solid rgba(154, 205, 255, 0.24); border-radius: 12px; background: linear-gradient(180deg, rgba(16, 31, 58, 0.96), rgba(10, 20, 40, 0.96)); color: ${THEMES.text};
+        border: 1px solid ${withAlpha(THEMES.accent2, 0.3, 'rgba(154, 205, 255, 0.24)')}; border-radius: 12px; background: linear-gradient(180deg, ${withAlpha(THEMES.panelAlt, 0.94, 'rgba(16, 31, 58, 0.96)')}, ${withAlpha(THEMES.panel, 0.95, 'rgba(10, 20, 40, 0.96)')}); color: ${THEMES.text};
         min-height: 42px; padding: 10px 12px; transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease, box-shadow 0.2s ease; box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
       }
       .xy-dodge-select { appearance: none; -webkit-appearance: none; background-image: linear-gradient(180deg, rgba(16, 31, 58, 0.98), rgba(10, 20, 40, 0.98)), linear-gradient(45deg, transparent 50%, ${THEMES.subtext} 50%), linear-gradient(135deg, ${THEMES.subtext} 50%, transparent 50%); background-repeat: no-repeat; background-position: 0 0, calc(100% - 18px) 50%, calc(100% - 12px) 50%; background-size: 100% 100%, 6px 6px, 6px 6px; padding-right: 34px; }
       .xy-dodge-button:hover, .xy-dodge-mobile-controls button:hover { transform: translateY(-1px); background: linear-gradient(180deg, rgba(20, 39, 72, 0.98), rgba(12, 24, 45, 0.98)); }
-      .xy-dodge-button--primary { background: linear-gradient(135deg, rgba(108,229,255,0.22), rgba(141,132,255,0.18)); border-color: rgba(108,229,255,0.28); }
+      .xy-dodge-button--primary { background: linear-gradient(135deg, ${withAlpha(THEMES.accent, 0.24, 'rgba(108,229,255,0.22)')}, ${withAlpha(THEMES.accent2, 0.2, 'rgba(141,132,255,0.18)')}); border-color: ${withAlpha(THEMES.accent, 0.35, 'rgba(108,229,255,0.28)')}; }
       .xy-dodge-button--danger { background: rgba(255,111,159,0.16); }
       .xy-dodge-button[disabled], .xy-dodge-select[disabled] { opacity: 0.55; cursor: not-allowed; transform: none; }
       .xy-dodge-mode-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .xy-dodge-quick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .xy-dodge-mode-card[data-active='true'], .xy-dodge-segmented button[data-active='true'] { border-color: rgba(108,229,255,0.5); box-shadow: inset 0 0 0 1px rgba(108,229,255,0.22), 0 0 22px rgba(108,229,255,0.08); }
+      .xy-dodge-mode-card[data-active='true'], .xy-dodge-segmented button[data-active='true'] { border-color: ${withAlpha(THEMES.accent, 0.56, 'rgba(108,229,255,0.5)')}; box-shadow: inset 0 0 0 1px ${withAlpha(THEMES.accent, 0.28, 'rgba(108,229,255,0.22)')}, 0 0 22px ${withAlpha(THEMES.accent, 0.14, 'rgba(108,229,255,0.08)')}; }
       .xy-dodge-story-card[data-locked='true'] { opacity: 0.65; }
       .xy-dodge-progress { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
       .xy-dodge-progress > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, ${THEMES.accent}, ${THEMES.accent2}); transition: width .25s ease; }
@@ -260,9 +260,9 @@
       .xy-dodge-effect-list { margin: 0; padding-left: 18px; color: ${THEMES.subtext}; display: grid; gap: 4px; font-size: 12px; }
       .xy-dodge-effect-list li::marker { color: ${THEMES.accent}; }
       .xy-dodge-utility-label { display: flex; align-items: center; gap: 8px; color: ${THEMES.text}; font-size: 13px; }
-      .xy-dodge-utility-label input[type='checkbox'] { appearance:none; -webkit-appearance:none; width:16px; height:16px; margin:0; border:1px solid rgba(178,188,255,.7); border-radius:4px; background:rgba(21,30,62,.96); box-shadow:inset 0 0 0 1px rgba(129,146,255,.18); cursor:pointer; position:relative; flex:0 0 auto; }
+      .xy-dodge-utility-label input[type='checkbox'] { appearance:none; -webkit-appearance:none; width:16px; height:16px; margin:0; border:1px solid ${withAlpha(THEMES.accent2, 0.62, 'rgba(178,188,255,.7)')}; border-radius:4px; background:${withAlpha(THEMES.panelAlt, 0.92, 'rgba(21,30,62,.96)')}; box-shadow:inset 0 0 0 1px ${withAlpha(THEMES.accent, 0.22, 'rgba(129,146,255,.18)')}; cursor:pointer; position:relative; flex:0 0 auto; }
       .xy-dodge-utility-label input[type='checkbox']:checked { background:${THEMES.accent2}; border-color:${THEMES.accent}; }
-      .xy-dodge-utility-label input[type='checkbox']:checked::after { content:'✓'; position:absolute; left:3px; top:-1px; color:#0b1024; font-size:11px; font-weight:800; }
+      .xy-dodge-utility-label input[type='checkbox']:checked::after { content:''; position:absolute; left:5px; top:1px; width:4px; height:8px; border:solid ${withAlpha(THEMES.bg, 0.9, '#0b1024')}; border-width:0 2px 2px 0; transform:rotate(45deg); }
       .xy-dodge-claim-button-wrap { display:flex; gap:8px; flex-wrap:wrap; }
       @keyframes xyPulse { 0% { transform: scale(.98); } 100% { transform: scale(1); } }
       @media (max-width: 1120px) { .xy-dodge-layout, .xy-dodge-hero { grid-template-columns: 1fr; } .xy-dodge-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -319,9 +319,7 @@
 
     updateThemeColors() {
       const css = getComputedStyle(document.documentElement);
-      const betaEnabled = this.isBetaEnabled();
       const read = (name, fallback) => (css.getPropertyValue(name).trim() || fallback);
-      if (!betaEnabled) return;
       THEMES.bg = read('--bg', THEMES.bg);
       THEMES.panel = read('--panel', THEMES.panel);
       THEMES.panelAlt = read('--panel-2', THEMES.panelAlt);
@@ -1171,8 +1169,18 @@
         this.player.targetLane = this.chooseAutoplayLane();
       }
       if (cheats.has('ghost')) {
-        this.particles.push({ x: this.player.x, y: this.player.y + 4, vx: 0, vy: 0.18, life: 0.4, size: 8, color: 'rgba(108,229,255,0.22)' });
-        if (this.particles.length > 120) this.particles.shift();
+        if ((this.frameCounter || 0) % 2 === 0) {
+          this.particles.push({
+            x: this.player.x,
+            y: this.player.y + 4,
+            vx: 0,
+            vy: 0.18,
+            life: 0.34,
+            size: 6,
+            color: withAlpha(THEMES.accent, 0.26, 'rgba(108,229,255,0.26)')
+          });
+        }
+        if (this.particles.length > 72) this.particles.shift();
       }
       const laneWidth = BOARD.width / BOARD.lanes;
       const targetX = this.player.targetLane * laneWidth + laneWidth / 2;
