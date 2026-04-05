@@ -18,7 +18,12 @@
   --motion-fast: 180ms;
   --motion-med: 260ms;
   --motion-slow: 340ms;
+  --motion-xs: 140ms;
+  --motion-lg: 420ms;
   --motion-ease: cubic-bezier(.22,.61,.36,1);
+  --motion-ease-soft: cubic-bezier(.25,.46,.45,.94);
+  --motion-ease-entrance: cubic-bezier(.16,1,.3,1);
+  --motion-ease-exit: cubic-bezier(.4,0,1,1);
   --icon-color: var(--muted);
   --icon-color-hover: var(--periwinkle-2);
   --nav-height: 68px;
@@ -99,7 +104,7 @@ h6,
 .btn-ghost{ position:absolute; right:8px; border:0; background:transparent; color:var(--muted); font-weight:700; cursor:pointer; width:30px; height:30px; padding:0; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; line-height:1; transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease); }
 .btn-ghost:hover{ background:rgba(178,188,255,.12); color:var(--text); }
 
-.ui-toggle-btn{ border:1px solid rgba(178,188,255,.3); background:rgba(17,24,46,.82); color:var(--periwinkle-2); border-radius:999px; min-height:40px; padding:8px 14px; font-weight:700; cursor:pointer; transition: all var(--motion-fast) var(--motion-ease); white-space:nowrap; }
+.ui-toggle-btn{ border:1px solid rgba(178,188,255,.3); background:rgba(17,24,46,.82); color:var(--periwinkle-2); border-radius:999px; min-height:40px; padding:8px 14px; font-weight:700; cursor:pointer; transition: border-color var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease-soft); white-space:nowrap; }
 .ui-toggle-btn:hover{ border-color:rgba(178,188,255,.6); background:rgba(26,35,66,.96); }
 .ui-toggle-btn.is-active{ color:var(--periwinkle-2); border-color:rgba(178,188,255,.3); background:rgba(17,24,46,.82); }
 
@@ -123,7 +128,7 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 .sidebar,.main-content{ min-height:0; }
 .sidebar{ background:linear-gradient(180deg,var(--panel),#0d1020); border-radius:var(--radius); border:1px solid rgba(178,188,255,.16); box-shadow:var(--soft-shadow); padding:16px 16px 22px; overflow-y:auto; overflow-x:hidden; scrollbar-width:thin; scrollbar-color:rgba(129,146,255,0.5) rgba(11,16,34,0.35); }
 .main-content{ background:linear-gradient(180deg, rgba(17,20,38,.86), rgba(12,15,28,.86)); border-radius:var(--radius); border:1px solid rgba(178,188,255,.16); box-shadow:var(--soft-shadow); padding:14px; overflow-y:auto; overflow-x:hidden; scrollbar-width:thin; scrollbar-color:rgba(129,146,255,0.5) rgba(11,16,34,0.35); transform-origin:center center; }
-.main-content.is-view-switching{ animation:viewSwitch var(--motion-med) var(--motion-ease); }
+.main-content.is-view-switching{ animation:viewSwitch var(--motion-med) var(--motion-ease-entrance); will-change:transform, opacity; }
 .sidebar::-webkit-scrollbar,.main-content::-webkit-scrollbar,.modal::-webkit-scrollbar{ width:10px; }
 .sidebar::-webkit-scrollbar-thumb,.main-content::-webkit-scrollbar-thumb,.modal::-webkit-scrollbar-thumb{ background:linear-gradient(180deg, rgba(141,156,255,.78), rgba(108,229,255,.5)); border:2px solid rgba(11,16,34,.86); border-radius:999px; }
 .sidebar::-webkit-scrollbar-track,.main-content::-webkit-scrollbar-track,.modal::-webkit-scrollbar-track{ background:rgba(11,16,34,.42); border-radius:999px; }
@@ -149,21 +154,22 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 .legend-icon.external{ background:rgba(255,166,118,.2); color:#ffb583; }
 
 .product-grid{ display:grid; gap:16px; align-items:stretch; grid-template-columns:repeat(2,1fr); }
-.card{ position:relative; display:flex; flex-direction:column; min-height:280px; background:linear-gradient(180deg,var(--card),var(--panel-2)); border:1px solid rgba(178,188,255,.15); border-radius:12px; overflow:hidden; box-shadow:var(--soft-shadow); transition: transform var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease); }
-.card:hover{ transform:translateY(-3px); border-color:rgba(178,188,255,.36); box-shadow:var(--hover-shadow); }
+.card{ position:relative; display:flex; flex-direction:column; min-height:280px; background:linear-gradient(180deg,var(--card),var(--panel-2)); border:1px solid rgba(178,188,255,.15); border-radius:12px; overflow:hidden; box-shadow:var(--soft-shadow); transition: transform var(--motion-med) var(--motion-ease-soft), box-shadow var(--motion-med) var(--motion-ease-soft), border-color var(--motion-fast) var(--motion-ease), filter var(--motion-fast) var(--motion-ease); will-change:transform; backface-visibility:hidden; }
+.card:hover{ transform:translate3d(0,-3px,0); border-color:rgba(178,188,255,.36); box-shadow:var(--hover-shadow); }
 .card.card-enter{
-  animation:cardEnter 220ms var(--motion-ease);
+  animation:cardEnter var(--motion-med) var(--motion-ease-entrance);
+  will-change:transform, opacity;
 }
 
 .card.card-exit{
   opacity:0;
-  transform:scale(.98);
-  transition:opacity 170ms var(--motion-ease), transform 170ms var(--motion-ease);
+  transform:translate3d(0, 4px, 0) scale(.985);
+  transition:opacity var(--motion-fast) var(--motion-ease-exit), transform var(--motion-fast) var(--motion-ease-exit);
   pointer-events:none;
 }
 
 .card.card-shift{
-  transition:transform 230ms var(--motion-ease);
+  transition:transform var(--motion-med) var(--motion-ease-soft);
 }
 
 .card-body{ padding:14px; display:flex; flex-direction:column; gap:10px; flex:1; }
@@ -236,7 +242,7 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 .block{ display:block; width:100%; }
 
 .page-switch{ display:flex; gap:8px; min-width:0; }
-.page-switch-btn,.subtab-btn{ border:1px solid rgba(178,188,255,.28); background:rgba(17,24,46,.9); color:var(--muted); border-radius:999px; padding:8px 12px; font-weight:700; cursor:pointer; transition: all var(--motion-fast) var(--motion-ease); max-width:100%; line-height:1.25; }
+.page-switch-btn,.subtab-btn{ border:1px solid rgba(178,188,255,.28); background:rgba(17,24,46,.9); color:var(--muted); border-radius:999px; padding:8px 12px; font-weight:700; cursor:pointer; transition: border-color var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease-soft); max-width:100%; line-height:1.25; }
 .page-switch-btn.is-active,.subtab-btn.is-active{ color:#090d1d; border-color:transparent; background:linear-gradient(90deg,#8192ff,#adb8ff); }
 .themed-icon-control{ margin-left:4px; display:inline-flex; align-items:center; justify-content:center; color:var(--icon-color); inline-size:34px; block-size:34px; border:0; background:transparent; padding:0; cursor:pointer; transition: color var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease); }
 .settings-tab-btn svg{ width:21px; height:21px; flex:0 0 auto; }
@@ -245,15 +251,15 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 .themed-icon-control:focus-visible{ outline:2px solid rgba(178,188,255,.55); outline-offset:4px; border-radius:8px; }
 .app-page{ display:none; flex-direction:column; gap:14px; width:100%; opacity:1; transform:translateY(0); transition:opacity var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease); }
 .app-page.is-active{ display:flex; }
-.app-page.animate-in-page{ animation:pageFadeIn var(--motion-med) var(--motion-ease); }
+.app-page.animate-in-page{ animation:pageFadeIn var(--motion-med) var(--motion-ease-entrance); will-change:transform, opacity; }
 #scriptsPage{ min-height:100%; }
 .subpage-header h2{ margin:0; color:var(--periwinkle-2); }
 .subtabs{ display:flex; flex-wrap:wrap; gap:8px; padding:10px; border-radius:12px; border:1px solid rgba(178,188,255,.18); background:rgba(18,23,43,.65); }
 .subtabs .subtab-btn{ white-space:normal; text-wrap:pretty; text-align:left; }
 .subtab-panel{ border:1px solid rgba(178,188,255,.2); border-radius:12px; background:rgba(10,14,28,.72); padding:14px; transition:opacity var(--motion-med) var(--motion-ease), transform var(--motion-med) var(--motion-ease); }
-.subtab-panel.animate-in-subtab{ animation:subtabFadeIn var(--motion-med) var(--motion-ease); }
+.subtab-panel.animate-in-subtab{ animation:subtabFadeIn var(--motion-med) var(--motion-ease-entrance); will-change:transform, opacity; }
 .script-card,.rank-item{ transition:transform var(--motion-med) var(--motion-ease), opacity var(--motion-med) var(--motion-ease); }
-.subtab-panel.animate-in-subtab .script-card,.subtab-panel.animate-in-subtab .rank-item{ animation:cardEnter var(--motion-med) var(--motion-ease); }
+.subtab-panel.animate-in-subtab .script-card,.subtab-panel.animate-in-subtab .rank-item{ animation:cardEnter var(--motion-med) var(--motion-ease-entrance); }
 .subtab-panel h3{ margin:0; }
 .rank-list,.script-list,.saved-script-list{ margin-top:12px; display:grid; gap:10px; }
 .rank-item,.script-card,.saved-script-item{ border:1px solid rgba(178,188,255,.2); border-radius:10px; background:rgba(17,20,38,.7); }
@@ -346,24 +352,24 @@ body.easter-game-mode .xy-sidepanel{ max-height:min(56dvh, 560px); overflow-y:au
 
 
 @keyframes viewSwitch{
-  0%{ opacity:1; transform:scale(1); }
-  42%{ opacity:.84; transform:scale(.986); }
-  100%{ opacity:1; transform:scale(1); }
+  0%{ opacity:1; transform:translate3d(0,0,0) scale(1); }
+  38%{ opacity:.88; transform:translate3d(0,2px,0) scale(.992); }
+  100%{ opacity:1; transform:translate3d(0,0,0) scale(1); }
 }
 
 @keyframes pageFadeIn{
-  from{ opacity:0; transform:translateY(8px) scale(1.004); }
-  to{ opacity:1; transform:translateY(0) scale(1); }
+  from{ opacity:0; transform:translate3d(0,10px,0) scale(.996); }
+  to{ opacity:1; transform:translate3d(0,0,0) scale(1); }
 }
 
 @keyframes subtabFadeIn{
-  from{ opacity:0; transform:translateY(6px) scale(1.003); }
-  to{ opacity:1; transform:translateY(0) scale(1); }
+  from{ opacity:0; transform:translate3d(0,8px,0) scale(.997); }
+  to{ opacity:1; transform:translate3d(0,0,0) scale(1); }
 }
 
 @keyframes cardEnter{
-  from{ opacity:0; transform:translateY(8px) scale(.986); }
-  to{ opacity:1; transform:translateY(0) scale(1); }
+  from{ opacity:0; transform:translate3d(0,12px,0) scale(.986); }
+  to{ opacity:1; transform:translate3d(0,0,0) scale(1); }
 }
 
 @keyframes overlayFadeIn{
@@ -532,6 +538,14 @@ body.easter-game-mode .xy-sidepanel{ max-height:min(56dvh, 560px); overflow-y:au
 }
 
 @media (prefers-reduced-motion: reduce){
+  *,
+  *::before,
+  *::after{
+    transition-duration:1ms !important;
+    animation-duration:1ms !important;
+    animation-iteration-count:1 !important;
+    scroll-behavior:auto !important;
+  }
   .main-content.is-view-switching,
   .app-page.animate-in-page,
   .subtab-panel.animate-in-subtab,
