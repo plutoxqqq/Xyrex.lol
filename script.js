@@ -535,16 +535,16 @@ const products = [
 
 const scriptsHubData = {
   tierListPaid: [
-    { tier: 'S', executor: 'Pluton', notes: 'Top paid pick for balanced performance, consistency, and support coverage' },
-    { tier: 'A', executor: 'Potassium', notes: 'Strong feature depth with excellent sUNC support, but trust concerns remain' },
-    { tier: 'A', executor: 'Seliware', notes: 'Smooth execution and polished UX, with occasional detection instability' },
-    { tier: 'B', executor: 'Volcano', notes: 'Stable long-term option with reliable execution, but comparatively expensive' }
+    { tier: '1', executor: 'Pluton', notes: 'Top paid pick for balanced performance, consistency, and support coverage' },
+    { tier: '2', executor: 'Potassium', notes: 'Strong feature depth with excellent sUNC support, but trust concerns remain' },
+    { tier: '3', executor: 'Seliware', notes: 'Smooth execution and polished UX, with occasional detection instability' },
+    { tier: '4', executor: 'Volcano', notes: 'Stable long-term option with reliable execution, but comparatively expensive' }
   ],
   tierListFree: [
-    { tier: 'S', executor: 'Pluton', notes: 'Best free overall package right now with broad platform support' },
-    { tier: 'A', executor: 'Velocity', notes: 'Fast keyless free option with modern tooling and customization' },
-    { tier: 'A', executor: 'Solara', notes: 'Reliable free Windows option with steady day-to-day stability' },
-    { tier: 'B', executor: 'JJSploit', notes: 'Beginner-friendly choice with a simplified workflow' }
+    { tier: '1', executor: 'Pluton', notes: 'Best free overall package right now with broad platform support' },
+    { tier: '2', executor: 'Velocity', notes: 'Fast keyless free option with modern tooling and customization' },
+    { tier: '3', executor: 'Solara', notes: 'Reliable free Windows option with steady day-to-day stability' },
+    { tier: '4', executor: 'JJSploit', notes: 'Beginner-friendly choice with a simplified workflow' }
   ],
   popularScripts: [
     {
@@ -575,6 +575,7 @@ const XYREX_OFFICIAL_DISCORD_URL = 'https://discord.gg/6YXCAQYY';
 const discordWordmarkSvg = '<svg viewBox="0 0 127.14 96.36" aria-hidden="true" focusable="false"><path fill="currentColor" d="M107.7 8.07A105.15 105.15 0 0081.47 0a72.06 72.06 0 00-3.36 6.83 97.68 97.68 0 00-29.94 0A72.37 72.37 0 0044.8 0 105.89 105.89 0 0018.57 8.08C1.03 34.37-3.72 60 1.39 85.28A105.73 105.73 0 0033.32 96a77.7 77.7 0 006.84-11.16 68.42 68.42 0 01-10.78-5.15c.91-.67 1.8-1.37 2.66-2.09a75.57 75.57 0 0063.48 0c.87.72 1.76 1.42 2.67 2.09a68.68 68.68 0 01-10.8 5.16A77.53 77.53 0 0094.24 96a105.25 105.25 0 0031.91-10.72c6-29.3-1-54.68-18.45-77.21zM42.45 65.69c-6.23 0-11.33-5.69-11.33-12.69s5-12.7 11.33-12.7S53.78 46 53.78 53s-5.03 12.69-11.33 12.69zm42.24 0c-6.23 0-11.33-5.69-11.33-12.69s5-12.7 11.33-12.7S96.02 46 96.02 53s-5.03 12.69-11.33 12.69z"/></svg>';
 
 const popularScriptFileSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" aria-hidden="true" focusable="false"><path fill="currentColor" d="M288 64C252.7 64 224 92.7 224 128L224 384C224 419.3 252.7 448 288 448L480 448C515.3 448 544 419.3 544 384L544 183.4C544 166 536.9 149.3 524.3 137.2L466.6 81.8C454.7 70.4 438.8 64 422.3 64L288 64zM160 192C124.7 192 96 220.7 96 256L96 512C96 547.3 124.7 576 160 576L352 576C387.3 576 416 547.3 416 512L416 496L352 496L352 512L160 512L160 256L176 256L176 192L160 192z"/></svg>';
+const popularScriptCopySvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" aria-hidden="true" focusable="false"><path fill="currentColor" d="M288 64C252.7 64 224 92.7 224 128L224 384C224 419.3 252.7 448 288 448L480 448C515.3 448 544 419.3 544 384L544 183.4C544 166 536.9 149.3 524.3 137.2L466.6 81.8C454.7 70.4 438.8 64 422.3 64L288 64zM160 192C124.7 192 96 220.7 96 256L96 512C96 547.3 124.7 576 160 576L352 576C387.3 576 416 547.3 416 512L416 496L352 496L352 512L160 512L160 256L176 256L176 192L160 192z"/></svg>';
 
 const qs = sel => document.querySelector(sel);
 const qsa = sel => Array.from(document.querySelectorAll(sel));
@@ -726,40 +727,47 @@ function renderProducts(list) {
   if (!oldCards.length) {
     grid.innerHTML = '';
     qs('#noResults').hidden = Boolean(sorted.length);
-    if (!sorted.length) return;
     sorted.forEach((product, index) => grid.appendChild(createProductCard(product, index)));
     return;
   }
-
+  const existingByName = new Map(oldCards.map(card => [card.getAttribute('data-name'), card]));
   const oldRectByName = new Map(oldCards.map(card => [card.getAttribute('data-name'), card.getBoundingClientRect()]));
   const nextNames = new Set(sorted.map(item => item.name));
+  qs('#noResults').hidden = Boolean(sorted.length);
 
   oldCards.forEach(card => {
-    if (!nextNames.has(card.getAttribute('data-name'))) card.classList.add('card-exit');
+    const name = card.getAttribute('data-name');
+    if (!nextNames.has(name)) card.classList.add('card-exit');
   });
 
   window.setTimeout(() => {
     if (grid.dataset.renderVersion !== nextVersion) return;
 
-    grid.innerHTML = '';
-    qs('#noResults').hidden = Boolean(sorted.length);
+    oldCards.forEach(card => {
+      if (!nextNames.has(card.getAttribute('data-name'))) card.remove();
+    });
     if (!sorted.length) return;
 
-    sorted.forEach((product, index) => {
-      const card = createProductCard(product, index);
-      grid.appendChild(card);
-
-      const oldRect = oldRectByName.get(product.name);
-      if (!oldRect) {
-        card.classList.add('card-enter');
-        return;
+    const orderedCards = sorted.map((product, index) => {
+      const existingCard = existingByName.get(product.name);
+      if (existingCard) {
+        existingCard.setAttribute('data-index', String(index));
+        return existingCard;
       }
+      const newCard = createProductCard(product, index);
+      newCard.classList.add('card-enter');
+      return newCard;
+    });
+    orderedCards.forEach(card => grid.appendChild(card));
 
+    orderedCards.forEach(card => {
+      const name = card.getAttribute('data-name');
+      const oldRect = oldRectByName.get(name);
+      if (!oldRect) return;
       const newRect = card.getBoundingClientRect();
       const deltaX = oldRect.left - newRect.left;
       const deltaY = oldRect.top - newRect.top;
       if (Math.abs(deltaX) < 0.5 && Math.abs(deltaY) < 0.5) return;
-
       card.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
       card.style.transition = 'transform 0s';
       requestAnimationFrame(() => {
@@ -1068,7 +1076,7 @@ function renderTierList(containerId, entries) {
   if (!wrap) return;
   wrap.innerHTML = entries.map(entry => `
     <article class="rank-item rank-tier-${escapeHtml(String(entry.tier || '').toLowerCase())}">
-      <div class="rank-badge">${escapeHtml(entry.tier)}</div>
+      <div class="rank-badge"><span>${escapeHtml(entry.tier)}</span></div>
       <div><h4>${escapeHtml(entry.executor)}</h4><p>${escapeHtml(entry.notes)}</p></div>
     </article>`).join('');
 }
@@ -1083,8 +1091,25 @@ function renderPopularScripts() {
         <span>${escapeHtml(stripTrailingPeriod(item.game))}</span>
       </div>
       <p>${escapeHtml(stripTrailingPeriod(item.description))}</p>
-      <pre>${escapeHtml(item.script)}</pre>
+      <div class="script-code-wrap">
+        <pre>${escapeHtml(item.script)}</pre>
+        <button class="script-copy-btn" type="button" data-script-copy="${escapeHtml(item.script)}" title="Copy script" aria-label="Copy script">${popularScriptCopySvg}</button>
+      </div>
     </article>`).join('');
+
+  wrap.querySelectorAll('.script-copy-btn').forEach(button => {
+    button.addEventListener('click', async () => {
+      const scriptValue = button.getAttribute('data-script-copy') || '';
+      if (!scriptValue) return;
+      try {
+        await navigator.clipboard.writeText(scriptValue);
+        button.classList.add('is-copied');
+        window.setTimeout(() => button.classList.remove('is-copied'), 900);
+      } catch {
+        // no-op
+      }
+    });
+  });
 }
 
 function renderRecentChanges() {
@@ -1394,14 +1419,23 @@ function setActiveSubtab(targetSubtabId) {
   if (targetSubtabId === activeSubtabId) return;
 
   const nextPanel = qs(`#${targetSubtabId}`);
+  const previousPanel = qs(`#${activeSubtabId}`);
   if (!nextPanel) return;
 
-  qsa('.subtab-panel').forEach(panel => {
-    panel.hidden = panel.id !== targetSubtabId;
-  });
-
-  animateMainContentTransition();
-  restartAnimationClass(nextPanel, 'animate-in-subtab');
+  const tabOrder = ['tierPaidPanel', 'tierFreePanel', 'popularScriptsPanel', 'savedScriptsPanel', 'recentChangesPanel'];
+  const previousIndex = tabOrder.indexOf(activeSubtabId);
+  const nextIndex = tabOrder.indexOf(targetSubtabId);
+  const direction = nextIndex > previousIndex ? 'forward' : 'backward';
+  if (previousPanel) {
+    previousPanel.classList.remove('subtab-slide-forward-out', 'subtab-slide-backward-out', 'subtab-slide-forward-in', 'subtab-slide-backward-in');
+    previousPanel.classList.add(direction === 'forward' ? 'subtab-slide-forward-out' : 'subtab-slide-backward-out');
+  }
+  nextPanel.hidden = false;
+  nextPanel.classList.remove('subtab-slide-forward-out', 'subtab-slide-backward-out', 'subtab-slide-forward-in', 'subtab-slide-backward-in');
+  nextPanel.classList.add(direction === 'forward' ? 'subtab-slide-forward-in' : 'subtab-slide-backward-in');
+  window.setTimeout(() => {
+    if (previousPanel) previousPanel.hidden = true;
+  }, 230);
   activeSubtabId = targetSubtabId;
   syncRouteWithState();
 }
@@ -1444,7 +1478,14 @@ function initScriptsHub() {
   qs('#savedScriptsList').addEventListener('click', event => {
     const trigger = event.target.closest('[data-saved-script-id]');
     if (!trigger) return;
-    currentSavedScriptId = trigger.getAttribute('data-saved-script-id');
+    const selectedId = trigger.getAttribute('data-saved-script-id');
+    if (selectedId === currentSavedScriptId) {
+      currentSavedScriptId = null;
+      clearSavedScriptEditor();
+      renderSavedScriptsList();
+      return;
+    }
+    currentSavedScriptId = selectedId;
     const selected = getSavedScripts().find(item => item.id === currentSavedScriptId);
     setEditorFromSavedScript(selected);
     renderSavedScriptsList();

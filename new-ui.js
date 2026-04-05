@@ -154,7 +154,7 @@
         <header class="new-ui-theme-head">
           <div>
             <h3>Theme Customizer</h3>
-            <p>Adjust the full site palette and mood with live preview</p>
+            <p>Adjust the full site palette and mood, then apply it to reload with your selected theme</p>
           </div>
           <button type="button" class="new-ui-theme-close" aria-label="Close Theme Customizer">✕</button>
         </header>
@@ -252,13 +252,11 @@
       const preset = pastelThemePresets.find(item => item.id === trigger.getAttribute('data-preset-id'));
       if (!preset) return;
       setInputValues(preset.colors);
-      applyTheme(preset.colors);
-      localStorage.setItem(THEME_KEY, JSON.stringify(preset.colors));
     });
     modal.querySelector('#saveNewUiThemeBtn').addEventListener('click', () => {
       const payload = collectInputValues();
       localStorage.setItem(THEME_KEY, JSON.stringify(payload));
-      applyTheme(payload);
+      window.location.reload();
     });
     modal.querySelector('#resetNewUiThemeBtn').addEventListener('click', () => {
       Object.entries(colorInputMap).forEach(([key, selector]) => {
@@ -266,7 +264,7 @@
         if (input) input.value = themeDefaults[key];
       });
       localStorage.removeItem(THEME_KEY);
-      clearThemeOverrides();
+      window.location.reload();
     });
     modal.querySelector('.new-ui-theme-close').addEventListener('click', closeThemeModal);
     modal.addEventListener('click', event => {
@@ -465,6 +463,7 @@
   async function collectExternalResearch(product) {
     const snippets = [];
     const cleanName = encodeURIComponent(product.name.replace(/\s+/g, '_'));
+    const searchQuery = encodeURIComponent(`${product.name} executor review risk detection`);
     try {
       const wiki = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${cleanName}`);
       if (wiki.ok) {
@@ -487,6 +486,20 @@
       } catch {
         // no-op
       }
+    }
+    try {
+      const searchSnapshot = await fetch(`https://r.jina.ai/http://duckduckgo.com/?q=${searchQuery}`);
+      if (searchSnapshot.ok) {
+        const text = await searchSnapshot.text();
+        const compact = text
+          .replace(/\s+/g, ' ')
+          .replace(/DuckDuckGo/gi, '')
+          .trim()
+          .slice(0, 700);
+        if (compact) snippets.push(`Search findings snapshot: ${compact}`);
+      }
+    } catch {
+      // no-op
     }
     return snippets.join('\n');
   }

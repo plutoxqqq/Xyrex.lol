@@ -362,6 +362,11 @@ body.new-ui-enabled .search-input:focus {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--periwinkle) 28%, transparent);
 }
 
+body.new-ui-enabled .btn-ghost:hover {
+  background: color-mix(in srgb, var(--periwinkle) 22%, transparent);
+  color: var(--text);
+}
+
 body.new-ui-enabled .ui-toggle-btn,
 body.new-ui-enabled .page-switch-btn,
 body.new-ui-enabled .subtab-btn,
@@ -397,6 +402,11 @@ body.new-ui-enabled .filter-checkbox:checked,
 body.new-ui-enabled .price-checkbox:checked {
   background: var(--periwinkle);
   border-color: var(--periwinkle-2);
+}
+
+body.new-ui-enabled .filter-checkbox:checked::after,
+body.new-ui-enabled .price-checkbox:checked::after {
+  border-color: color-mix(in srgb, var(--bg) 82%, #000 18%);
 }
 
 body.new-ui-enabled .platform-chip,
