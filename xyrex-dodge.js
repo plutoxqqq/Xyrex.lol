@@ -227,8 +227,8 @@
         border: 1px solid ${withAlpha(THEMES.accent2, 0.3, 'rgba(154, 205, 255, 0.24)')}; border-radius: 12px; background: linear-gradient(180deg, ${withAlpha(THEMES.panelAlt, 0.94, 'rgba(16, 31, 58, 0.96)')}, ${withAlpha(THEMES.panel, 0.95, 'rgba(10, 20, 40, 0.96)')}); color: ${THEMES.text};
         min-height: 42px; padding: 10px 12px; transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease, box-shadow 0.2s ease; box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
       }
-      .xy-dodge-select { appearance: none; -webkit-appearance: none; background-image: linear-gradient(180deg, rgba(16, 31, 58, 0.98), rgba(10, 20, 40, 0.98)), linear-gradient(45deg, transparent 50%, ${THEMES.subtext} 50%), linear-gradient(135deg, ${THEMES.subtext} 50%, transparent 50%); background-repeat: no-repeat; background-position: 0 0, calc(100% - 18px) 50%, calc(100% - 12px) 50%; background-size: 100% 100%, 6px 6px, 6px 6px; padding-right: 34px; }
-      .xy-dodge-button:hover, .xy-dodge-mobile-controls button:hover { transform: translateY(-1px); background: linear-gradient(180deg, rgba(20, 39, 72, 0.98), rgba(12, 24, 45, 0.98)); }
+      .xy-dodge-select { appearance: none; -webkit-appearance: none; background-image: linear-gradient(180deg, ${withAlpha(THEMES.panelAlt, 0.95, 'rgba(16, 31, 58, 0.98)')}, ${withAlpha(THEMES.panel, 0.96, 'rgba(10, 20, 40, 0.98)')}), linear-gradient(45deg, transparent 50%, ${THEMES.subtext} 50%), linear-gradient(135deg, ${THEMES.subtext} 50%, transparent 50%); background-repeat: no-repeat; background-position: 0 0, calc(100% - 18px) 50%, calc(100% - 12px) 50%; background-size: 100% 100%, 6px 6px, 6px 6px; padding-right: 34px; }
+      .xy-dodge-button:hover, .xy-dodge-mobile-controls button:hover { transform: translateY(-1px); background: linear-gradient(180deg, ${withAlpha(THEMES.panelAlt, 0.98, 'rgba(20, 39, 72, 0.98)')}, ${withAlpha(THEMES.panel, 0.98, 'rgba(12, 24, 45, 0.98)')}); border-color:${withAlpha(THEMES.accent2, 0.5, 'rgba(178,188,255,0.42)')}; }
       .xy-dodge-button--primary { background: linear-gradient(135deg, ${withAlpha(THEMES.accent, 0.24, 'rgba(108,229,255,0.22)')}, ${withAlpha(THEMES.accent2, 0.2, 'rgba(141,132,255,0.18)')}); border-color: ${withAlpha(THEMES.accent, 0.35, 'rgba(108,229,255,0.28)')}; }
       .xy-dodge-button--danger { background: rgba(255,111,159,0.16); }
       .xy-dodge-button[disabled], .xy-dodge-select[disabled] { opacity: 0.55; cursor: not-allowed; transform: none; }
@@ -248,13 +248,13 @@
       .xy-dodge-toast[data-tone='warning'] { background: rgba(255, 209, 102, 0.13); }
       .xy-dodge-toast[data-tone='danger'] { background: rgba(255, 111, 159, 0.18); }
       .xy-dodge-toast[data-tone='ok'] { animation: xyPulse 0.35s ease; }
-      .xy-dodge-segmented { background: rgba(255,255,255,0.04); border-radius: 14px; padding: 4px; }
+      .xy-dodge-segmented { background: ${withAlpha(THEMES.panelAlt, 0.62, 'rgba(255,255,255,0.04)')}; border-radius: 14px; padding: 4px; border:1px solid ${withAlpha(THEMES.accent2, 0.28, 'rgba(178,188,255,0.22)')}; }
       .xy-dodge-segmented button { flex: 1; min-width: 88px; }
       .xy-dodge-compact-grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:10px; }
       .xy-dodge-loadout-grid { display: grid; gap: 10px; }
       .xy-dodge-loadout-option { text-align: left; width: 100%; cursor: pointer; transition: border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease; }
-      .xy-dodge-loadout-option:hover { transform: translateY(-1px); border-color: rgba(108,229,255,0.4); }
-      .xy-dodge-loadout-option[data-active='true'] { border-color: rgba(108,229,255,0.52); box-shadow: inset 0 0 0 1px rgba(108,229,255,0.24), 0 0 18px rgba(108,229,255,0.08); }
+      .xy-dodge-loadout-option:hover { transform: translateY(-1px); border-color: ${withAlpha(THEMES.accent, 0.48, 'rgba(108,229,255,0.4)')}; }
+      .xy-dodge-loadout-option[data-active='true'] { border-color: ${withAlpha(THEMES.accent, 0.58, 'rgba(108,229,255,0.52)')}; box-shadow: inset 0 0 0 1px ${withAlpha(THEMES.accent, 0.26, 'rgba(108,229,255,0.24)')}, 0 0 18px ${withAlpha(THEMES.accent, 0.12, 'rgba(108,229,255,0.08)')}; }
       .xy-dodge-loadout-option h5 { margin: 0; font-size: 14px; }
       .xy-dodge-loadout-option p { margin: 6px 0; }
       .xy-dodge-effect-list { margin: 0; padding-left: 18px; color: ${THEMES.subtext}; display: grid; gap: 4px; font-size: 12px; }

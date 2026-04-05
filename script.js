@@ -710,7 +710,7 @@ function createProductCard(product, index) {
   return card;
 }
 
-const CARD_EXIT_ANIMATION_MS = 280;
+const CARD_EXIT_ANIMATION_MS = 210;
 
 function renderProducts(list) {
   const grid = qs('#productGrid');
@@ -774,6 +774,7 @@ function renderProducts(list) {
         card.classList.add('card-shift');
         card.style.transform = '';
         card.style.transition = '';
+        window.setTimeout(() => card.classList.remove('card-shift'), 430);
       });
     });
   }, CARD_EXIT_ANIMATION_MS);
@@ -1088,12 +1089,16 @@ function renderPopularScripts() {
     <article class="script-card">
       <div class="script-card-head">
         <h4 class="script-card-title"><span class="script-file-icon">${popularScriptFileSvg}</span>${escapeHtml(item.name)}</h4>
-        <span>${escapeHtml(stripTrailingPeriod(item.game))}</span>
+        <div class="script-card-meta">
+          <span>${escapeHtml(stripTrailingPeriod(item.game))}</span>
+          <button class="script-copy-btn" type="button" data-script-copy="${escapeHtml(item.script)}" title="Copy script" aria-label="Copy script">
+            <span class="script-file-icon">${popularScriptFileSvg}</span>
+          </button>
+        </div>
       </div>
       <p>${escapeHtml(stripTrailingPeriod(item.description))}</p>
       <div class="script-code-wrap">
         <pre>${escapeHtml(item.script)}</pre>
-        <button class="script-copy-btn" type="button" data-script-copy="${escapeHtml(item.script)}" title="Copy script" aria-label="Copy script">${popularScriptCopySvg}</button>
       </div>
     </article>`).join('');
 
@@ -1426,16 +1431,49 @@ function setActiveSubtab(targetSubtabId) {
   const previousIndex = tabOrder.indexOf(activeSubtabId);
   const nextIndex = tabOrder.indexOf(targetSubtabId);
   const direction = nextIndex > previousIndex ? 'forward' : 'backward';
-  if (previousPanel) {
-    previousPanel.classList.remove('subtab-slide-forward-out', 'subtab-slide-backward-out', 'subtab-slide-forward-in', 'subtab-slide-backward-in');
-    previousPanel.classList.add(direction === 'forward' ? 'subtab-slide-forward-out' : 'subtab-slide-backward-out');
+  if (!previousPanel || typeof nextPanel.animate !== 'function' || typeof previousPanel.animate !== 'function') {
+    qsa('.subtab-panel').forEach(panel => {
+      panel.hidden = panel.id !== targetSubtabId;
+    });
+  } else {
+    const wrapper = previousPanel.parentElement;
+    const outgoingTransform = direction === 'forward' ? 'translateX(-42px)' : 'translateX(42px)';
+    const incomingFrom = direction === 'forward' ? 'translateX(42px)' : 'translateX(-42px)';
+    const wrapperHeight = Math.max(previousPanel.offsetHeight, nextPanel.offsetHeight);
+    wrapper.style.position = 'relative';
+    wrapper.style.minHeight = `${wrapperHeight}px`;
+
+    previousPanel.hidden = false;
+    previousPanel.style.position = 'absolute';
+    previousPanel.style.inset = '0';
+    previousPanel.style.width = '100%';
+
+    nextPanel.hidden = false;
+    nextPanel.style.position = 'absolute';
+    nextPanel.style.inset = '0';
+    nextPanel.style.width = '100%';
+
+    const outgoing = previousPanel.animate(
+      [{ opacity: 1, transform: 'translateX(0)' }, { opacity: 0, transform: outgoingTransform }],
+      { duration: 260, easing: 'cubic-bezier(.22,.84,.25,1)', fill: 'forwards' }
+    );
+    const incoming = nextPanel.animate(
+      [{ opacity: 0, transform: incomingFrom }, { opacity: 1, transform: 'translateX(0)' }],
+      { duration: 300, easing: 'cubic-bezier(.2,.9,.26,1)', fill: 'forwards' }
+    );
+
+    Promise.allSettled([outgoing.finished, incoming.finished]).then(() => {
+      previousPanel.hidden = true;
+      [previousPanel, nextPanel].forEach(panel => {
+        panel.style.position = '';
+        panel.style.inset = '';
+        panel.style.width = '';
+        panel.style.opacity = '';
+        panel.style.transform = '';
+      });
+      wrapper.style.minHeight = '';
+    });
   }
-  nextPanel.hidden = false;
-  nextPanel.classList.remove('subtab-slide-forward-out', 'subtab-slide-backward-out', 'subtab-slide-forward-in', 'subtab-slide-backward-in');
-  nextPanel.classList.add(direction === 'forward' ? 'subtab-slide-forward-in' : 'subtab-slide-backward-in');
-  window.setTimeout(() => {
-    if (previousPanel) previousPanel.hidden = true;
-  }, 230);
   activeSubtabId = targetSubtabId;
   syncRouteWithState();
 }

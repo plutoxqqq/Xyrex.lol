@@ -181,6 +181,10 @@
             <label>Warning Accent <input type="color" id="newUiWarning" value="#f0c36f" /></label>
           </div>
         </section>
+        <div class="new-ui-theme-preview" id="newUiThemePreview">
+          <strong id="newUiThemePreviewLabel">Pending theme: Current</strong>
+          <div class="new-ui-theme-preview-swatches" id="newUiThemePreviewSwatches"></div>
+        </div>
         <div class="new-ui-theme-actions">
           <button type="button" class="btn-primary" id="saveNewUiThemeBtn">Apply Theme</button>
           <button type="button" class="btn-danger" id="resetNewUiThemeBtn">Reset</button>
@@ -221,6 +225,17 @@
         input.value = merged[key] || themeDefaults[key];
       });
     };
+    const renderPendingPreview = (palette, labelText = 'Pending theme: Custom') => {
+      const merged = { ...themeDefaults, ...(palette || {}) };
+      const previewLabel = modal.querySelector('#newUiThemePreviewLabel');
+      const previewSwatches = modal.querySelector('#newUiThemePreviewSwatches');
+      if (previewLabel) previewLabel.textContent = labelText;
+      if (previewSwatches) {
+        previewSwatches.innerHTML = ['bg', 'panel', 'card', 'accent', 'accentSoft', 'text']
+          .map(key => `<span style="background:${merged[key] || themeDefaults[key]}"></span>`)
+          .join('');
+      }
+    };
     const collectInputValues = () => {
       const payload = {};
       Object.entries(colorInputMap).forEach(([key, selector]) => {
@@ -241,6 +256,13 @@
     };
     setThemeTab('newUiThemeBasicPanel');
     setInputValues(saved);
+    renderPendingPreview(saved, 'Pending theme: Current');
+    Object.values(colorInputMap).forEach(selector => {
+      modal.querySelector(selector)?.addEventListener('input', () => {
+        renderPendingPreview(collectInputValues(), 'Pending theme: Custom');
+        modal.querySelectorAll('.new-ui-preset-swatch').forEach(swatch => swatch.classList.remove('is-selected'));
+      });
+    });
     modal.querySelectorAll('.new-ui-theme-tab').forEach(tab => {
       tab.addEventListener('click', () => {
         setThemeTab(tab.getAttribute('data-theme-tab-target'));
@@ -251,7 +273,11 @@
       if (!trigger) return;
       const preset = pastelThemePresets.find(item => item.id === trigger.getAttribute('data-preset-id'));
       if (!preset) return;
+      modal.querySelectorAll('.new-ui-preset-swatch').forEach(swatch => {
+        swatch.classList.toggle('is-selected', swatch === trigger);
+      });
       setInputValues(preset.colors);
+      renderPendingPreview(preset.colors, `Pending theme: ${preset.label}`);
     });
     modal.querySelector('#saveNewUiThemeBtn').addEventListener('click', () => {
       const payload = collectInputValues();
