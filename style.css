@@ -283,7 +283,7 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 .saved-empty,.dev-list{ color:var(--muted); }
 .saved-error{ margin-top:10px; color:#ff9ec5; font-size:.88rem; }
 .dev-list{ margin:12px 0 0; line-height:1.5; }
-#easterEggPage{ display:flex; flex-direction:column; gap:10px; min-height:100%; }
+#easterEggPage.is-active{ display:flex; flex-direction:column; gap:10px; min-height:100%; }
 .egg-card{ min-height:300px; border:1px solid rgba(178,188,255,.2); border-radius:12px; background:rgba(10,14,28,.72); }
 .egg-game{ padding:14px; height:100%; }
 .egg-entry-hint{ color:var(--muted); font-size:.9rem; text-align:center; margin-top:2px; }
