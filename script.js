@@ -707,6 +707,8 @@ function createProductCard(product, index) {
   return card;
 }
 
+const CARD_EXIT_ANIMATION_MS = 210;
+
 function renderProducts(list) {
   const grid = qs('#productGrid');
   const sorted = [...list].sort((a, b) => {
@@ -764,7 +766,7 @@ function renderProducts(list) {
         card.style.transition = '';
       });
     });
-  }, 180);
+  }, CARD_EXIT_ANIMATION_MS);
 }
 
 function getActiveFilters() {

@@ -82,7 +82,7 @@ body.new-ui-enabled .card.featured-card::before {
 
 body.new-ui-enabled .card:hover {
   border-color: var(--newui-border-strong);
-  transform: translateY(-2px);
+  transform: translate3d(0, -2px, 0);
 }
 
 body.new-ui-enabled .card-body {
@@ -248,6 +248,13 @@ body.new-ui-enabled .price {
   height: 32px;
   border-radius: 10px;
   cursor: pointer;
+  transition: border-color var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease-soft);
+}
+
+.new-ui-theme-close:hover {
+  border-color: var(--newui-border-strong);
+  background: color-mix(in srgb, var(--panel-2) 86%, var(--bg) 14%);
+  transform: translate3d(0, -1px, 0);
 }
 
 .new-ui-theme-grid {
@@ -270,12 +277,18 @@ body.new-ui-enabled .price {
   padding: 7px 12px;
   font-weight: 700;
   cursor: pointer;
+  transition: border-color var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease-soft);
 }
 
 .new-ui-theme-tab.is-active {
   color: #091020;
   border-color: transparent;
   background: linear-gradient(90deg, var(--periwinkle), var(--periwinkle-2));
+}
+
+.new-ui-theme-tab:hover {
+  border-color: var(--newui-border-strong);
+  transform: translate3d(0, -1px, 0);
 }
 
 .new-ui-theme-panel-block {
@@ -301,10 +314,13 @@ body.new-ui-enabled .price {
   border: 2px solid color-mix(in srgb, var(--periwinkle-2) 34%, transparent);
   cursor: pointer;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+  transition: transform var(--motion-fast) var(--motion-ease-soft), box-shadow var(--motion-fast) var(--motion-ease-soft), border-color var(--motion-fast) var(--motion-ease);
 }
 
 .new-ui-preset-swatch:hover {
-  transform: translateY(-1px);
+  transform: translate3d(0, -1px, 0) scale(1.02);
+  border-color: var(--newui-border-strong);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.34);
 }
 
 .new-ui-theme-grid label {
@@ -499,4 +515,24 @@ body.new-ui-enabled .settings-action-btn {
 
 body.new-ui-enabled .settings-action-btn:hover {
   background: color-mix(in srgb, var(--panel-2) 86%, transparent);
+}
+
+body.new-ui-enabled .new-ui-panel,
+body.new-ui-enabled .new-ui-theme-panel,
+body.new-ui-enabled .new-ui-theme-modal,
+body.new-ui-enabled .new-ui-theme-grid label,
+body.new-ui-enabled .official-link-btn,
+body.new-ui-enabled .official-site-btn,
+body.new-ui-enabled .settings-action-btn,
+body.new-ui-enabled .info-btn,
+body.new-ui-enabled .btn-primary,
+body.new-ui-enabled .btn-danger,
+body.new-ui-enabled .ui-toggle-btn,
+body.new-ui-enabled .page-switch-btn,
+body.new-ui-enabled .subtab-btn,
+body.new-ui-enabled .saved-script-item,
+body.new-ui-enabled .rank-item,
+body.new-ui-enabled .script-card,
+body.new-ui-enabled .card {
+  transition: background var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-med) var(--motion-ease-soft), transform var(--motion-fast) var(--motion-ease-soft), color var(--motion-fast) var(--motion-ease);
 }
