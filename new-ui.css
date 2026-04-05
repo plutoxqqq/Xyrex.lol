@@ -536,3 +536,19 @@ body.new-ui-enabled .script-card,
 body.new-ui-enabled .card {
   transition: background var(--motion-med) var(--motion-ease-soft), border-color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-slow) var(--motion-ease-soft), transform var(--motion-fast) var(--motion-ease-soft), color var(--motion-fast) var(--motion-ease);
 }
+
+
+body.new-ui-enabled .modal,
+body.new-ui-enabled .settings-group {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 90%, var(--bg) 10%), color-mix(in srgb, var(--panel-2) 88%, var(--bg-2) 12%));
+}
+
+body.new-ui-enabled .search-input:focus,
+body.new-ui-enabled .page-switch-btn.is-active,
+body.new-ui-enabled .subtab-btn.is-active,
+body.new-ui-enabled .script-card,
+body.new-ui-enabled .settings-group,
+body.new-ui-enabled .xy-dodge-panel,
+body.new-ui-enabled .xy-dodge-canvas-wrap {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--periwinkle-2) 18%, transparent), 0 18px 36px color-mix(in srgb, var(--periwinkle) 16%, transparent);
+}

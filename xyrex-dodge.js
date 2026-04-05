@@ -139,6 +139,19 @@
   };
 
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  const withAlpha = (hexColor, alpha, fallback) => {
+    const normalized = String(hexColor || '').trim();
+    if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(normalized)) {
+      const value = normalized.length === 4
+        ? `#${normalized[1]}${normalized[1]}${normalized[2]}${normalized[2]}${normalized[3]}${normalized[3]}`
+        : normalized;
+      const r = parseInt(value.slice(1, 3), 16);
+      const g = parseInt(value.slice(3, 5), 16);
+      const b = parseInt(value.slice(5, 7), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+    return fallback;
+  };
   const pick = items => items[Math.floor(Math.random() * items.length)];
   const betaFeaturesEnabled = () => localStorage.getItem('xyrex_beta_features') === 'enabled';
   const localDayKey = () => {
@@ -292,12 +305,35 @@
       this.pickups = [];
       this.dialogueTimer = 0;
       this.storyChapter = this.resolveStoryChapter();
+      this.lastUiSyncAt = 0;
+      this.uiStateCache = {};
+      this.lastMissionSignature = '';
+      this.updateThemeColors();
       this.ensureTokenState();
       this.ensureDailyObjectiveState();
       injectStyles();
       this.buildUi();
       this.attachGlobalListeners();
       this.hydrateRemoteProgress();
+    }
+
+    updateThemeColors() {
+      const css = getComputedStyle(document.documentElement);
+      const betaEnabled = this.isBetaEnabled();
+      const read = (name, fallback) => (css.getPropertyValue(name).trim() || fallback);
+      if (!betaEnabled) return;
+      THEMES.bg = read('--bg', THEMES.bg);
+      THEMES.panel = read('--panel', THEMES.panel);
+      THEMES.panelAlt = read('--panel-2', THEMES.panelAlt);
+      THEMES.border = withAlpha(read('--periwinkle-2', THEMES.accent2), 0.28, THEMES.border);
+      THEMES.accent = read('--periwinkle', THEMES.accent);
+      THEMES.accent2 = read('--periwinkle-2', THEMES.accent2);
+      THEMES.accent3 = read('--accent-success', THEMES.accent3);
+      THEMES.warning = read('--accent-warning', THEMES.warning);
+      THEMES.text = read('--text', THEMES.text);
+      THEMES.subtext = read('--muted', THEMES.subtext);
+      THEMES.track = read('--bg-2', THEMES.track);
+      THEMES.cardShadow = `0 20px 52px ${withAlpha(read('--periwinkle', THEMES.accent), 0.22, 'rgba(0,0,0,0.36)')}`;
     }
 
     loadData() {
@@ -497,7 +533,7 @@
                 <div class="xy-dodge-mini-card"><span>AI Tokens</span><strong id="xyTokenCount">0</strong><small>Daily + purchased.</small></div>
                 <div class="xy-dodge-mini-card"><span>Story</span><strong id="xyStoryProgressLabel">0 / ${STORY_CHAPTERS.length}</strong><small>Sector progress.</small></div>
               </div>
-              <div id="xyBetaNotice" class="xy-dodge-toast" data-tone="warning" ${betaEnabled ? 'hidden' : ''}>Beta Features are disabled so turn them on in Settings to enable story mode additional game modes missions and the new responsive interface</div>
+              <div id="xyBetaNotice" class="xy-dodge-toast" data-tone="warning" ${betaEnabled ? 'hidden' : ''}>Beta Features are disabled. Enable them in Settings to unlock Story mode, additional game modes, missions, and the new responsive interface.</div>
             </div>
           </section>
 
@@ -833,19 +869,42 @@
       const visibleModeName = this.isBetaEnabled() ? this.data.selectedMode : 'Classic';
       const mode = GAME_MODES[visibleModeName] || GAME_MODES.Classic;
       this.ensureDailyObjectiveState();
-      this.bestEl.textContent = String(this.data.bestScore || 0);
-      this.bankEl.textContent = String(this.data.coins || 0);
-      this.runsEl.textContent = String(this.data.totalRuns || 0);
-      this.comboBestEl.textContent = String(this.data.longestCombo || 0);
-      this.runScoreEl.textContent = `Score: ${this.score}`;
-      this.runCoinsEl.textContent = `Coins: ${this.runCoins}`;
-      this.runComboEl.textContent = `Combo: ${this.combo}`;
-      this.runLivesEl.textContent = `Lives: ${this.lives || 1}`;
-      if (this.currentModeLabelEl) this.currentModeLabelEl.textContent = visibleModeName;
-      if (this.modeObjectiveEl) this.modeObjectiveEl.textContent = mode.objective;
-      if (this.tokenCountEl) this.tokenCountEl.textContent = String(this.availableAiTokens());
-      if (this.storyProgressLabelEl) this.storyProgressLabelEl.textContent = `${Math.min(this.data.storyProgress, STORY_CHAPTERS.length)} / ${STORY_CHAPTERS.length}`;
-      if (this.missionCardEl) this.renderMissionCard();
+      const now = performance.now();
+      if (now - this.lastUiSyncAt < 90) return;
+      this.lastUiSyncAt = now;
+
+      const writeIfChanged = (key, next, target, formatter = value => value) => {
+        if (!target) return;
+        if (this.uiStateCache[key] === next) return;
+        this.uiStateCache[key] = next;
+        target.textContent = formatter(next);
+      };
+
+      writeIfChanged('bestScore', this.data.bestScore || 0, this.bestEl, String);
+      writeIfChanged('coinBank', this.data.coins || 0, this.bankEl, String);
+      writeIfChanged('totalRuns', this.data.totalRuns || 0, this.runsEl, String);
+      writeIfChanged('longestCombo', this.data.longestCombo || 0, this.comboBestEl, String);
+      writeIfChanged('runScore', this.score, this.runScoreEl, value => `Score: ${value}`);
+      writeIfChanged('runCoins', this.runCoins, this.runCoinsEl, value => `Coins: ${value}`);
+      writeIfChanged('runCombo', this.combo, this.runComboEl, value => `Combo: ${value}`);
+      writeIfChanged('runLives', this.lives || 1, this.runLivesEl, value => `Lives: ${value}`);
+      writeIfChanged('modeName', visibleModeName, this.currentModeLabelEl);
+      writeIfChanged('modeObjective', mode.objective, this.modeObjectiveEl);
+      writeIfChanged('availableTokens', this.availableAiTokens(), this.tokenCountEl, String);
+      writeIfChanged('storyProgress', `${Math.min(this.data.storyProgress, STORY_CHAPTERS.length)} / ${STORY_CHAPTERS.length}`, this.storyProgressLabelEl);
+      if (this.missionCardEl) {
+        const missionState = this.ensureDailyObjectiveState();
+        const missionSignature = JSON.stringify({
+          id: missionState.id,
+          progress: missionState.progress,
+          completed: missionState.completed,
+          rewardClaimed: missionState.rewardClaimed
+        });
+        if (missionSignature !== this.lastMissionSignature) {
+          this.lastMissionSignature = missionSignature;
+          this.renderMissionCard();
+        }
+      }
       this.syncLoadoutButtons();
       this.updateCheatUi();
     }
@@ -1278,14 +1337,14 @@
       const ctx = this.ctx;
       ctx.clearRect(0, 0, BOARD.width, BOARD.height);
       const gradient = ctx.createLinearGradient(0, 0, 0, BOARD.height);
-      gradient.addColorStop(0, '#07101f');
-      gradient.addColorStop(1, '#02060d');
+      gradient.addColorStop(0, THEMES.bg);
+      gradient.addColorStop(1, THEMES.track);
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, BOARD.width, BOARD.height);
 
       for (let lane = 0; lane <= BOARD.lanes; lane += 1) {
         const x = lane * (BOARD.width / BOARD.lanes);
-        ctx.strokeStyle = 'rgba(115, 164, 255, 0.22)';
+        ctx.strokeStyle = withAlpha(THEMES.accent2, 0.3, 'rgba(115, 164, 255, 0.22)');
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(x, 0);
@@ -1293,7 +1352,7 @@
         ctx.stroke();
       }
       for (let y = 40; y < BOARD.height; y += 80) {
-        ctx.strokeStyle = 'rgba(115, 164, 255, 0.12)';
+        ctx.strokeStyle = withAlpha(THEMES.accent, 0.18, 'rgba(115, 164, 255, 0.12)');
         ctx.setLineDash([8, 8]);
         ctx.beginPath();
         ctx.moveTo(0, y);
@@ -1304,14 +1363,14 @@
 
       this.blocks.forEach(block => {
         this.drawRoundedRect(ctx, block.x - 2, block.y - 2, block.w + 4, block.h + 4, 8, 'rgba(0,0,0,0.3)');
-        this.drawRoundedRect(ctx, block.x, block.y, block.w, block.h, 8, 'rgba(255,111,159,0.92)', 'rgba(255,235,244,0.8)');
+        this.drawRoundedRect(ctx, block.x, block.y, block.w, block.h, 8, THEMES.danger, withAlpha(THEMES.text, 0.7, 'rgba(255,235,244,0.8)'));
       });
       this.pickups.forEach(pickup => {
         ctx.beginPath();
-        ctx.fillStyle = 'rgba(123,255,186,0.95)';
+        ctx.fillStyle = THEMES.accent3;
         ctx.arc(pickup.x, pickup.y, pickup.size, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = 'rgba(226,255,239,0.9)';
+        ctx.strokeStyle = THEMES.text;
         ctx.lineWidth = 2;
         ctx.stroke();
       });
@@ -1327,20 +1386,23 @@
       const playerX = this.player.x - this.player.w / 2;
       const playerY = this.player.y - this.player.h / 2;
       this.drawRoundedRect(ctx, playerX - 2, playerY - 2, this.player.w + 4, this.player.h + 4, 9, 'rgba(0,0,0,0.38)');
-      this.drawRoundedRect(ctx, playerX, playerY, this.player.w, this.player.h, 9, 'rgba(108,229,255,0.95)', 'rgba(233,252,255,0.96)');
+      this.drawRoundedRect(ctx, playerX, playerY, this.player.w, this.player.h, 9, THEMES.accent, THEMES.text);
 
       if (this.data.selectedMode === 'Story' && this.isBetaEnabled()) {
-        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.fillStyle = THEMES.text;
         ctx.font = 'bold 18px Inter, system-ui, sans-serif';
         ctx.fillText(this.storyChapter.title, 24, 34);
         ctx.font = '14px Inter, system-ui, sans-serif';
-        ctx.fillStyle = 'rgba(191,208,238,0.9)';
+        ctx.fillStyle = THEMES.subtext;
         ctx.fillText(this.storyChapter.objectiveLabel, 24, 58);
       }
     }
 
     loop = timestamp => {
       if (!this.running) return;
+      if ((this.frameCounter = (this.frameCounter || 0) + 1) % 180 === 0 && this.isBetaEnabled()) {
+        this.updateThemeColors();
+      }
       const dt = clamp((timestamp - this.lastTs) / 1000, 0, 0.045);
       this.lastTs = timestamp;
       if (!this.paused && !this.gameOver) {
