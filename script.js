@@ -707,7 +707,7 @@ function createProductCard(product, index) {
   return card;
 }
 
-const CARD_EXIT_ANIMATION_MS = 210;
+const CARD_EXIT_ANIMATION_MS = 280;
 
 function renderProducts(list) {
   const grid = qs('#productGrid');

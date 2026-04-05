@@ -181,14 +181,14 @@ body.new-ui-enabled .price {
   color: var(--text);
   font-weight: 700;
   cursor: pointer;
-  transition: background var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease);
+  transition: background var(--motion-med) var(--motion-ease-soft), transform var(--motion-fast) var(--motion-ease-soft), border-color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-med) var(--motion-ease-soft);
 }
 
 .new-ui-info-btn:hover,
 .new-ui-ai-btn:hover {
   background: color-mix(in srgb, var(--panel-2) 88%, var(--card) 12%);
   border-color: var(--newui-border-strong);
-  transform: translateY(-1px);
+  transform: translate3d(0, -2px, 0);
 }
 
 .new-ui-ai-btn:disabled {
@@ -206,7 +206,7 @@ body.new-ui-enabled .price {
   z-index: 200;
   opacity: 0;
   pointer-events: none;
-  transition: opacity var(--motion-fast) var(--motion-ease);
+  transition: opacity var(--motion-med) var(--motion-ease-soft);
 }
 
 .new-ui-theme-modal[aria-hidden="false"] {
@@ -248,13 +248,13 @@ body.new-ui-enabled .price {
   height: 32px;
   border-radius: 10px;
   cursor: pointer;
-  transition: border-color var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease-soft);
+  transition: border-color var(--motion-fast) var(--motion-ease), background var(--motion-med) var(--motion-ease-soft), transform var(--motion-fast) var(--motion-ease-soft), box-shadow var(--motion-med) var(--motion-ease-soft);
 }
 
 .new-ui-theme-close:hover {
   border-color: var(--newui-border-strong);
   background: color-mix(in srgb, var(--panel-2) 86%, var(--bg) 14%);
-  transform: translate3d(0, -1px, 0);
+  transform: translate3d(0, -2px, 0);
 }
 
 .new-ui-theme-grid {
@@ -277,7 +277,7 @@ body.new-ui-enabled .price {
   padding: 7px 12px;
   font-weight: 700;
   cursor: pointer;
-  transition: border-color var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease-soft);
+  transition: border-color var(--motion-fast) var(--motion-ease), background var(--motion-med) var(--motion-ease-soft), color var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease-soft), box-shadow var(--motion-med) var(--motion-ease-soft);
 }
 
 .new-ui-theme-tab.is-active {
@@ -288,7 +288,7 @@ body.new-ui-enabled .price {
 
 .new-ui-theme-tab:hover {
   border-color: var(--newui-border-strong);
-  transform: translate3d(0, -1px, 0);
+  transform: translate3d(0, -2px, 0);
 }
 
 .new-ui-theme-panel-block {
@@ -314,11 +314,11 @@ body.new-ui-enabled .price {
   border: 2px solid color-mix(in srgb, var(--periwinkle-2) 34%, transparent);
   cursor: pointer;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
-  transition: transform var(--motion-fast) var(--motion-ease-soft), box-shadow var(--motion-fast) var(--motion-ease-soft), border-color var(--motion-fast) var(--motion-ease);
+  transition: transform var(--motion-fast) var(--motion-ease-soft), box-shadow var(--motion-med) var(--motion-ease-soft), border-color var(--motion-fast) var(--motion-ease);
 }
 
 .new-ui-preset-swatch:hover {
-  transform: translate3d(0, -1px, 0) scale(1.02);
+  transform: translate3d(0, -2px, 0) scale(1.04);
   border-color: var(--newui-border-strong);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.34);
 }
@@ -534,5 +534,5 @@ body.new-ui-enabled .saved-script-item,
 body.new-ui-enabled .rank-item,
 body.new-ui-enabled .script-card,
 body.new-ui-enabled .card {
-  transition: background var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-med) var(--motion-ease-soft), transform var(--motion-fast) var(--motion-ease-soft), color var(--motion-fast) var(--motion-ease);
+  transition: background var(--motion-med) var(--motion-ease-soft), border-color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-slow) var(--motion-ease-soft), transform var(--motion-fast) var(--motion-ease-soft), color var(--motion-fast) var(--motion-ease);
 }
