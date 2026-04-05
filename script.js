@@ -535,16 +535,16 @@ const products = [
 
 const scriptsHubData = {
   tierListPaid: [
-    { tier: 'S', executor: 'Pluton', notes: 'Top paid pick for balanced performance, consistency, and support coverage' },
-    { tier: 'A', executor: 'Potassium', notes: 'Strong feature depth with excellent sUNC support, but trust concerns remain' },
-    { tier: 'A', executor: 'Seliware', notes: 'Smooth execution and polished UX, with occasional detection instability' },
-    { tier: 'B', executor: 'Volcano', notes: 'Stable long-term option with reliable execution, but comparatively expensive' }
+    { tier: '1', executor: 'Pluton', notes: 'Top paid pick for balanced performance, consistency, and support coverage' },
+    { tier: '2', executor: 'Potassium', notes: 'Strong feature depth with excellent sUNC support, but trust concerns remain' },
+    { tier: '3', executor: 'Seliware', notes: 'Smooth execution and polished UX, with occasional detection instability' },
+    { tier: '4', executor: 'Volcano', notes: 'Stable long-term option with reliable execution, but comparatively expensive' }
   ],
   tierListFree: [
-    { tier: 'S', executor: 'Pluton', notes: 'Best free overall package right now with broad platform support' },
-    { tier: 'A', executor: 'Velocity', notes: 'Fast keyless free option with modern tooling and customization' },
-    { tier: 'A', executor: 'Solara', notes: 'Reliable free Windows option with steady day-to-day stability' },
-    { tier: 'B', executor: 'JJSploit', notes: 'Beginner-friendly choice with a simplified workflow' }
+    { tier: '1', executor: 'Pluton', notes: 'Best free overall package right now with broad platform support' },
+    { tier: '2', executor: 'Velocity', notes: 'Fast keyless free option with modern tooling and customization' },
+    { tier: '3', executor: 'Solara', notes: 'Reliable free Windows option with steady day-to-day stability' },
+    { tier: '4', executor: 'JJSploit', notes: 'Beginner-friendly choice with a simplified workflow' }
   ],
   popularScripts: [
     {
@@ -709,7 +709,7 @@ function createProductCard(product, index) {
   return card;
 }
 
-const CARD_EXIT_ANIMATION_MS = 280;
+const CARD_EXIT_ANIMATION_MS = 210;
 
 function renderProducts(list) {
   const grid = qs('#productGrid');
@@ -726,46 +726,54 @@ function renderProducts(list) {
   if (!oldCards.length) {
     grid.innerHTML = '';
     qs('#noResults').hidden = Boolean(sorted.length);
-    if (!sorted.length) return;
     sorted.forEach((product, index) => grid.appendChild(createProductCard(product, index)));
     return;
   }
-
+  const existingByName = new Map(oldCards.map(card => [card.getAttribute('data-name'), card]));
   const oldRectByName = new Map(oldCards.map(card => [card.getAttribute('data-name'), card.getBoundingClientRect()]));
   const nextNames = new Set(sorted.map(item => item.name));
+  qs('#noResults').hidden = Boolean(sorted.length);
 
   oldCards.forEach(card => {
-    if (!nextNames.has(card.getAttribute('data-name'))) card.classList.add('card-exit');
+    const name = card.getAttribute('data-name');
+    if (!nextNames.has(name)) card.classList.add('card-exit');
   });
 
   window.setTimeout(() => {
     if (grid.dataset.renderVersion !== nextVersion) return;
 
-    grid.innerHTML = '';
-    qs('#noResults').hidden = Boolean(sorted.length);
+    oldCards.forEach(card => {
+      if (!nextNames.has(card.getAttribute('data-name'))) card.remove();
+    });
     if (!sorted.length) return;
 
-    sorted.forEach((product, index) => {
-      const card = createProductCard(product, index);
-      grid.appendChild(card);
-
-      const oldRect = oldRectByName.get(product.name);
-      if (!oldRect) {
-        card.classList.add('card-enter');
-        return;
+    const orderedCards = sorted.map((product, index) => {
+      const existingCard = existingByName.get(product.name);
+      if (existingCard) {
+        existingCard.setAttribute('data-index', String(index));
+        return existingCard;
       }
+      const newCard = createProductCard(product, index);
+      newCard.classList.add('card-enter');
+      return newCard;
+    });
+    orderedCards.forEach(card => grid.appendChild(card));
 
+    orderedCards.forEach(card => {
+      const name = card.getAttribute('data-name');
+      const oldRect = oldRectByName.get(name);
+      if (!oldRect) return;
       const newRect = card.getBoundingClientRect();
       const deltaX = oldRect.left - newRect.left;
       const deltaY = oldRect.top - newRect.top;
       if (Math.abs(deltaX) < 0.5 && Math.abs(deltaY) < 0.5) return;
-
       card.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
       card.style.transition = 'transform 0s';
       requestAnimationFrame(() => {
         card.classList.add('card-shift');
         card.style.transform = '';
         card.style.transition = '';
+        window.setTimeout(() => card.classList.remove('card-shift'), 430);
       });
     });
   }, CARD_EXIT_ANIMATION_MS);
@@ -1068,7 +1076,7 @@ function renderTierList(containerId, entries) {
   if (!wrap) return;
   wrap.innerHTML = entries.map(entry => `
     <article class="rank-item rank-tier-${escapeHtml(String(entry.tier || '').toLowerCase())}">
-      <div class="rank-badge">${escapeHtml(entry.tier)}</div>
+      <div class="rank-badge"><span>${escapeHtml(entry.tier)}</span></div>
       <div><h4>${escapeHtml(entry.executor)}</h4><p>${escapeHtml(entry.notes)}</p></div>
     </article>`).join('');
 }
@@ -1080,11 +1088,32 @@ function renderPopularScripts() {
     <article class="script-card">
       <div class="script-card-head">
         <h4 class="script-card-title"><span class="script-file-icon">${popularScriptFileSvg}</span>${escapeHtml(item.name)}</h4>
-        <span>${escapeHtml(stripTrailingPeriod(item.game))}</span>
+        <div class="script-card-meta">
+          <span>${escapeHtml(stripTrailingPeriod(item.game))}</span>
+          <button class="script-copy-btn" type="button" data-script-copy="${escapeHtml(item.script)}" title="Copy script" aria-label="Copy script">
+            <span class="script-file-icon">${popularScriptFileSvg}</span>
+          </button>
+        </div>
       </div>
       <p>${escapeHtml(stripTrailingPeriod(item.description))}</p>
-      <pre>${escapeHtml(item.script)}</pre>
+      <div class="script-code-wrap">
+        <pre>${escapeHtml(item.script)}</pre>
+      </div>
     </article>`).join('');
+
+  wrap.querySelectorAll('.script-copy-btn').forEach(button => {
+    button.addEventListener('click', async () => {
+      const scriptValue = button.getAttribute('data-script-copy') || '';
+      if (!scriptValue) return;
+      try {
+        await navigator.clipboard.writeText(scriptValue);
+        button.classList.add('is-copied');
+        window.setTimeout(() => button.classList.remove('is-copied'), 900);
+      } catch {
+        // no-op
+      }
+    });
+  });
 }
 
 function renderRecentChanges() {
@@ -1394,14 +1423,56 @@ function setActiveSubtab(targetSubtabId) {
   if (targetSubtabId === activeSubtabId) return;
 
   const nextPanel = qs(`#${targetSubtabId}`);
+  const previousPanel = qs(`#${activeSubtabId}`);
   if (!nextPanel) return;
 
-  qsa('.subtab-panel').forEach(panel => {
-    panel.hidden = panel.id !== targetSubtabId;
-  });
+  const tabOrder = ['tierPaidPanel', 'tierFreePanel', 'popularScriptsPanel', 'savedScriptsPanel', 'recentChangesPanel'];
+  const previousIndex = tabOrder.indexOf(activeSubtabId);
+  const nextIndex = tabOrder.indexOf(targetSubtabId);
+  const direction = nextIndex > previousIndex ? 'forward' : 'backward';
+  if (!previousPanel || typeof nextPanel.animate !== 'function' || typeof previousPanel.animate !== 'function') {
+    qsa('.subtab-panel').forEach(panel => {
+      panel.hidden = panel.id !== targetSubtabId;
+    });
+  } else {
+    const wrapper = previousPanel.parentElement;
+    const outgoingTransform = direction === 'forward' ? 'translateX(-42px)' : 'translateX(42px)';
+    const incomingFrom = direction === 'forward' ? 'translateX(42px)' : 'translateX(-42px)';
+    const wrapperHeight = Math.max(previousPanel.offsetHeight, nextPanel.offsetHeight);
+    wrapper.style.position = 'relative';
+    wrapper.style.minHeight = `${wrapperHeight}px`;
 
-  animateMainContentTransition();
-  restartAnimationClass(nextPanel, 'animate-in-subtab');
+    previousPanel.hidden = false;
+    previousPanel.style.position = 'absolute';
+    previousPanel.style.inset = '0';
+    previousPanel.style.width = '100%';
+
+    nextPanel.hidden = false;
+    nextPanel.style.position = 'absolute';
+    nextPanel.style.inset = '0';
+    nextPanel.style.width = '100%';
+
+    const outgoing = previousPanel.animate(
+      [{ opacity: 1, transform: 'translateX(0)' }, { opacity: 0, transform: outgoingTransform }],
+      { duration: 260, easing: 'cubic-bezier(.22,.84,.25,1)', fill: 'forwards' }
+    );
+    const incoming = nextPanel.animate(
+      [{ opacity: 0, transform: incomingFrom }, { opacity: 1, transform: 'translateX(0)' }],
+      { duration: 300, easing: 'cubic-bezier(.2,.9,.26,1)', fill: 'forwards' }
+    );
+
+    Promise.allSettled([outgoing.finished, incoming.finished]).then(() => {
+      previousPanel.hidden = true;
+      [previousPanel, nextPanel].forEach(panel => {
+        panel.style.position = '';
+        panel.style.inset = '';
+        panel.style.width = '';
+        panel.style.opacity = '';
+        panel.style.transform = '';
+      });
+      wrapper.style.minHeight = '';
+    });
+  }
   activeSubtabId = targetSubtabId;
   syncRouteWithState();
 }
@@ -1444,7 +1515,14 @@ function initScriptsHub() {
   qs('#savedScriptsList').addEventListener('click', event => {
     const trigger = event.target.closest('[data-saved-script-id]');
     if (!trigger) return;
-    currentSavedScriptId = trigger.getAttribute('data-saved-script-id');
+    const selectedId = trigger.getAttribute('data-saved-script-id');
+    if (selectedId === currentSavedScriptId) {
+      currentSavedScriptId = null;
+      clearSavedScriptEditor();
+      renderSavedScriptsList();
+      return;
+    }
+    currentSavedScriptId = selectedId;
     const selected = getSavedScripts().find(item => item.id === currentSavedScriptId);
     setEditorFromSavedScript(selected);
     renderSavedScriptsList();

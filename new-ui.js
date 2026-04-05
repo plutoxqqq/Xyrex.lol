@@ -154,7 +154,7 @@
         <header class="new-ui-theme-head">
           <div>
             <h3>Theme Customizer</h3>
-            <p>Adjust the full site palette and mood with live preview</p>
+            <p>Adjust the full site palette and mood, then apply it to reload with your selected theme</p>
           </div>
           <button type="button" class="new-ui-theme-close" aria-label="Close Theme Customizer">✕</button>
         </header>
@@ -181,6 +181,10 @@
             <label>Warning Accent <input type="color" id="newUiWarning" value="#f0c36f" /></label>
           </div>
         </section>
+        <div class="new-ui-theme-preview" id="newUiThemePreview">
+          <strong id="newUiThemePreviewLabel">Pending theme: Current</strong>
+          <div class="new-ui-theme-preview-swatches" id="newUiThemePreviewSwatches"></div>
+        </div>
         <div class="new-ui-theme-actions">
           <button type="button" class="btn-primary" id="saveNewUiThemeBtn">Apply Theme</button>
           <button type="button" class="btn-danger" id="resetNewUiThemeBtn">Reset</button>
@@ -221,6 +225,17 @@
         input.value = merged[key] || themeDefaults[key];
       });
     };
+    const renderPendingPreview = (palette, labelText = 'Pending theme: Custom') => {
+      const merged = { ...themeDefaults, ...(palette || {}) };
+      const previewLabel = modal.querySelector('#newUiThemePreviewLabel');
+      const previewSwatches = modal.querySelector('#newUiThemePreviewSwatches');
+      if (previewLabel) previewLabel.textContent = labelText;
+      if (previewSwatches) {
+        previewSwatches.innerHTML = ['bg', 'panel', 'card', 'accent', 'accentSoft', 'text']
+          .map(key => `<span style="background:${merged[key] || themeDefaults[key]}"></span>`)
+          .join('');
+      }
+    };
     const collectInputValues = () => {
       const payload = {};
       Object.entries(colorInputMap).forEach(([key, selector]) => {
@@ -241,6 +256,13 @@
     };
     setThemeTab('newUiThemeBasicPanel');
     setInputValues(saved);
+    renderPendingPreview(saved, 'Pending theme: Current');
+    Object.values(colorInputMap).forEach(selector => {
+      modal.querySelector(selector)?.addEventListener('input', () => {
+        renderPendingPreview(collectInputValues(), 'Pending theme: Custom');
+        modal.querySelectorAll('.new-ui-preset-swatch').forEach(swatch => swatch.classList.remove('is-selected'));
+      });
+    });
     modal.querySelectorAll('.new-ui-theme-tab').forEach(tab => {
       tab.addEventListener('click', () => {
         setThemeTab(tab.getAttribute('data-theme-tab-target'));
@@ -251,14 +273,16 @@
       if (!trigger) return;
       const preset = pastelThemePresets.find(item => item.id === trigger.getAttribute('data-preset-id'));
       if (!preset) return;
+      modal.querySelectorAll('.new-ui-preset-swatch').forEach(swatch => {
+        swatch.classList.toggle('is-selected', swatch === trigger);
+      });
       setInputValues(preset.colors);
-      applyTheme(preset.colors);
-      localStorage.setItem(THEME_KEY, JSON.stringify(preset.colors));
+      renderPendingPreview(preset.colors, `Pending theme: ${preset.label}`);
     });
     modal.querySelector('#saveNewUiThemeBtn').addEventListener('click', () => {
       const payload = collectInputValues();
       localStorage.setItem(THEME_KEY, JSON.stringify(payload));
-      applyTheme(payload);
+      window.location.reload();
     });
     modal.querySelector('#resetNewUiThemeBtn').addEventListener('click', () => {
       Object.entries(colorInputMap).forEach(([key, selector]) => {
@@ -266,7 +290,7 @@
         if (input) input.value = themeDefaults[key];
       });
       localStorage.removeItem(THEME_KEY);
-      clearThemeOverrides();
+      window.location.reload();
     });
     modal.querySelector('.new-ui-theme-close').addEventListener('click', closeThemeModal);
     modal.addEventListener('click', event => {
@@ -465,6 +489,7 @@
   async function collectExternalResearch(product) {
     const snippets = [];
     const cleanName = encodeURIComponent(product.name.replace(/\s+/g, '_'));
+    const searchQuery = encodeURIComponent(`${product.name} executor review risk detection`);
     try {
       const wiki = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${cleanName}`);
       if (wiki.ok) {
@@ -487,6 +512,20 @@
       } catch {
         // no-op
       }
+    }
+    try {
+      const searchSnapshot = await fetch(`https://r.jina.ai/http://duckduckgo.com/?q=${searchQuery}`);
+      if (searchSnapshot.ok) {
+        const text = await searchSnapshot.text();
+        const compact = text
+          .replace(/\s+/g, ' ')
+          .replace(/DuckDuckGo/gi, '')
+          .trim()
+          .slice(0, 700);
+        if (compact) snippets.push(`Search findings snapshot: ${compact}`);
+      }
+    } catch {
+      // no-op
     }
     return snippets.join('\n');
   }

@@ -348,6 +348,38 @@ body.new-ui-enabled .price {
   margin-top: 12px;
 }
 
+.new-ui-theme-preview {
+  margin-top: 12px;
+  border: 1px solid color-mix(in srgb, var(--periwinkle-2) 28%, transparent);
+  border-radius: 10px;
+  padding: 10px;
+  background: color-mix(in srgb, var(--panel-2) 72%, var(--bg) 28%);
+}
+
+.new-ui-theme-preview strong {
+  display: block;
+  font-size: .82rem;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.new-ui-theme-preview-swatches {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.new-ui-theme-preview-swatches span {
+  display: block;
+  height: 20px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--text) 20%, transparent);
+}
+
+.new-ui-preset-swatch.is-selected {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--periwinkle-2) 64%, transparent), 0 8px 18px color-mix(in srgb, var(--periwinkle) 24%, transparent);
+}
+
 
 
 /* Full theme takeover for all previously blue surfaces in New UI mode */
@@ -362,6 +394,11 @@ body.new-ui-enabled .search-input:focus {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--periwinkle) 28%, transparent);
 }
 
+body.new-ui-enabled .btn-ghost:hover {
+  background: color-mix(in srgb, var(--periwinkle) 22%, transparent);
+  color: var(--text);
+}
+
 body.new-ui-enabled .ui-toggle-btn,
 body.new-ui-enabled .page-switch-btn,
 body.new-ui-enabled .subtab-btn,
@@ -370,6 +407,15 @@ body.new-ui-enabled .btn-danger {
   border-color: color-mix(in srgb, var(--periwinkle-2) 34%, transparent);
   background: color-mix(in srgb, var(--panel) 76%, var(--bg) 24%);
   color: var(--text);
+}
+
+body.new-ui-enabled .page-switch-btn:hover,
+body.new-ui-enabled .subtab-btn:hover,
+body.new-ui-enabled .ui-toggle-btn:hover,
+body.new-ui-enabled .btn-primary:hover,
+body.new-ui-enabled .btn-danger:hover {
+  border-color: color-mix(in srgb, var(--periwinkle-2) 58%, transparent);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--periwinkle) 20%, transparent);
 }
 
 body.new-ui-enabled .page-switch-btn.is-active,
@@ -397,6 +443,11 @@ body.new-ui-enabled .filter-checkbox:checked,
 body.new-ui-enabled .price-checkbox:checked {
   background: var(--periwinkle);
   border-color: var(--periwinkle-2);
+}
+
+body.new-ui-enabled .filter-checkbox:checked::after,
+body.new-ui-enabled .price-checkbox:checked::after {
+  border-color: color-mix(in srgb, var(--bg) 82%, #000 18%);
 }
 
 body.new-ui-enabled .platform-chip,
