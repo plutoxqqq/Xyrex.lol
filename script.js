@@ -698,6 +698,12 @@ function createProductCard(product, index) {
   body.appendChild(header);
   body.appendChild(createPlatformChips(product.platform));
   body.appendChild(summary);
+  if (product.name === 'Velocity') {
+    const warningPill = document.createElement('div');
+    warningPill.className = 'card-alert-pill';
+    warningPill.textContent = 'Security alert: avoid download';
+    body.appendChild(warningPill);
+  }
   body.appendChild(price);
 
   const infoBtn = document.createElement('button');
@@ -826,6 +832,7 @@ function applyAllFilters() {
 function openModal(product) {
   const overlay = qs('#modalOverlay');
   const content = qs('#modalContent');
+  const isVelocity = product.name === 'Velocity';
 
   const officialSite = product.officialSite || '';
   const officialSiteHost = officialSite
@@ -856,6 +863,14 @@ function openModal(product) {
   content.innerHTML = `
     <h2>${escapeHtml(product.name)}</h2>
     <p class="modal-headline">${escapeHtml(stripTrailingPeriod(product.description))}</p>
+    ${
+      isVelocity
+        ? `<div class="modal-velocity-warning" role="alert" aria-live="assertive">
+             <strong>⚠ Critical Safety Warning</strong>
+             VELOCITY HAS BEEN HACKED AND INFECTED WITH MALWARE. DO NOT DOWNLOAD OR RUN IT.
+           </div>`
+        : ''
+    }
     <div class="modal-layout">
       <div>
         <div class="modal-section"><strong>Pros</strong><ul>${product.pros.map(f => `<li>${escapeHtml(f)}</li>`).join('')}</ul></div>
@@ -1533,6 +1548,15 @@ function initScriptsHub() {
   qs('#deleteScriptBtn').addEventListener('click', deleteSelectedScript);
 }
 
+function initSiteAlertBanner() {
+  const banner = qs('.site-alert-banner');
+  const dismissButton = qs('.site-alert-dismiss');
+  if (!banner || !dismissButton) return;
+  dismissButton.addEventListener('click', () => {
+    banner.classList.add('is-dismissed');
+  });
+}
+
 function syncNavigationLayoutMetrics() {
   const topnav = qs('.topnav');
   if (!topnav) return;
@@ -1562,6 +1586,7 @@ window.addEventListener('xyrex:account-changed', () => {
 
 function init() {
   setBetaFeaturesEnabled(getBetaFeaturesEnabled());
+  initSiteAlertBanner();
   syncNavigationLayoutMetrics();
   renderProducts(products);
   initScriptsHub();
