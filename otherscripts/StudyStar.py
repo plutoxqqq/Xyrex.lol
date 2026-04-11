@@ -353,21 +353,21 @@ def can_bind_local_port(port):
 
 
 class FocusBlockerApp:
-    BG = "#06070d"
-    BG_2 = "#0a0c14"
-    PANEL = "#111426"
-    PANEL_2 = "#12172b"
-    CARD = "#12162a"
-    CARD_ALT = "#0f1425"
-    TEXT = "#eef1ff"
-    MUTED = "#aeb5d6"
-    PERI = "#8f9cff"
-    PERI_2 = "#b2bcff"
-    SUCCESS = "#5dd39e"
-    WARNING = "#f0c36f"
-    INPUT_BG = "#0b1020"
-    TRACK = "#101525"
-    DANGER = "#ff8c8c"
+    BG = "#f3f6ff"
+    BG_2 = "#e9eefc"
+    PANEL = "#ffffff"
+    PANEL_2 = "#ffffff"
+    CARD = "#f7f9ff"
+    CARD_ALT = "#f9fbff"
+    TEXT = "#192033"
+    MUTED = "#5f6c8f"
+    PERI = "#506cff"
+    PERI_2 = "#2f4de0"
+    SUCCESS = "#1f8f61"
+    WARNING = "#a77207"
+    INPUT_BG = "#eef3ff"
+    TRACK = "#d8e1f9"
+    DANGER = "#c13131"
 
     def __init__(self, root):
         self.root = root
@@ -405,22 +405,22 @@ class FocusBlockerApp:
             pass
         self.style.configure(
             "Xy.Vertical.TScrollbar",
-            background=self.PERI,
+            background="#9bb1ff",
             troughcolor=self.TRACK,
             bordercolor=self.TRACK,
-            darkcolor=self.PERI,
-            lightcolor=self.PERI_2,
-            arrowcolor=self.TEXT,
+            darkcolor="#7f99ff",
+            lightcolor="#b1c2ff",
+            arrowcolor="#213169",
             relief="flat",
-            width=10
+            width=12
         )
 
     def _make_text_panel(self, parent, title, subtitle, default_lines):
-        wrap = tk.Frame(parent, bg=self.CARD_ALT, highlightthickness=1, highlightbackground="#24314a")
+        wrap = tk.Frame(parent, bg=self.CARD_ALT, highlightthickness=1, highlightbackground="#cdd8f7")
         header = tk.Frame(wrap, bg=self.CARD_ALT)
         header.pack(fill="x", padx=14, pady=(14, 8))
         tk.Label(header, text=title, font=("Segoe UI Semibold", 12), fg=self.TEXT, bg=self.CARD_ALT).pack(anchor="w")
-        tk.Label(header, text=subtitle, font=("Segoe UI", 8), fg=self.MUTED, bg=self.CARD_ALT).pack(anchor="w", pady=(2, 0))
+        tk.Label(header, text=subtitle, font=("Segoe UI", 9), fg=self.MUTED, bg=self.CARD_ALT, wraplength=500, justify="left").pack(anchor="w", pady=(4, 0))
 
         text_wrap = tk.Frame(wrap, bg=self.CARD_ALT)
         text_wrap.pack(fill="both", expand=True, padx=(12, 10), pady=(0, 12))
@@ -434,11 +434,11 @@ class FocusBlockerApp:
             relief="flat",
             borderwidth=0,
             highlightthickness=1,
-            highlightbackground="#202c45",
+            highlightbackground="#c8d3f2",
             highlightcolor=self.PERI_2,
             padx=12,
             pady=12,
-            selectbackground="#31406d",
+            selectbackground="#dce5ff",
             selectforeground=self.TEXT
         )
         text.pack(side="left", fill="both", expand=True)
@@ -449,9 +449,9 @@ class FocusBlockerApp:
         return wrap, text
 
     def _make_stat_card(self, parent, title, value, value_fg=None):
-        card = tk.Frame(parent, bg=self.CARD_ALT, highlightthickness=1, highlightbackground="#24314a")
+        card = tk.Frame(parent, bg=self.CARD_ALT, highlightthickness=1, highlightbackground="#d3dcf6")
         card.pack(fill="x", pady=(0, 10))
-        tk.Label(card, text=title, font=("Segoe UI", 9), fg=self.MUTED, bg=self.CARD_ALT).pack(anchor="w", padx=14, pady=(12, 4))
+        tk.Label(card, text=title, font=("Segoe UI", 10), fg=self.MUTED, bg=self.CARD_ALT).pack(anchor="w", padx=14, pady=(12, 4))
         lbl = tk.Label(card, text=value, font=("Consolas", 15, "bold"), fg=value_fg or self.TEXT, bg=self.CARD_ALT)
         lbl.pack(anchor="w", padx=14, pady=(0, 12))
         return lbl
@@ -464,50 +464,72 @@ class FocusBlockerApp:
         self.app_shell = tk.Frame(self.root, bg=self.BG)
         self.app_shell.place(relx=0, rely=0, relwidth=1, relheight=1)
 
-        self.topnav = tk.Frame(self.app_shell, bg="#080a12", height=72, highlightthickness=1, highlightbackground="#28324e")
+        self.topnav = tk.Frame(self.app_shell, bg=self.PANEL, height=88, highlightthickness=1, highlightbackground="#cdd8f7")
         self.topnav.pack(fill="x", padx=18, pady=(16, 10))
         self.topnav.pack_propagate(False)
 
-        nav_inner = tk.Frame(self.topnav, bg="#080a12")
+        nav_inner = tk.Frame(self.topnav, bg=self.PANEL)
         nav_inner.pack(fill="both", expand=True, padx=18, pady=10)
 
-        brand_col = tk.Frame(nav_inner, bg="#080a12")
+        brand_col = tk.Frame(nav_inner, bg=self.PANEL)
         brand_col.pack(side="left", fill="y")
-        tk.Label(brand_col, text=APP_TITLE, font=("Segoe UI", 20, "bold"), fg=self.PERI_2, bg="#080a12").pack(anchor="w")
-        tk.Label(brand_col, text="Safe local focus blocker", font=("Segoe UI", 9), fg=self.MUTED, bg="#080a12").pack(anchor="w", pady=(2, 0))
+        tk.Label(brand_col, text=APP_TITLE, font=("Segoe UI", 22, "bold"), fg=self.PERI_2, bg=self.PANEL).pack(anchor="w")
+        tk.Label(brand_col, text="Safe local focus blocker", font=("Segoe UI", 10), fg=self.MUTED, bg=self.PANEL).pack(anchor="w", pady=(2, 0))
 
-        nav_right = tk.Frame(nav_inner, bg="#080a12")
+        nav_right = tk.Frame(nav_inner, bg=self.PANEL)
         nav_right.pack(side="right", fill="y")
-        self.status_pill = tk.Label(nav_right, text="IDLE", font=("Segoe UI", 10, "bold"), fg="#dfffee", bg="#173224", padx=14, pady=8)
+        self.status_pill = tk.Label(nav_right, text="IDLE", font=("Segoe UI", 10, "bold"), fg="#ffffff", bg="#2b9469", padx=14, pady=8)
         self.status_pill.pack(anchor="e", pady=(0, 6))
-        self.countdown_pill = tk.Label(nav_right, text="--:--:--", font=("Consolas", 14, "bold"), fg=self.TEXT, bg="#18233d", padx=14, pady=8)
+        self.countdown_pill = tk.Label(nav_right, text="--:--:--", font=("Consolas", 14, "bold"), fg=self.TEXT, bg="#eaf0ff", padx=14, pady=8)
         self.countdown_pill.pack(anchor="e")
 
         self.page_layout = tk.Frame(self.app_shell, bg=self.BG)
         self.page_layout.pack(fill="both", expand=True, padx=18, pady=(0, 18))
+        self.page_layout.grid_columnconfigure(0, weight=0)
+        self.page_layout.grid_columnconfigure(1, weight=1)
+        self.page_layout.grid_rowconfigure(0, weight=1)
 
-        self.sidebar = tk.Frame(self.page_layout, bg=self.PANEL, width=320, highlightthickness=1, highlightbackground="#2b3552")
-        self.sidebar.pack(side="left", fill="y", padx=(0, 14))
+        self.sidebar = tk.Frame(self.page_layout, bg=self.PANEL, width=360, highlightthickness=1, highlightbackground="#cdd8f7")
+        self.sidebar.grid(row=0, column=0, sticky="nsw", padx=(0, 14))
         self.sidebar.pack_propagate(False)
 
-        self.main_content = tk.Frame(self.page_layout, bg=self.PANEL_2, highlightthickness=1, highlightbackground="#2b3552")
-        self.main_content.pack(side="left", fill="both", expand=True)
+        self.main_content = tk.Frame(self.page_layout, bg=self.PANEL_2, highlightthickness=1, highlightbackground="#cdd8f7")
+        self.main_content.grid(row=0, column=1, sticky="nsew")
 
         self._build_sidebar()
         self._build_main_content()
 
     def _build_sidebar(self):
-        side_inner = tk.Frame(self.sidebar, bg=self.PANEL)
-        side_inner.pack(fill="both", expand=True, padx=16, pady=16)
+        side_scroll_wrap = tk.Frame(self.sidebar, bg=self.PANEL)
+        side_scroll_wrap.pack(fill="both", expand=True)
+        side_canvas = tk.Canvas(side_scroll_wrap, bg=self.PANEL, highlightthickness=0, bd=0)
+        side_scrollbar = ttk.Scrollbar(side_scroll_wrap, orient="vertical", command=side_canvas.yview, style="Xy.Vertical.TScrollbar")
+        side_canvas.configure(yscrollcommand=side_scrollbar.set)
+        side_canvas.pack(side="left", fill="both", expand=True)
+        side_scrollbar.pack(side="right", fill="y")
+
+        side_inner = tk.Frame(side_canvas, bg=self.PANEL)
+        side_window = side_canvas.create_window((0, 0), window=side_inner, anchor="nw")
+
+        def _sync_sidebar_canvas(_event=None):
+            side_canvas.configure(scrollregion=side_canvas.bbox("all"))
+            side_canvas.itemconfigure(side_window, width=side_canvas.winfo_width())
+
+        side_inner.bind("<Configure>", _sync_sidebar_canvas)
+        side_canvas.bind("<Configure>", _sync_sidebar_canvas)
+        side_canvas.bind_all("<MouseWheel>", lambda event: side_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units"))
+
+        side_inner.pack_propagate(False)
+        side_inner.configure(width=320)
 
         tk.Label(side_inner, text="Session Setup", font=("Segoe UI", 15, "bold"), fg=self.PERI_2, bg=self.PANEL).pack(anchor="w")
-        tk.Label(side_inner, text="Timer keeps counting even if the window is closed.", font=("Segoe UI", 9), fg=self.MUTED, bg=self.PANEL).pack(anchor="w", pady=(4, 16))
+        tk.Label(side_inner, text="Timer keeps counting even if the window is closed.", font=("Segoe UI", 10), fg=self.MUTED, bg=self.PANEL).pack(anchor="w", pady=(4, 16))
 
-        session_card = tk.Frame(side_inner, bg=self.CARD, highlightthickness=1, highlightbackground="#24314a")
+        session_card = tk.Frame(side_inner, bg=self.CARD, highlightthickness=1, highlightbackground="#d3dcf6")
         session_card.pack(fill="x", pady=(0, 14))
 
         tk.Label(session_card, text="Minutes", font=("Segoe UI", 10, "bold"), fg=self.TEXT, bg=self.CARD).pack(anchor="w", padx=14, pady=(14, 6))
-        self.duration_entry = tk.Entry(session_card, font=("Segoe UI", 15, "bold"), bg=self.INPUT_BG, fg=self.TEXT, insertbackground=self.TEXT, relief="flat", justify="center", highlightthickness=1, highlightbackground="#27334d", highlightcolor=self.PERI_2)
+        self.duration_entry = tk.Entry(session_card, font=("Segoe UI", 16, "bold"), bg=self.INPUT_BG, fg=self.TEXT, insertbackground=self.TEXT, relief="flat", justify="center", highlightthickness=1, highlightbackground="#c8d3f2", highlightcolor=self.PERI_2)
         self.duration_entry.pack(fill="x", padx=14, pady=(0, 14), ipady=10)
         self.duration_entry.insert(0, "60")
 
@@ -530,24 +552,24 @@ class FocusBlockerApp:
         action_card = tk.Frame(side_inner, bg=self.PANEL)
         action_card.pack(fill="x", pady=(6, 0))
 
-        self.start_button = tk.Button(action_card, text="START FOCUS SESSION", command=self.start_session, font=("Segoe UI", 12, "bold"), bg=self.PERI, fg="#090d1d", activebackground=self.PERI_2, activeforeground="#090d1d", relief="flat", bd=0, cursor="hand2", padx=12, pady=16)
+        self.start_button = tk.Button(action_card, text="START FOCUS SESSION", command=self.start_session, font=("Segoe UI", 12, "bold"), bg=self.PERI, fg="#ffffff", activebackground=self.PERI_2, activeforeground="#ffffff", relief="flat", bd=0, cursor="hand2", padx=12, pady=16)
         self.start_button.pack(fill="x", pady=(0, 10))
 
-        self.generate_code_button = tk.Button(action_card, text="GENERATE / SHOW CODE", command=self.show_current_code, font=("Segoe UI", 10, "bold"), bg="#202b44", fg=self.TEXT, activebackground="#2c3a5c", activeforeground=self.TEXT, relief="flat", bd=0, cursor="hand2", padx=12, pady=12)
+        self.generate_code_button = tk.Button(action_card, text="GENERATE / SHOW CODE", command=self.show_current_code, font=("Segoe UI", 10, "bold"), bg="#dde5ff", fg="#1d2d61", activebackground="#d0dcff", activeforeground="#1d2d61", relief="flat", bd=0, cursor="hand2", padx=12, pady=12)
         self.generate_code_button.pack(fill="x", pady=(0, 10))
 
-        self.code_entry = tk.Entry(action_card, font=("Consolas", 12, "bold"), bg=self.INPUT_BG, fg=self.TEXT, insertbackground=self.TEXT, relief="flat", justify="center", highlightthickness=1, highlightbackground="#27334d", highlightcolor=self.PERI_2)
+        self.code_entry = tk.Entry(action_card, font=("Consolas", 12, "bold"), bg=self.INPUT_BG, fg=self.TEXT, insertbackground=self.TEXT, relief="flat", justify="center", highlightthickness=1, highlightbackground="#c8d3f2", highlightcolor=self.PERI_2)
         self.code_entry.pack(fill="x", pady=(0, 10), ipady=10)
         self.code_entry.bind("<Return>", lambda event: self.try_unlock_with_code())
 
-        self.code_submit_button = tk.Button(action_card, text="ENTER CODE TO STOP", command=self.try_unlock_with_code, font=("Segoe UI", 10, "bold"), bg="#202b44", fg=self.TEXT, activebackground="#2c3a5c", activeforeground=self.TEXT, relief="flat", bd=0, cursor="hand2", padx=12, pady=12)
+        self.code_submit_button = tk.Button(action_card, text="ENTER CODE TO STOP", command=self.try_unlock_with_code, font=("Segoe UI", 10, "bold"), bg="#dde5ff", fg="#1d2d61", activebackground="#d0dcff", activeforeground="#1d2d61", relief="flat", bd=0, cursor="hand2", padx=12, pady=12)
         self.code_submit_button.pack(fill="x", pady=(0, 10))
 
-        self.reset_button = tk.Button(action_card, text="Reset Defaults", command=self.reset_defaults, font=("Segoe UI", 10, "bold"), bg="#202b44", fg=self.TEXT, activebackground="#2c3a5c", activeforeground=self.TEXT, relief="flat", bd=0, cursor="hand2", padx=12, pady=12)
+        self.reset_button = tk.Button(action_card, text="Reset Defaults", command=self.reset_defaults, font=("Segoe UI", 10, "bold"), bg="#dde5ff", fg="#1d2d61", activebackground="#d0dcff", activeforeground="#1d2d61", relief="flat", bd=0, cursor="hand2", padx=12, pady=12)
         self.reset_button.pack(fill="x")
 
     def _check(self, parent, text, variable):
-        return tk.Checkbutton(parent, text=text, variable=variable, onvalue=True, offvalue=False, bg=self.PANEL, fg=self.TEXT, selectcolor=self.INPUT_BG, activebackground=self.PANEL, activeforeground=self.TEXT, font=("Segoe UI", 9), highlightthickness=0, bd=0)
+        return tk.Checkbutton(parent, text=text, variable=variable, onvalue=True, offvalue=False, bg=self.PANEL, fg=self.TEXT, selectcolor=self.INPUT_BG, activebackground=self.PANEL, activeforeground=self.TEXT, font=("Segoe UI", 10), highlightthickness=0, bd=0, wraplength=300, justify="left")
 
     def _build_main_content(self):
         main_inner = tk.Frame(self.main_content, bg=self.PANEL_2)
@@ -556,7 +578,7 @@ class FocusBlockerApp:
         header = tk.Frame(main_inner, bg=self.PANEL_2)
         header.pack(fill="x", pady=(0, 12))
         tk.Label(header, text="Rules", font=("Segoe UI", 16, "bold"), fg=self.TEXT, bg=self.PANEL_2).pack(anchor="w")
-        tk.Label(header, text="Allowed sites are for matching sub-URLs. Exact hard-block items match exactly. Website enforcement is domain-level only.", font=("Segoe UI", 9), fg=self.MUTED, bg=self.PANEL_2).pack(anchor="w", pady=(4, 0))
+        tk.Label(header, text="Allowed sites are for matching sub-URLs. Exact hard-block items match exactly. Website enforcement is domain-level only.", font=("Segoe UI", 10), fg=self.MUTED, bg=self.PANEL_2, wraplength=850, justify="left").pack(anchor="w", pady=(4, 0))
 
         grid = tk.Frame(main_inner, bg=self.PANEL_2)
         grid.pack(fill="both", expand=True)
