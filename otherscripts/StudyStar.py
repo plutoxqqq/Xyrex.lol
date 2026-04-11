@@ -477,19 +477,19 @@ class FocusBlockerApp:
         self.topnav.pack(fill="x", padx=18, pady=(16, 10))
         self.topnav.pack_propagate(False)
 
-        nav_inner = tk.Frame(self.topnav, bg="#080a12")
+        nav_inner = tk.Frame(self.topnav, bg=self.PANEL)
         nav_inner.pack(fill="both", expand=True, padx=18, pady=10)
 
-        brand_col = tk.Frame(nav_inner, bg="#080a12")
+        brand_col = tk.Frame(nav_inner, bg=self.PANEL)
         brand_col.pack(side="left", fill="y")
         tk.Label(brand_col, text=APP_TITLE, font=("Segoe UI", 22, "bold"), fg=self.PERI_2, bg="#080a12").pack(anchor="w")
         tk.Label(brand_col, text="Safe local focus blocker", font=("Segoe UI", 10), fg=self.MUTED, bg="#080a12").pack(anchor="w", pady=(2, 0))
 
-        nav_right = tk.Frame(nav_inner, bg="#080a12")
+        nav_right = tk.Frame(nav_inner, bg=self.PANEL)
         nav_right.pack(side="right", fill="y")
-        self.status_pill = tk.Label(nav_right, text="IDLE", font=("Segoe UI", 10, "bold"), fg="#dfffee", bg="#173224", padx=14, pady=8)
+        self.status_pill = tk.Label(nav_right, text="IDLE", font=("Segoe UI", 10, "bold"), fg="#ffffff", bg="#2b9469", padx=14, pady=8)
         self.status_pill.pack(anchor="e", pady=(0, 6))
-        self.countdown_pill = tk.Label(nav_right, text="--:--:--", font=("Consolas", 14, "bold"), fg=self.TEXT, bg="#18233d", padx=14, pady=8)
+        self.countdown_pill = tk.Label(nav_right, text="--:--:--", font=("Consolas", 14, "bold"), fg=self.TEXT, bg="#eaf0ff", padx=14, pady=8)
         self.countdown_pill.pack(anchor="e")
 
         self.page_layout = tk.Frame(self.app_shell, bg=self.BG)
@@ -541,7 +541,7 @@ class FocusBlockerApp:
         tk.Label(side_inner, text="Session Setup", font=("Segoe UI", 15, "bold"), fg=self.PERI_2, bg=self.PANEL).pack(anchor="w")
         tk.Label(side_inner, text="Timer keeps counting even if the window is closed.", font=("Segoe UI", 10), fg=self.MUTED, bg=self.PANEL).pack(anchor="w", pady=(4, 16))
 
-        session_card = tk.Frame(side_inner, bg=self.CARD, highlightthickness=1, highlightbackground="#24314a")
+        session_card = tk.Frame(side_inner, bg=self.CARD, highlightthickness=1, highlightbackground="#d3dcf6")
         session_card.pack(fill="x", pady=(0, 14))
 
         tk.Label(session_card, text="Minutes", font=("Segoe UI", 10, "bold"), fg=self.TEXT, bg=self.CARD).pack(anchor="w", padx=14, pady=(14, 6))
@@ -570,20 +570,20 @@ class FocusBlockerApp:
         action_card = tk.Frame(side_inner, bg=self.PANEL)
         action_card.pack(fill="x", pady=(6, 0))
 
-        self.start_button = tk.Button(action_card, text="START FOCUS SESSION", command=self.start_session, font=("Segoe UI", 12, "bold"), bg=self.PERI, fg="#090d1d", activebackground=self.PERI_2, activeforeground="#090d1d", relief="flat", bd=0, cursor="hand2", padx=12, pady=16)
+        self.start_button = tk.Button(action_card, text="START FOCUS SESSION", command=self.start_session, font=("Segoe UI", 12, "bold"), bg=self.PERI, fg="#ffffff", activebackground=self.PERI_2, activeforeground="#ffffff", relief="flat", bd=0, cursor="hand2", padx=12, pady=16)
         self.start_button.pack(fill="x", pady=(0, 10))
 
-        self.generate_code_button = tk.Button(action_card, text="GENERATE / SHOW CODE", command=self.show_current_code, font=("Segoe UI", 10, "bold"), bg="#202b44", fg=self.TEXT, activebackground="#2c3a5c", activeforeground=self.TEXT, relief="flat", bd=0, cursor="hand2", padx=12, pady=12)
+        self.generate_code_button = tk.Button(action_card, text="GENERATE / SHOW CODE", command=self.show_current_code, font=("Segoe UI", 10, "bold"), bg="#dde5ff", fg="#1d2d61", activebackground="#d0dcff", activeforeground="#1d2d61", relief="flat", bd=0, cursor="hand2", padx=12, pady=12)
         self.generate_code_button.pack(fill="x", pady=(0, 10))
 
-        self.code_entry = tk.Entry(action_card, font=("Consolas", 12, "bold"), bg=self.INPUT_BG, fg=self.TEXT, insertbackground=self.TEXT, relief="flat", justify="center", highlightthickness=1, highlightbackground="#27334d", highlightcolor=self.PERI_2)
+        self.code_entry = tk.Entry(action_card, font=("Consolas", 12, "bold"), bg=self.INPUT_BG, fg=self.TEXT, insertbackground=self.TEXT, relief="flat", justify="center", highlightthickness=1, highlightbackground="#c8d3f2", highlightcolor=self.PERI_2)
         self.code_entry.pack(fill="x", pady=(0, 10), ipady=10)
         self.code_entry.bind("<Return>", lambda event: self.try_unlock_with_code())
 
-        self.code_submit_button = tk.Button(action_card, text="ENTER CODE TO STOP", command=self.try_unlock_with_code, font=("Segoe UI", 10, "bold"), bg="#202b44", fg=self.TEXT, activebackground="#2c3a5c", activeforeground=self.TEXT, relief="flat", bd=0, cursor="hand2", padx=12, pady=12)
+        self.code_submit_button = tk.Button(action_card, text="ENTER CODE TO STOP", command=self.try_unlock_with_code, font=("Segoe UI", 10, "bold"), bg="#dde5ff", fg="#1d2d61", activebackground="#d0dcff", activeforeground="#1d2d61", relief="flat", bd=0, cursor="hand2", padx=12, pady=12)
         self.code_submit_button.pack(fill="x", pady=(0, 10))
 
-        self.reset_button = tk.Button(action_card, text="Reset Defaults", command=self.reset_defaults, font=("Segoe UI", 10, "bold"), bg="#202b44", fg=self.TEXT, activebackground="#2c3a5c", activeforeground=self.TEXT, relief="flat", bd=0, cursor="hand2", padx=12, pady=12)
+        self.reset_button = tk.Button(action_card, text="Reset Defaults", command=self.reset_defaults, font=("Segoe UI", 10, "bold"), bg="#dde5ff", fg="#1d2d61", activebackground="#d0dcff", activeforeground="#1d2d61", relief="flat", bd=0, cursor="hand2", padx=12, pady=12)
         self.reset_button.pack(fill="x")
 
     def _check(self, parent, text, variable):
