@@ -67,12 +67,12 @@ const products = [
     sunc: 94,
     description: 'Fast Windows executor focused on free performance',
     pros: ['Fast execution'],
-    cons: ['Stability issues'],
+    cons: [],
     pricingOptions: ['Free'],
     freeOrPaid: 'free',
-    stability: 'Mixed',
+    stability: 'High',
     trustLevel: 'Medium',
-    status: 'Undetected',
+    status: 'Down',
     officialSite: 'https://work.ink/1Yct/velocitydownload'
   },
   {
@@ -698,6 +698,12 @@ function createProductCard(product, index) {
   body.appendChild(header);
   body.appendChild(createPlatformChips(product.platform));
   body.appendChild(summary);
+  if (product.name === 'Velocity') {
+    const warningPill = document.createElement('div');
+    warningPill.className = 'card-alert-pill';
+    warningPill.textContent = 'Down';
+    body.appendChild(warningPill);
+  }
   body.appendChild(price);
 
   const infoBtn = document.createElement('button');
@@ -826,8 +832,12 @@ function applyAllFilters() {
 function openModal(product) {
   const overlay = qs('#modalOverlay');
   const content = qs('#modalContent');
+  const isVelocity = product.name === 'Velocity';
 
   const officialSite = product.officialSite || '';
+  const consMarkup = Array.isArray(product.cons) && product.cons.length
+    ? `<div class="modal-section"><strong>Cons</strong><ul>${product.cons.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul></div>`
+    : '';
   const officialSiteHost = officialSite
     ? (() => {
         try {
@@ -856,10 +866,18 @@ function openModal(product) {
   content.innerHTML = `
     <h2>${escapeHtml(product.name)}</h2>
     <p class="modal-headline">${escapeHtml(stripTrailingPeriod(product.description))}</p>
+    ${
+      isVelocity
+        ? `<div class="modal-velocity-warning" role="alert" aria-live="assertive">
+             <strong>⚠ Status Update</strong>
+             Velocity is currently down due to the adware incident.
+           </div>`
+        : ''
+    }
     <div class="modal-layout">
       <div>
         <div class="modal-section"><strong>Pros</strong><ul>${product.pros.map(f => `<li>${escapeHtml(f)}</li>`).join('')}</ul></div>
-        <div class="modal-section"><strong>Cons</strong><ul>${product.cons.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul></div>
+        ${consMarkup}
         <div class="modal-section"><strong>Pricing</strong><ul>${product.pricingOptions.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul></div>
       </div>
       <aside class="status-panel">
