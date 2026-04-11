@@ -86,18 +86,20 @@ BROWSER_PROCESSES = {
 
 class BlockPageHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        html = """<!doctype html>
+        host = self.headers.get("Host", "unknown-site")
+        request_target = f"{host}{self.path or '/'}"
+        html = f"""<!doctype html>
 <html>
 <head>
 <meta charset='utf-8'>
-<title>SITE BLOCKED</title>
+<title>StudyStar | Site Blocked</title>
 <style>
     html, body {
         margin: 0;
         padding: 0;
         width: 100%;
         height: 100%;
-        background: linear-gradient(180deg, #05070d 0%, #0a0d18 100%);
+        background: radial-gradient(circle at 20% 20%, #1a2550 0%, #0a0d18 55%, #06070d 100%);
         color: #eef1ff;
         font-family: Segoe UI, Arial, sans-serif;
     }
@@ -110,56 +112,97 @@ class BlockPageHandler(BaseHTTPRequestHandler):
         padding: 24px;
         box-sizing: border-box;
     }
+    .overlay {
+        width: min(860px, 100%);
+        background: #0f1428;
+        border: 1px solid #2f3b63;
+        border-radius: 24px;
+        box-shadow: 0 24px 70px rgba(0,0,0,0.45);
+        overflow: hidden;
+    }
+    .bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 20px;
+        background: #141c35;
+        border-bottom: 1px solid #2f3b63;
+    }
+    .brand {
+        font-size: 14px;
+        letter-spacing: 0.08em;
+        font-weight: 700;
+        color: #b7c5ff;
+        text-transform: uppercase;
+    }
+    .state {
+        font-size: 12px;
+        color: #ffd7d7;
+        background: #4c2230;
+        border: 1px solid #8f4156;
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-weight: 700;
+    }
     .card {
-        width: min(720px, 100%);
-        background: rgba(17, 20, 38, 0.96);
-        border: 1px solid #28324e;
-        border-radius: 22px;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.35);
-        padding: 36px;
+        padding: 28px;
     }
     .badge {
         display: inline-block;
-        padding: 8px 14px;
+        padding: 8px 12px;
         border-radius: 999px;
-        background: #1a2340;
+        background: #202b4d;
         color: #b7c0ff;
         font-weight: 700;
         letter-spacing: 0.06em;
         font-size: 12px;
-        margin-bottom: 18px;
+        margin-bottom: 14px;
     }
     h1 {
         margin: 0 0 12px;
-        font-size: 40px;
-        line-height: 1.05;
+        font-size: 38px;
+        line-height: 1.1;
     }
     p {
         margin: 0 0 14px;
-        color: #aeb5d6;
-        font-size: 17px;
-        line-height: 1.6;
+        color: #b9c2ea;
+        font-size: 16px;
+        line-height: 1.55;
     }
     .box {
-        margin-top: 18px;
+        margin-top: 14px;
         padding: 16px 18px;
         border-radius: 14px;
         background: #0b1020;
-        border: 1px solid #202c45;
+        border: 1px solid #29375c;
         color: #dbe0ff;
         font-family: Consolas, monospace;
         word-break: break-word;
+        font-size: 14px;
+    }
+    .hint {
+        margin-top: 16px;
+        font-size: 14px;
+        color: #98a6d8;
     }
 </style>
 </head>
 <body>
 <div class='wrap'>
-    <div class='card'>
-        <div class='badge'>SITE BLOCKED</div>
-        <h1>Stay on task.</h1>
-        <p>This site is blocked for the current focus session.</p>
-        <p>Go back to one of your allowed study pages or wait until the timer ends.</p>
-        <div class='box'>This browser request was redirected to the local block page by StudyStar V2.</div>
+    <div class='overlay'>
+        <div class='bar'>
+            <div class='brand'>StudyStar V2</div>
+            <div class='state'>Focus Lock Active</div>
+        </div>
+        <div class='card'>
+            <div class='badge'>SITE BLOCKED</div>
+            <h1>This site is blocked.</h1>
+            <p>Your current focus session is enforcing website restrictions.</p>
+            <p>Return to an approved study resource or wait for your session to end.</p>
+            <div class='box'>Blocked request: {request_target}</div>
+            <div class='hint'>If you believe this is incorrect, open StudyStar V2 and review your rules.</div>
+        </div>
     </div>
 </div>
 </body>
@@ -359,21 +402,21 @@ def can_bind_local_port(port):
 
 
 class FocusBlockerApp:
-    BG = "#06070d"
-    BG_2 = "#0a0c14"
-    PANEL = "#111426"
-    PANEL_2 = "#12172b"
-    CARD = "#12162a"
-    CARD_ALT = "#101427"
-    TEXT = "#eef1ff"
-    MUTED = "#aeb5d6"
-    PERI = "#8f9cff"
-    PERI_2 = "#b2bcff"
-    SUCCESS = "#5dd39e"
-    WARNING = "#f0c36f"
-    INPUT_BG = "#0b1020"
-    TRACK = "#0e1324"
-    DANGER = "#ff8c8c"
+    BG = "#090d18"
+    BG_2 = "#0d1324"
+    PANEL = "#111a2f"
+    PANEL_2 = "#121d34"
+    CARD = "#16213a"
+    CARD_ALT = "#0f182e"
+    TEXT = "#edf1ff"
+    MUTED = "#9eaacf"
+    PERI = "#4f77ff"
+    PERI_2 = "#7c98ff"
+    SUCCESS = "#53c89c"
+    WARNING = "#f2c36e"
+    INPUT_BG = "#0a1326"
+    TRACK = "#0e1930"
+    DANGER = "#ff8c9e"
 
     def __init__(self, root):
         self.root = root
@@ -425,9 +468,9 @@ class FocusBlockerApp:
         )
 
     def _make_text_panel(self, parent, title, subtitle, default_lines):
-        wrap = tk.Frame(parent, bg=self.CARD_ALT, highlightthickness=1, highlightbackground="#2a3352")
+        wrap = tk.Frame(parent, bg=self.CARD_ALT, highlightthickness=1, highlightbackground="#2f3f67")
         header = tk.Frame(wrap, bg=self.CARD_ALT)
-        header.pack(fill="x", padx=14, pady=(14, 8))
+        header.pack(fill="x", padx=16, pady=(14, 8))
         tk.Label(header, text=title, font=("Segoe UI Semibold", 12), fg=self.TEXT, bg=self.CARD_ALT).pack(anchor="w")
         tk.Label(header, text=subtitle, font=("Segoe UI", 9), fg=self.MUTED, bg=self.CARD_ALT, wraplength=540, justify="left").pack(anchor="w", pady=(4, 0))
 
@@ -443,7 +486,7 @@ class FocusBlockerApp:
             relief="flat",
             borderwidth=0,
             highlightthickness=1,
-            highlightbackground="#2a3452",
+            highlightbackground="#2a3b62",
             highlightcolor=self.PERI_2,
             padx=12,
             pady=12,
@@ -458,12 +501,44 @@ class FocusBlockerApp:
         return wrap, text
 
     def _make_stat_card(self, parent, title, value, value_fg=None):
-        card = tk.Frame(parent, bg=self.CARD_ALT, highlightthickness=1, highlightbackground="#2a3352")
+        card = tk.Frame(parent, bg=self.CARD_ALT, highlightthickness=1, highlightbackground="#2f3f67")
         card.pack(fill="x", pady=(0, 10))
-        tk.Label(card, text=title, font=("Segoe UI", 10), fg=self.MUTED, bg=self.CARD_ALT).pack(anchor="w", padx=14, pady=(12, 4))
+        tk.Label(card, text=title, font=("Segoe UI", 10), fg=self.MUTED, bg=self.CARD_ALT).pack(anchor="w", padx=14, pady=(10, 4))
         lbl = tk.Label(card, text=value, font=("Consolas", 15, "bold"), fg=value_fg or self.TEXT, bg=self.CARD_ALT)
-        lbl.pack(anchor="w", padx=14, pady=(0, 12))
+        lbl.pack(anchor="w", padx=14, pady=(0, 10))
         return lbl
+
+    def _make_button(self, parent, text, command, primary=False, danger=False):
+        if primary:
+            bg = self.PERI
+            fg = "#f5f8ff"
+            active_bg = self.PERI_2
+            active_fg = "#ffffff"
+        elif danger:
+            bg = "#3b1b2c"
+            fg = "#ffdfe7"
+            active_bg = "#57253d"
+            active_fg = "#fff0f4"
+        else:
+            bg = "#1b2947"
+            fg = "#d8e2ff"
+            active_bg = "#263a64"
+            active_fg = "#eff4ff"
+        return tk.Button(
+            parent,
+            text=text,
+            command=command,
+            font=("Segoe UI", 10, "bold"),
+            bg=bg,
+            fg=fg,
+            activebackground=active_bg,
+            activeforeground=active_fg,
+            relief="flat",
+            bd=0,
+            cursor="hand2",
+            padx=12,
+            pady=11
+        )
 
     def build_ui(self):
         self.bg_canvas = tk.Canvas(self.root, bg=self.BG, highlightthickness=0, bd=0)
@@ -473,36 +548,36 @@ class FocusBlockerApp:
         self.app_shell = tk.Frame(self.root, bg=self.BG)
         self.app_shell.place(relx=0, rely=0, relwidth=1, relheight=1)
 
-        self.topnav = tk.Frame(self.app_shell, bg="#080a12", height=88, highlightthickness=1, highlightbackground="#2a3452")
-        self.topnav.pack(fill="x", padx=18, pady=(16, 10))
+        self.topnav = tk.Frame(self.app_shell, bg="#0f182d", height=92, highlightthickness=1, highlightbackground="#30426e")
+        self.topnav.pack(fill="x", padx=18, pady=(16, 12))
         self.topnav.pack_propagate(False)
 
-        nav_inner = tk.Frame(self.topnav, bg=self.PANEL)
+        nav_inner = tk.Frame(self.topnav, bg="#0f182d")
         nav_inner.pack(fill="both", expand=True, padx=18, pady=10)
 
-        brand_col = tk.Frame(nav_inner, bg=self.PANEL)
+        brand_col = tk.Frame(nav_inner, bg="#0f182d")
         brand_col.pack(side="left", fill="y")
-        tk.Label(brand_col, text=APP_TITLE, font=("Segoe UI", 22, "bold"), fg=self.PERI_2, bg="#080a12").pack(anchor="w")
-        tk.Label(brand_col, text="Safe local focus blocker", font=("Segoe UI", 10), fg=self.MUTED, bg="#080a12").pack(anchor="w", pady=(2, 0))
+        tk.Label(brand_col, text=APP_TITLE, font=("Segoe UI", 22, "bold"), fg=self.PERI_2, bg="#0f182d").pack(anchor="w")
+        tk.Label(brand_col, text="Focused website and application lock for serious study sessions", font=("Segoe UI", 10), fg=self.MUTED, bg="#0f182d").pack(anchor="w", pady=(2, 0))
 
-        nav_right = tk.Frame(nav_inner, bg=self.PANEL)
+        nav_right = tk.Frame(nav_inner, bg="#0f182d")
         nav_right.pack(side="right", fill="y")
-        self.status_pill = tk.Label(nav_right, text="IDLE", font=("Segoe UI", 10, "bold"), fg="#ffffff", bg="#2b9469", padx=14, pady=8)
+        self.status_pill = tk.Label(nav_right, text="IDLE", font=("Segoe UI", 10, "bold"), fg="#dfffea", bg="#173728", padx=14, pady=8)
         self.status_pill.pack(anchor="e", pady=(0, 6))
-        self.countdown_pill = tk.Label(nav_right, text="--:--:--", font=("Consolas", 14, "bold"), fg=self.TEXT, bg="#eaf0ff", padx=14, pady=8)
+        self.countdown_pill = tk.Label(nav_right, text="--:--:--", font=("Consolas", 14, "bold"), fg="#edf1ff", bg="#17284a", padx=14, pady=8)
         self.countdown_pill.pack(anchor="e")
 
         self.page_layout = tk.Frame(self.app_shell, bg=self.BG)
         self.page_layout.pack(fill="both", expand=True, padx=18, pady=(0, 18))
-        self.page_layout.grid_columnconfigure(0, weight=0)
+        self.page_layout.grid_columnconfigure(0, weight=1, minsize=340)
         self.page_layout.grid_columnconfigure(1, weight=1)
         self.page_layout.grid_rowconfigure(0, weight=1)
 
-        self.sidebar = tk.Frame(self.page_layout, bg=self.PANEL, width=360, highlightthickness=1, highlightbackground="#2b3552")
-        self.sidebar.grid(row=0, column=0, sticky="nsw", padx=(0, 14))
+        self.sidebar = tk.Frame(self.page_layout, bg=self.PANEL, width=390, highlightthickness=1, highlightbackground="#2f3f67")
+        self.sidebar.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
         self.sidebar.pack_propagate(False)
 
-        self.main_content = tk.Frame(self.page_layout, bg=self.PANEL_2, highlightthickness=1, highlightbackground="#2b3552")
+        self.main_content = tk.Frame(self.page_layout, bg=self.PANEL_2, highlightthickness=1, highlightbackground="#2f3f67")
         self.main_content.grid(row=0, column=1, sticky="nsew")
 
         self._build_sidebar()
@@ -538,14 +613,14 @@ class FocusBlockerApp:
         side_canvas.bind("<Enter>", _bind_mousewheel)
         side_canvas.bind("<Leave>", _unbind_mousewheel)
 
-        tk.Label(side_inner, text="Session Setup", font=("Segoe UI", 15, "bold"), fg=self.PERI_2, bg=self.PANEL).pack(anchor="w")
-        tk.Label(side_inner, text="Timer keeps counting even if the window is closed.", font=("Segoe UI", 10), fg=self.MUTED, bg=self.PANEL).pack(anchor="w", pady=(4, 16))
+        tk.Label(side_inner, text="Session Control", font=("Segoe UI", 15, "bold"), fg=self.PERI_2, bg=self.PANEL).pack(anchor="w", padx=16, pady=(14, 0))
+        tk.Label(side_inner, text="Status stays active in the background even if this window is closed.", font=("Segoe UI", 10), fg=self.MUTED, bg=self.PANEL, wraplength=330, justify="left").pack(anchor="w", padx=16, pady=(4, 14))
 
-        session_card = tk.Frame(side_inner, bg=self.CARD, highlightthickness=1, highlightbackground="#d3dcf6")
+        session_card = tk.Frame(side_inner, bg=self.CARD, highlightthickness=1, highlightbackground="#3a4d7a")
         session_card.pack(fill="x", pady=(0, 14))
 
-        tk.Label(session_card, text="Minutes", font=("Segoe UI", 10, "bold"), fg=self.TEXT, bg=self.CARD).pack(anchor="w", padx=14, pady=(14, 6))
-        self.duration_entry = tk.Entry(session_card, font=("Segoe UI", 16, "bold"), bg=self.INPUT_BG, fg=self.TEXT, insertbackground=self.TEXT, relief="flat", justify="center", highlightthickness=1, highlightbackground="#27334d", highlightcolor=self.PERI_2)
+        tk.Label(session_card, text="Focus duration (minutes)", font=("Segoe UI", 10, "bold"), fg=self.TEXT, bg=self.CARD).pack(anchor="w", padx=14, pady=(14, 6))
+        self.duration_entry = tk.Entry(session_card, font=("Segoe UI", 16, "bold"), bg=self.INPUT_BG, fg=self.TEXT, insertbackground=self.TEXT, relief="flat", justify="center", highlightthickness=1, highlightbackground="#2d406b", highlightcolor=self.PERI_2)
         self.duration_entry.pack(fill="x", padx=14, pady=(0, 14), ipady=10)
         self.duration_entry.insert(0, "60")
 
@@ -555,13 +630,14 @@ class FocusBlockerApp:
         self.hard_app_var = tk.BooleanVar(value=True)
         self.browser_popup_var = tk.BooleanVar(value=True)
 
-        toggles = tk.Frame(side_inner, bg=self.PANEL)
+        toggles = tk.Frame(side_inner, bg=self.CARD_ALT, highlightthickness=1, highlightbackground="#2f3f67")
         toggles.pack(fill="x", pady=(0, 12))
-        self._check(toggles, "Allow-list mode for websites", self.allow_mode_var).pack(anchor="w", pady=3)
-        self._check(toggles, "Block common subdomains for blocked sites", self.block_subdomains_var).pack(anchor="w", pady=3)
-        self._check(toggles, "Exact hard-block sites enabled", self.hard_site_var).pack(anchor="w", pady=3)
-        self._check(toggles, "Exact hard-block apps enabled", self.hard_app_var).pack(anchor="w", pady=3)
-        self._check(toggles, "Show popup when app is blocked", self.browser_popup_var).pack(anchor="w", pady=3)
+        tk.Label(toggles, text="Protection Settings", font=("Segoe UI", 11, "bold"), fg=self.TEXT, bg=self.CARD_ALT).pack(anchor="w", padx=12, pady=(10, 4))
+        self._check(toggles, "Allow-list mode for websites", self.allow_mode_var).pack(anchor="w", padx=12, pady=3)
+        self._check(toggles, "Block common subdomains for blocked sites", self.block_subdomains_var).pack(anchor="w", padx=12, pady=3)
+        self._check(toggles, "Enable exact hard-block site paths", self.hard_site_var).pack(anchor="w", padx=12, pady=3)
+        self._check(toggles, "Enable exact hard-block applications", self.hard_app_var).pack(anchor="w", padx=12, pady=3)
+        self._check(toggles, "Show alerts when apps are blocked", self.browser_popup_var).pack(anchor="w", padx=12, pady=(3, 10))
 
         self.status_label = self._make_stat_card(side_inner, "Status", "Idle", self.SUCCESS)
         self.countdown_label = self._make_stat_card(side_inner, "Time Left", "--:--:--", self.TEXT)
@@ -570,35 +646,37 @@ class FocusBlockerApp:
         action_card = tk.Frame(side_inner, bg=self.PANEL)
         action_card.pack(fill="x", pady=(6, 0))
 
-        self.start_button = tk.Button(action_card, text="START FOCUS SESSION", command=self.start_session, font=("Segoe UI", 12, "bold"), bg=self.PERI, fg="#ffffff", activebackground=self.PERI_2, activeforeground="#ffffff", relief="flat", bd=0, cursor="hand2", padx=12, pady=16)
+        self.start_button = self._make_button(action_card, "START FOCUS SESSION", self.start_session, primary=True)
+        self.start_button.config(font=("Segoe UI", 12, "bold"), pady=14)
         self.start_button.pack(fill="x", pady=(0, 10))
 
-        self.generate_code_button = tk.Button(action_card, text="GENERATE / SHOW CODE", command=self.show_current_code, font=("Segoe UI", 10, "bold"), bg="#dde5ff", fg="#1d2d61", activebackground="#d0dcff", activeforeground="#1d2d61", relief="flat", bd=0, cursor="hand2", padx=12, pady=12)
+        self.generate_code_button = self._make_button(action_card, "GENERATE / SHOW CODE", self.show_current_code)
         self.generate_code_button.pack(fill="x", pady=(0, 10))
 
-        self.code_entry = tk.Entry(action_card, font=("Consolas", 12, "bold"), bg=self.INPUT_BG, fg=self.TEXT, insertbackground=self.TEXT, relief="flat", justify="center", highlightthickness=1, highlightbackground="#c8d3f2", highlightcolor=self.PERI_2)
+        tk.Label(action_card, text="Secure code entry to stop session", font=("Segoe UI", 9), fg=self.MUTED, bg=self.PANEL).pack(anchor="w", pady=(2, 6))
+        self.code_entry = tk.Entry(action_card, font=("Consolas", 12, "bold"), bg=self.INPUT_BG, fg=self.TEXT, insertbackground=self.TEXT, relief="flat", justify="center", highlightthickness=1, highlightbackground="#3a4d7a", highlightcolor=self.PERI_2)
         self.code_entry.pack(fill="x", pady=(0, 10), ipady=10)
         self.code_entry.bind("<Return>", lambda event: self.try_unlock_with_code())
 
-        self.code_submit_button = tk.Button(action_card, text="ENTER CODE TO STOP", command=self.try_unlock_with_code, font=("Segoe UI", 10, "bold"), bg="#dde5ff", fg="#1d2d61", activebackground="#d0dcff", activeforeground="#1d2d61", relief="flat", bd=0, cursor="hand2", padx=12, pady=12)
+        self.code_submit_button = self._make_button(action_card, "ENTER CODE TO STOP", self.try_unlock_with_code)
         self.code_submit_button.pack(fill="x", pady=(0, 10))
 
-        self.reset_button = tk.Button(action_card, text="Reset Defaults", command=self.reset_defaults, font=("Segoe UI", 10, "bold"), bg="#dde5ff", fg="#1d2d61", activebackground="#d0dcff", activeforeground="#1d2d61", relief="flat", bd=0, cursor="hand2", padx=12, pady=12)
+        self.reset_button = self._make_button(action_card, "Reset to Defaults", self.reset_defaults, danger=True)
         self.reset_button.pack(fill="x")
 
     def _check(self, parent, text, variable):
-        widget = tk.Checkbutton(parent, text=text, variable=variable, onvalue=True, offvalue=False, bg=self.PANEL, fg=self.TEXT, selectcolor=self.INPUT_BG, activebackground=self.PANEL, activeforeground=self.TEXT, font=("Segoe UI", 10), highlightthickness=0, bd=0, wraplength=300, justify="left")
+        widget = tk.Checkbutton(parent, text=text, variable=variable, onvalue=True, offvalue=False, bg=self.CARD_ALT, fg=self.TEXT, selectcolor=self.INPUT_BG, activebackground=self.CARD_ALT, activeforeground=self.TEXT, font=("Segoe UI", 10), highlightthickness=0, bd=0, wraplength=300, justify="left")
         self.config_checkbuttons.append(widget)
         return widget
 
     def _build_main_content(self):
         main_inner = tk.Frame(self.main_content, bg=self.PANEL_2)
-        main_inner.pack(fill="both", expand=True, padx=14, pady=14)
+        main_inner.pack(fill="both", expand=True, padx=16, pady=16)
 
         header = tk.Frame(main_inner, bg=self.PANEL_2)
         header.pack(fill="x", pady=(0, 12))
-        tk.Label(header, text="Rules", font=("Segoe UI", 16, "bold"), fg=self.TEXT, bg=self.PANEL_2).pack(anchor="w")
-        tk.Label(header, text="Allowed sites are for matching sub-URLs. Exact hard-block items match exactly. Website enforcement is domain-level only.", font=("Segoe UI", 10), fg=self.MUTED, bg=self.PANEL_2, wraplength=850, justify="left").pack(anchor="w", pady=(4, 0))
+        tk.Label(header, text="Rules and Enforcement Configuration", font=("Segoe UI", 16, "bold"), fg=self.TEXT, bg=self.PANEL_2).pack(anchor="w")
+        tk.Label(header, text="Edit each list clearly. Domain rules redirect to a full local blocked overlay page, and app rules terminate matching processes.", font=("Segoe UI", 10), fg=self.MUTED, bg=self.PANEL_2, wraplength=850, justify="left").pack(anchor="w", pady=(4, 0))
 
         grid = tk.Frame(main_inner, bg=self.PANEL_2)
         grid.pack(fill="both", expand=True)
