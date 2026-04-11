@@ -263,11 +263,17 @@ def remove_existing_block(content):
     return content
 
 
-def build_hosts_block_section(domains):
+def build_hosts_block_section(domains, block_subdomains=True):
     lines = [START_MARKER]
     for domain in domains:
+        domain = domain.strip().lower()
+        if not domain:
+            continue
         lines.append(f"{REDIRECT_IP} {domain}")
-        lines.append(f"{REDIRECT_IP} www.{domain}" if not domain.startswith("www.") else f"{REDIRECT_IP} {domain[4:]}")
+        if block_subdomains:
+            lines.append(f"{REDIRECT_IP} www.{domain}" if not domain.startswith("www.") else f"{REDIRECT_IP} {domain[4:]}")
+            for prefix in ("m", "mobile", "api", "app"):
+                lines.append(f"{REDIRECT_IP} {prefix}.{domain}")
     lines.append(END_MARKER)
     deduped = []
     seen = set()
@@ -285,11 +291,11 @@ def flush_dns():
         pass
 
 
-def apply_hosts_redirect(domains):
+def apply_hosts_redirect(domains, block_subdomains=True):
     with open(HOSTS_PATH, "r", encoding="utf-8") as f:
         content = f.read()
     content = remove_existing_block(content).rstrip() + "\n\n"
-    content += build_hosts_block_section(domains)
+    content += build_hosts_block_section(domains, block_subdomains=block_subdomains)
     with open(HOSTS_PATH, "w", encoding="utf-8") as f:
         f.write(content)
     flush_dns()
@@ -372,8 +378,8 @@ class FocusBlockerApp:
     def __init__(self, root):
         self.root = root
         self.root.title(APP_TITLE)
-        self.root.geometry("1340x860")
-        self.root.minsize(1220, 760)
+        self.root.geometry("1140x740")
+        self.root.minsize(980, 620)
         self.root.configure(bg=self.BG)
 
         self.active = False
@@ -392,6 +398,9 @@ class FocusBlockerApp:
         self.hard_blocked_apps = []
         self.last_popup_times = {}
         self.session_started_at = None
+        self.last_hosts_refresh_ts = 0
+        self.config_checkbuttons = []
+        self.config_text_widgets = []
 
         self._configure_ttk()
         self.build_ui()
@@ -541,6 +550,7 @@ class FocusBlockerApp:
         self.duration_entry.insert(0, "60")
 
         self.allow_mode_var = tk.BooleanVar(value=True)
+        self.block_subdomains_var = tk.BooleanVar(value=True)
         self.hard_site_var = tk.BooleanVar(value=True)
         self.hard_app_var = tk.BooleanVar(value=True)
         self.browser_popup_var = tk.BooleanVar(value=True)
@@ -548,6 +558,7 @@ class FocusBlockerApp:
         toggles = tk.Frame(side_inner, bg=self.PANEL)
         toggles.pack(fill="x", pady=(0, 12))
         self._check(toggles, "Allow-list mode for websites", self.allow_mode_var).pack(anchor="w", pady=3)
+        self._check(toggles, "Block common subdomains for blocked sites", self.block_subdomains_var).pack(anchor="w", pady=3)
         self._check(toggles, "Exact hard-block sites enabled", self.hard_site_var).pack(anchor="w", pady=3)
         self._check(toggles, "Exact hard-block apps enabled", self.hard_app_var).pack(anchor="w", pady=3)
         self._check(toggles, "Show popup when app is blocked", self.browser_popup_var).pack(anchor="w", pady=3)
@@ -576,7 +587,9 @@ class FocusBlockerApp:
         self.reset_button.pack(fill="x")
 
     def _check(self, parent, text, variable):
-        return tk.Checkbutton(parent, text=text, variable=variable, onvalue=True, offvalue=False, bg=self.PANEL, fg=self.TEXT, selectcolor=self.INPUT_BG, activebackground=self.PANEL, activeforeground=self.TEXT, font=("Segoe UI", 10), highlightthickness=0, bd=0, wraplength=300, justify="left")
+        widget = tk.Checkbutton(parent, text=text, variable=variable, onvalue=True, offvalue=False, bg=self.PANEL, fg=self.TEXT, selectcolor=self.INPUT_BG, activebackground=self.PANEL, activeforeground=self.TEXT, font=("Segoe UI", 10), highlightthickness=0, bd=0, wraplength=300, justify="left")
+        self.config_checkbuttons.append(widget)
+        return widget
 
     def _build_main_content(self):
         main_inner = tk.Frame(self.main_content, bg=self.PANEL_2)
@@ -607,6 +620,13 @@ class FocusBlockerApp:
         bottom.pack(fill="x", pady=(12, 0))
         extra, self.hard_apps_box = self._make_text_panel(bottom, "Exact hard-block apps", "Exact process-name match only", DEFAULT_HARD_BLOCKED_APPS)
         extra.pack(fill="both", expand=True)
+        self.config_text_widgets = [
+            self.allowed_sites_box,
+            self.blocked_sites_box,
+            self.hard_sites_box,
+            self.blocked_apps_box,
+            self.hard_apps_box
+        ]
 
     def _draw_background(self, event=None):
         self.bg_canvas.delete("all")
@@ -646,6 +666,7 @@ class FocusBlockerApp:
         self.hard_site_var.set(True)
         self.hard_app_var.set(True)
         self.browser_popup_var.set(True)
+        self.block_subdomains_var.set(True)
 
     def _replace_text(self, widget, lines):
         widget.delete("1.0", tk.END)
@@ -675,6 +696,7 @@ class FocusBlockerApp:
             "hard_sites_enabled": self.hard_site_var.get(),
             "hard_apps_enabled": self.hard_app_var.get(),
             "popup_enabled": self.browser_popup_var.get(),
+            "block_subdomains": self.block_subdomains_var.get(),
             "session_started_at": self.session_started_at
         }
 
@@ -742,14 +764,24 @@ class FocusBlockerApp:
         self.block_server = None
         self.block_server_thread = None
 
-    def build_effective_domain_redirects(self):
-        domains = set(self.blocked_sites)
+    def build_effective_domain_redirects(self, blocked_sites=None):
+        domains = set(blocked_sites if blocked_sites is not None else self.blocked_sites)
         if self.allow_mode_var.get():
             # This script cannot discover every site on the internet. In allow-list mode,
             # only the listed blocked domains are enforced globally via hosts redirects.
             # Allowed sites are preserved in saved config and for exact matching helpers.
             pass
         return sorted(domains)
+
+    def set_config_locked(self, locked):
+        state = "disabled" if locked else "normal"
+        for widget in self.config_text_widgets:
+            widget.config(state=state)
+        for widget in self.config_checkbuttons:
+            widget.config(state=state)
+        self.duration_entry.config(state=state)
+        self.start_button.config(state=state)
+        self.reset_button.config(state=state)
 
     def process_name_matches_exact(self, proc_name, exact_list):
         return proc_name.lower() in {item.lower() for item in exact_list}
@@ -793,6 +825,14 @@ class FocusBlockerApp:
         formatted = self.format_time(remaining)
         self.countdown_label.config(text=formatted)
         self.countdown_pill.config(text=formatted)
+        if self.active and (time.time() - self.last_hosts_refresh_ts) >= 15:
+            try:
+                redirects = self.build_effective_domain_redirects()
+                if redirects:
+                    apply_hosts_redirect(redirects, block_subdomains=self.block_subdomains_var.get())
+                    self.last_hosts_refresh_ts = time.time()
+            except Exception:
+                pass
         self.save_current_state()
         if remaining <= 0:
             self.finish_session()
@@ -840,9 +880,10 @@ class FocusBlockerApp:
 
         try:
             self.start_block_page_server()
-            redirects = self.build_effective_domain_redirects()
+            redirects = self.build_effective_domain_redirects(blocked_sites)
             if redirects:
-                apply_hosts_redirect(redirects)
+                apply_hosts_redirect(redirects, block_subdomains=self.block_subdomains_var.get())
+                self.last_hosts_refresh_ts = time.time()
         except PermissionError:
             messagebox.showerror("Permission error", "Run this script as Administrator.")
             return
@@ -859,6 +900,7 @@ class FocusBlockerApp:
         self.hard_blocked_sites = hard_blocked_sites[:]
         self.hard_blocked_apps = hard_blocked_apps[:]
         self.session_started_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.set_config_locked(True)
 
         self.status_label.config(text="Active", fg=self.WARNING)
         self.status_pill.config(text="ACTIVE", fg="#fff1d2", bg="#4f3815")
@@ -912,8 +954,10 @@ class FocusBlockerApp:
         self.hard_blocked_apps = []
         self.last_popup_times = {}
         self.session_started_at = None
+        self.last_hosts_refresh_ts = 0
 
         self.code_entry.delete(0, tk.END)
+        self.set_config_locked(False)
         clear_state()
         if show_message:
             messagebox.showinfo(APP_TITLE, message)
@@ -936,6 +980,7 @@ class FocusBlockerApp:
         self.hard_site_var.set(bool(data.get("hard_sites_enabled", True)))
         self.hard_app_var.set(bool(data.get("hard_apps_enabled", True)))
         self.browser_popup_var.set(bool(data.get("popup_enabled", True)))
+        self.block_subdomains_var.set(bool(data.get("block_subdomains", True)))
 
         self._replace_text(self.allowed_sites_box, self.allowed_sites)
         self._replace_text(self.blocked_sites_box, self.blocked_sites)
@@ -952,12 +997,14 @@ class FocusBlockerApp:
         self.status_label.config(text="Active", fg=self.WARNING)
         self.status_pill.config(text="ACTIVE", fg="#fff1d2", bg="#4f3815")
         self.code_label.config(text=self.unlock_code or "Missing", fg=self.WARNING)
+        self.set_config_locked(True)
 
         try:
             self.start_block_page_server()
             redirects = self.build_effective_domain_redirects()
             if redirects:
-                apply_hosts_redirect(redirects)
+                apply_hosts_redirect(redirects, block_subdomains=self.block_subdomains_var.get())
+                self.last_hosts_refresh_ts = time.time()
         except Exception:
             pass
 
