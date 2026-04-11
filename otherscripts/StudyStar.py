@@ -263,11 +263,17 @@ def remove_existing_block(content):
     return content
 
 
-def build_hosts_block_section(domains):
+def build_hosts_block_section(domains, block_subdomains=True):
     lines = [START_MARKER]
     for domain in domains:
+        domain = domain.strip().lower()
+        if not domain:
+            continue
         lines.append(f"{REDIRECT_IP} {domain}")
-        lines.append(f"{REDIRECT_IP} www.{domain}" if not domain.startswith("www.") else f"{REDIRECT_IP} {domain[4:]}")
+        if block_subdomains:
+            lines.append(f"{REDIRECT_IP} www.{domain}" if not domain.startswith("www.") else f"{REDIRECT_IP} {domain[4:]}")
+            for prefix in ("m", "mobile", "api", "app"):
+                lines.append(f"{REDIRECT_IP} {prefix}.{domain}")
     lines.append(END_MARKER)
     deduped = []
     seen = set()
@@ -285,11 +291,11 @@ def flush_dns():
         pass
 
 
-def apply_hosts_redirect(domains):
+def apply_hosts_redirect(domains, block_subdomains=True):
     with open(HOSTS_PATH, "r", encoding="utf-8") as f:
         content = f.read()
     content = remove_existing_block(content).rstrip() + "\n\n"
-    content += build_hosts_block_section(domains)
+    content += build_hosts_block_section(domains, block_subdomains=block_subdomains)
     with open(HOSTS_PATH, "w", encoding="utf-8") as f:
         f.write(content)
     flush_dns()
@@ -358,7 +364,7 @@ class FocusBlockerApp:
     PANEL = "#111426"
     PANEL_2 = "#12172b"
     CARD = "#12162a"
-    CARD_ALT = "#0f1425"
+    CARD_ALT = "#101427"
     TEXT = "#eef1ff"
     MUTED = "#aeb5d6"
     PERI = "#8f9cff"
@@ -366,14 +372,14 @@ class FocusBlockerApp:
     SUCCESS = "#5dd39e"
     WARNING = "#f0c36f"
     INPUT_BG = "#0b1020"
-    TRACK = "#101525"
+    TRACK = "#0e1324"
     DANGER = "#ff8c8c"
 
     def __init__(self, root):
         self.root = root
         self.root.title(APP_TITLE)
-        self.root.geometry("1340x860")
-        self.root.minsize(1220, 760)
+        self.root.geometry("1140x740")
+        self.root.minsize(980, 620)
         self.root.configure(bg=self.BG)
 
         self.active = False
@@ -392,6 +398,9 @@ class FocusBlockerApp:
         self.hard_blocked_apps = []
         self.last_popup_times = {}
         self.session_started_at = None
+        self.last_hosts_refresh_ts = 0
+        self.config_checkbuttons = []
+        self.config_text_widgets = []
 
         self._configure_ttk()
         self.build_ui()
@@ -405,22 +414,22 @@ class FocusBlockerApp:
             pass
         self.style.configure(
             "Xy.Vertical.TScrollbar",
-            background=self.PERI,
+            background="#8f9cff",
             troughcolor=self.TRACK,
             bordercolor=self.TRACK,
-            darkcolor=self.PERI,
-            lightcolor=self.PERI_2,
-            arrowcolor=self.TEXT,
+            darkcolor="#7088ff",
+            lightcolor="#b2bcff",
+            arrowcolor="#eef1ff",
             relief="flat",
-            width=10
+            width=12
         )
 
     def _make_text_panel(self, parent, title, subtitle, default_lines):
-        wrap = tk.Frame(parent, bg=self.CARD_ALT, highlightthickness=1, highlightbackground="#24314a")
+        wrap = tk.Frame(parent, bg=self.CARD_ALT, highlightthickness=1, highlightbackground="#2a3352")
         header = tk.Frame(wrap, bg=self.CARD_ALT)
         header.pack(fill="x", padx=14, pady=(14, 8))
         tk.Label(header, text=title, font=("Segoe UI Semibold", 12), fg=self.TEXT, bg=self.CARD_ALT).pack(anchor="w")
-        tk.Label(header, text=subtitle, font=("Segoe UI", 8), fg=self.MUTED, bg=self.CARD_ALT).pack(anchor="w", pady=(2, 0))
+        tk.Label(header, text=subtitle, font=("Segoe UI", 9), fg=self.MUTED, bg=self.CARD_ALT, wraplength=540, justify="left").pack(anchor="w", pady=(4, 0))
 
         text_wrap = tk.Frame(wrap, bg=self.CARD_ALT)
         text_wrap.pack(fill="both", expand=True, padx=(12, 10), pady=(0, 12))
@@ -434,11 +443,11 @@ class FocusBlockerApp:
             relief="flat",
             borderwidth=0,
             highlightthickness=1,
-            highlightbackground="#202c45",
+            highlightbackground="#2a3452",
             highlightcolor=self.PERI_2,
             padx=12,
             pady=12,
-            selectbackground="#31406d",
+            selectbackground="#304170",
             selectforeground=self.TEXT
         )
         text.pack(side="left", fill="both", expand=True)
@@ -449,9 +458,9 @@ class FocusBlockerApp:
         return wrap, text
 
     def _make_stat_card(self, parent, title, value, value_fg=None):
-        card = tk.Frame(parent, bg=self.CARD_ALT, highlightthickness=1, highlightbackground="#24314a")
+        card = tk.Frame(parent, bg=self.CARD_ALT, highlightthickness=1, highlightbackground="#2a3352")
         card.pack(fill="x", pady=(0, 10))
-        tk.Label(card, text=title, font=("Segoe UI", 9), fg=self.MUTED, bg=self.CARD_ALT).pack(anchor="w", padx=14, pady=(12, 4))
+        tk.Label(card, text=title, font=("Segoe UI", 10), fg=self.MUTED, bg=self.CARD_ALT).pack(anchor="w", padx=14, pady=(12, 4))
         lbl = tk.Label(card, text=value, font=("Consolas", 15, "bold"), fg=value_fg or self.TEXT, bg=self.CARD_ALT)
         lbl.pack(anchor="w", padx=14, pady=(0, 12))
         return lbl
@@ -464,7 +473,7 @@ class FocusBlockerApp:
         self.app_shell = tk.Frame(self.root, bg=self.BG)
         self.app_shell.place(relx=0, rely=0, relwidth=1, relheight=1)
 
-        self.topnav = tk.Frame(self.app_shell, bg="#080a12", height=72, highlightthickness=1, highlightbackground="#28324e")
+        self.topnav = tk.Frame(self.app_shell, bg="#080a12", height=88, highlightthickness=1, highlightbackground="#2a3452")
         self.topnav.pack(fill="x", padx=18, pady=(16, 10))
         self.topnav.pack_propagate(False)
 
@@ -473,8 +482,8 @@ class FocusBlockerApp:
 
         brand_col = tk.Frame(nav_inner, bg="#080a12")
         brand_col.pack(side="left", fill="y")
-        tk.Label(brand_col, text=APP_TITLE, font=("Segoe UI", 20, "bold"), fg=self.PERI_2, bg="#080a12").pack(anchor="w")
-        tk.Label(brand_col, text="Safe local focus blocker", font=("Segoe UI", 9), fg=self.MUTED, bg="#080a12").pack(anchor="w", pady=(2, 0))
+        tk.Label(brand_col, text=APP_TITLE, font=("Segoe UI", 22, "bold"), fg=self.PERI_2, bg="#080a12").pack(anchor="w")
+        tk.Label(brand_col, text="Safe local focus blocker", font=("Segoe UI", 10), fg=self.MUTED, bg="#080a12").pack(anchor="w", pady=(2, 0))
 
         nav_right = tk.Frame(nav_inner, bg="#080a12")
         nav_right.pack(side="right", fill="y")
@@ -485,33 +494,63 @@ class FocusBlockerApp:
 
         self.page_layout = tk.Frame(self.app_shell, bg=self.BG)
         self.page_layout.pack(fill="both", expand=True, padx=18, pady=(0, 18))
+        self.page_layout.grid_columnconfigure(0, weight=0)
+        self.page_layout.grid_columnconfigure(1, weight=1)
+        self.page_layout.grid_rowconfigure(0, weight=1)
 
-        self.sidebar = tk.Frame(self.page_layout, bg=self.PANEL, width=320, highlightthickness=1, highlightbackground="#2b3552")
-        self.sidebar.pack(side="left", fill="y", padx=(0, 14))
+        self.sidebar = tk.Frame(self.page_layout, bg=self.PANEL, width=360, highlightthickness=1, highlightbackground="#2b3552")
+        self.sidebar.grid(row=0, column=0, sticky="nsw", padx=(0, 14))
         self.sidebar.pack_propagate(False)
 
         self.main_content = tk.Frame(self.page_layout, bg=self.PANEL_2, highlightthickness=1, highlightbackground="#2b3552")
-        self.main_content.pack(side="left", fill="both", expand=True)
+        self.main_content.grid(row=0, column=1, sticky="nsew")
 
         self._build_sidebar()
         self._build_main_content()
 
     def _build_sidebar(self):
-        side_inner = tk.Frame(self.sidebar, bg=self.PANEL)
-        side_inner.pack(fill="both", expand=True, padx=16, pady=16)
+        side_scroll_wrap = tk.Frame(self.sidebar, bg=self.PANEL)
+        side_scroll_wrap.pack(fill="both", expand=True)
+        side_canvas = tk.Canvas(side_scroll_wrap, bg=self.PANEL, highlightthickness=0, bd=0)
+        side_scrollbar = ttk.Scrollbar(side_scroll_wrap, orient="vertical", command=side_canvas.yview, style="Xy.Vertical.TScrollbar")
+        side_canvas.configure(yscrollcommand=side_scrollbar.set)
+        side_canvas.pack(side="left", fill="both", expand=True)
+        side_scrollbar.pack(side="right", fill="y")
+
+        side_inner = tk.Frame(side_canvas, bg=self.PANEL)
+        side_window = side_canvas.create_window((0, 0), window=side_inner, anchor="nw")
+
+        def _sync_sidebar_canvas(_event=None):
+            side_canvas.configure(scrollregion=side_canvas.bbox("all"))
+            side_canvas.itemconfigure(side_window, width=side_canvas.winfo_width())
+
+        def _bind_mousewheel(_event=None):
+            side_canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+        def _unbind_mousewheel(_event=None):
+            side_canvas.unbind_all("<MouseWheel>")
+
+        def _on_mousewheel(event):
+            side_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+        side_inner.bind("<Configure>", _sync_sidebar_canvas)
+        side_canvas.bind("<Configure>", _sync_sidebar_canvas)
+        side_canvas.bind("<Enter>", _bind_mousewheel)
+        side_canvas.bind("<Leave>", _unbind_mousewheel)
 
         tk.Label(side_inner, text="Session Setup", font=("Segoe UI", 15, "bold"), fg=self.PERI_2, bg=self.PANEL).pack(anchor="w")
-        tk.Label(side_inner, text="Timer keeps counting even if the window is closed.", font=("Segoe UI", 9), fg=self.MUTED, bg=self.PANEL).pack(anchor="w", pady=(4, 16))
+        tk.Label(side_inner, text="Timer keeps counting even if the window is closed.", font=("Segoe UI", 10), fg=self.MUTED, bg=self.PANEL).pack(anchor="w", pady=(4, 16))
 
         session_card = tk.Frame(side_inner, bg=self.CARD, highlightthickness=1, highlightbackground="#24314a")
         session_card.pack(fill="x", pady=(0, 14))
 
         tk.Label(session_card, text="Minutes", font=("Segoe UI", 10, "bold"), fg=self.TEXT, bg=self.CARD).pack(anchor="w", padx=14, pady=(14, 6))
-        self.duration_entry = tk.Entry(session_card, font=("Segoe UI", 15, "bold"), bg=self.INPUT_BG, fg=self.TEXT, insertbackground=self.TEXT, relief="flat", justify="center", highlightthickness=1, highlightbackground="#27334d", highlightcolor=self.PERI_2)
+        self.duration_entry = tk.Entry(session_card, font=("Segoe UI", 16, "bold"), bg=self.INPUT_BG, fg=self.TEXT, insertbackground=self.TEXT, relief="flat", justify="center", highlightthickness=1, highlightbackground="#27334d", highlightcolor=self.PERI_2)
         self.duration_entry.pack(fill="x", padx=14, pady=(0, 14), ipady=10)
         self.duration_entry.insert(0, "60")
 
         self.allow_mode_var = tk.BooleanVar(value=True)
+        self.block_subdomains_var = tk.BooleanVar(value=True)
         self.hard_site_var = tk.BooleanVar(value=True)
         self.hard_app_var = tk.BooleanVar(value=True)
         self.browser_popup_var = tk.BooleanVar(value=True)
@@ -519,6 +558,7 @@ class FocusBlockerApp:
         toggles = tk.Frame(side_inner, bg=self.PANEL)
         toggles.pack(fill="x", pady=(0, 12))
         self._check(toggles, "Allow-list mode for websites", self.allow_mode_var).pack(anchor="w", pady=3)
+        self._check(toggles, "Block common subdomains for blocked sites", self.block_subdomains_var).pack(anchor="w", pady=3)
         self._check(toggles, "Exact hard-block sites enabled", self.hard_site_var).pack(anchor="w", pady=3)
         self._check(toggles, "Exact hard-block apps enabled", self.hard_app_var).pack(anchor="w", pady=3)
         self._check(toggles, "Show popup when app is blocked", self.browser_popup_var).pack(anchor="w", pady=3)
@@ -547,7 +587,9 @@ class FocusBlockerApp:
         self.reset_button.pack(fill="x")
 
     def _check(self, parent, text, variable):
-        return tk.Checkbutton(parent, text=text, variable=variable, onvalue=True, offvalue=False, bg=self.PANEL, fg=self.TEXT, selectcolor=self.INPUT_BG, activebackground=self.PANEL, activeforeground=self.TEXT, font=("Segoe UI", 9), highlightthickness=0, bd=0)
+        widget = tk.Checkbutton(parent, text=text, variable=variable, onvalue=True, offvalue=False, bg=self.PANEL, fg=self.TEXT, selectcolor=self.INPUT_BG, activebackground=self.PANEL, activeforeground=self.TEXT, font=("Segoe UI", 10), highlightthickness=0, bd=0, wraplength=300, justify="left")
+        self.config_checkbuttons.append(widget)
+        return widget
 
     def _build_main_content(self):
         main_inner = tk.Frame(self.main_content, bg=self.PANEL_2)
@@ -556,7 +598,7 @@ class FocusBlockerApp:
         header = tk.Frame(main_inner, bg=self.PANEL_2)
         header.pack(fill="x", pady=(0, 12))
         tk.Label(header, text="Rules", font=("Segoe UI", 16, "bold"), fg=self.TEXT, bg=self.PANEL_2).pack(anchor="w")
-        tk.Label(header, text="Allowed sites are for matching sub-URLs. Exact hard-block items match exactly. Website enforcement is domain-level only.", font=("Segoe UI", 9), fg=self.MUTED, bg=self.PANEL_2).pack(anchor="w", pady=(4, 0))
+        tk.Label(header, text="Allowed sites are for matching sub-URLs. Exact hard-block items match exactly. Website enforcement is domain-level only.", font=("Segoe UI", 10), fg=self.MUTED, bg=self.PANEL_2, wraplength=850, justify="left").pack(anchor="w", pady=(4, 0))
 
         grid = tk.Frame(main_inner, bg=self.PANEL_2)
         grid.pack(fill="both", expand=True)
@@ -578,6 +620,13 @@ class FocusBlockerApp:
         bottom.pack(fill="x", pady=(12, 0))
         extra, self.hard_apps_box = self._make_text_panel(bottom, "Exact hard-block apps", "Exact process-name match only", DEFAULT_HARD_BLOCKED_APPS)
         extra.pack(fill="both", expand=True)
+        self.config_text_widgets = [
+            self.allowed_sites_box,
+            self.blocked_sites_box,
+            self.hard_sites_box,
+            self.blocked_apps_box,
+            self.hard_apps_box
+        ]
 
     def _draw_background(self, event=None):
         self.bg_canvas.delete("all")
@@ -617,6 +666,7 @@ class FocusBlockerApp:
         self.hard_site_var.set(True)
         self.hard_app_var.set(True)
         self.browser_popup_var.set(True)
+        self.block_subdomains_var.set(True)
 
     def _replace_text(self, widget, lines):
         widget.delete("1.0", tk.END)
@@ -646,6 +696,7 @@ class FocusBlockerApp:
             "hard_sites_enabled": self.hard_site_var.get(),
             "hard_apps_enabled": self.hard_app_var.get(),
             "popup_enabled": self.browser_popup_var.get(),
+            "block_subdomains": self.block_subdomains_var.get(),
             "session_started_at": self.session_started_at
         }
 
@@ -713,14 +764,24 @@ class FocusBlockerApp:
         self.block_server = None
         self.block_server_thread = None
 
-    def build_effective_domain_redirects(self):
-        domains = set(self.blocked_sites)
+    def build_effective_domain_redirects(self, blocked_sites=None):
+        domains = set(blocked_sites if blocked_sites is not None else self.blocked_sites)
         if self.allow_mode_var.get():
             # This script cannot discover every site on the internet. In allow-list mode,
             # only the listed blocked domains are enforced globally via hosts redirects.
             # Allowed sites are preserved in saved config and for exact matching helpers.
             pass
         return sorted(domains)
+
+    def set_config_locked(self, locked):
+        state = "disabled" if locked else "normal"
+        for widget in self.config_text_widgets:
+            widget.config(state=state)
+        for widget in self.config_checkbuttons:
+            widget.config(state=state)
+        self.duration_entry.config(state=state)
+        self.start_button.config(state=state)
+        self.reset_button.config(state=state)
 
     def process_name_matches_exact(self, proc_name, exact_list):
         return proc_name.lower() in {item.lower() for item in exact_list}
@@ -764,6 +825,14 @@ class FocusBlockerApp:
         formatted = self.format_time(remaining)
         self.countdown_label.config(text=formatted)
         self.countdown_pill.config(text=formatted)
+        if self.active and (time.time() - self.last_hosts_refresh_ts) >= 15:
+            try:
+                redirects = self.build_effective_domain_redirects()
+                if redirects:
+                    apply_hosts_redirect(redirects, block_subdomains=self.block_subdomains_var.get())
+                    self.last_hosts_refresh_ts = time.time()
+            except Exception:
+                pass
         self.save_current_state()
         if remaining <= 0:
             self.finish_session()
@@ -811,9 +880,10 @@ class FocusBlockerApp:
 
         try:
             self.start_block_page_server()
-            redirects = self.build_effective_domain_redirects()
+            redirects = self.build_effective_domain_redirects(blocked_sites)
             if redirects:
-                apply_hosts_redirect(redirects)
+                apply_hosts_redirect(redirects, block_subdomains=self.block_subdomains_var.get())
+                self.last_hosts_refresh_ts = time.time()
         except PermissionError:
             messagebox.showerror("Permission error", "Run this script as Administrator.")
             return
@@ -830,6 +900,7 @@ class FocusBlockerApp:
         self.hard_blocked_sites = hard_blocked_sites[:]
         self.hard_blocked_apps = hard_blocked_apps[:]
         self.session_started_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.set_config_locked(True)
 
         self.status_label.config(text="Active", fg=self.WARNING)
         self.status_pill.config(text="ACTIVE", fg="#fff1d2", bg="#4f3815")
@@ -883,8 +954,10 @@ class FocusBlockerApp:
         self.hard_blocked_apps = []
         self.last_popup_times = {}
         self.session_started_at = None
+        self.last_hosts_refresh_ts = 0
 
         self.code_entry.delete(0, tk.END)
+        self.set_config_locked(False)
         clear_state()
         if show_message:
             messagebox.showinfo(APP_TITLE, message)
@@ -907,6 +980,7 @@ class FocusBlockerApp:
         self.hard_site_var.set(bool(data.get("hard_sites_enabled", True)))
         self.hard_app_var.set(bool(data.get("hard_apps_enabled", True)))
         self.browser_popup_var.set(bool(data.get("popup_enabled", True)))
+        self.block_subdomains_var.set(bool(data.get("block_subdomains", True)))
 
         self._replace_text(self.allowed_sites_box, self.allowed_sites)
         self._replace_text(self.blocked_sites_box, self.blocked_sites)
@@ -923,12 +997,14 @@ class FocusBlockerApp:
         self.status_label.config(text="Active", fg=self.WARNING)
         self.status_pill.config(text="ACTIVE", fg="#fff1d2", bg="#4f3815")
         self.code_label.config(text=self.unlock_code or "Missing", fg=self.WARNING)
+        self.set_config_locked(True)
 
         try:
             self.start_block_page_server()
             redirects = self.build_effective_domain_redirects()
             if redirects:
-                apply_hosts_redirect(redirects)
+                apply_hosts_redirect(redirects, block_subdomains=self.block_subdomains_var.get())
+                self.last_hosts_refresh_ts = time.time()
         except Exception:
             pass
 
