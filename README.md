@@ -59,7 +59,7 @@ Xyrex.lol continues to evolve with:
 
 ## 📝 Contributing
 
-Feedback and contributions are welcome. If you’d like to suggest improvements or new features, join our Discord server: https://discord.gg/26CCYfbA
+Feedback and contributions are welcome. If you’d like to suggest improvements or new features, join our Discord server: https://discord.gg/6X8cyjUcAj
 
 ---
 
