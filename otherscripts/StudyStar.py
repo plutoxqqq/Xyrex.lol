@@ -447,6 +447,7 @@ class FocusBlockerApp:
 
         self._configure_ttk()
         self.build_ui()
+        self.restore_saved_preferences()
         self.restore_previous_session()
 
     def _configure_ttk(self):
@@ -745,6 +746,7 @@ class FocusBlockerApp:
         self.hard_app_var.set(True)
         self.browser_popup_var.set(True)
         self.block_subdomains_var.set(True)
+        self.save_current_state()
 
     def _replace_text(self, widget, lines):
         widget.delete("1.0", tk.END)
@@ -760,29 +762,53 @@ class FocusBlockerApp:
     def time_left(self):
         return max(0, int(self.session_end_ts - time.time())) if self.session_end_ts else 0
 
-    def build_state_data(self):
+    def build_preferences_data(self):
         return {
-            "active": self.active,
-            "session_end_ts": self.session_end_ts,
-            "unlock_code": self.unlock_code,
-            "allowed_sites": self.allowed_sites,
-            "blocked_sites": self.blocked_sites,
-            "blocked_apps": self.blocked_apps,
-            "hard_blocked_sites": self.hard_blocked_sites,
-            "hard_blocked_apps": self.hard_blocked_apps,
+            "allowed_sites": normalize_domains(self.allowed_sites_box.get("1.0", tk.END)),
+            "blocked_sites": normalize_domains(self.blocked_sites_box.get("1.0", tk.END)),
+            "blocked_apps": normalize_apps(self.blocked_apps_box.get("1.0", tk.END)),
+            "hard_blocked_sites": normalize_lines(self.hard_sites_box.get("1.0", tk.END), lower=True),
+            "hard_blocked_apps": normalize_apps(self.hard_apps_box.get("1.0", tk.END)),
             "allow_mode": self.allow_mode_var.get(),
             "hard_sites_enabled": self.hard_site_var.get(),
             "hard_apps_enabled": self.hard_app_var.get(),
             "popup_enabled": self.browser_popup_var.get(),
-            "block_subdomains": self.block_subdomains_var.get(),
-            "session_started_at": self.session_started_at
+            "block_subdomains": self.block_subdomains_var.get()
         }
+
+    def build_state_data(self):
+        data = self.build_preferences_data()
+        data.update(
+            {
+                "active": self.active,
+                "session_end_ts": self.session_end_ts if self.active else 0,
+                "unlock_code": self.unlock_code if self.active else "",
+                "session_started_at": self.session_started_at if self.active else None
+            }
+        )
+        return data
 
     def save_current_state(self):
         try:
             save_state(self.build_state_data())
         except Exception:
             pass
+
+    def restore_saved_preferences(self):
+        data = load_state()
+        if not data:
+            return
+        self.allow_mode_var.set(bool(data.get("allow_mode", True)))
+        self.hard_site_var.set(bool(data.get("hard_sites_enabled", True)))
+        self.hard_app_var.set(bool(data.get("hard_apps_enabled", True)))
+        self.browser_popup_var.set(bool(data.get("popup_enabled", True)))
+        self.block_subdomains_var.set(bool(data.get("block_subdomains", True)))
+
+        self._replace_text(self.allowed_sites_box, data.get("allowed_sites", DEFAULT_ALLOWED_SITES))
+        self._replace_text(self.blocked_sites_box, data.get("blocked_sites", DEFAULT_BLOCKED_SITES))
+        self._replace_text(self.blocked_apps_box, data.get("blocked_apps", DEFAULT_BLOCKED_APPS))
+        self._replace_text(self.hard_sites_box, data.get("hard_blocked_sites", DEFAULT_HARD_BLOCKED_SITES))
+        self._replace_text(self.hard_apps_box, data.get("hard_blocked_apps", DEFAULT_HARD_BLOCKED_APPS))
 
     def show_current_code(self):
         if not self.active:
@@ -1036,7 +1062,7 @@ class FocusBlockerApp:
 
         self.code_entry.delete(0, tk.END)
         self.set_config_locked(False)
-        clear_state()
+        self.save_current_state()
         if show_message:
             messagebox.showinfo(APP_TITLE, message)
 
@@ -1054,22 +1080,10 @@ class FocusBlockerApp:
         self.hard_blocked_sites = data.get("hard_blocked_sites", [])
         self.hard_blocked_apps = data.get("hard_blocked_apps", [])
         self.session_started_at = data.get("session_started_at")
-        self.allow_mode_var.set(bool(data.get("allow_mode", True)))
-        self.hard_site_var.set(bool(data.get("hard_sites_enabled", True)))
-        self.hard_app_var.set(bool(data.get("hard_apps_enabled", True)))
-        self.browser_popup_var.set(bool(data.get("popup_enabled", True)))
-        self.block_subdomains_var.set(bool(data.get("block_subdomains", True)))
-
-        self._replace_text(self.allowed_sites_box, self.allowed_sites)
-        self._replace_text(self.blocked_sites_box, self.blocked_sites)
-        self._replace_text(self.blocked_apps_box, self.blocked_apps)
-        self._replace_text(self.hard_sites_box, self.hard_blocked_sites)
-        self._replace_text(self.hard_apps_box, self.hard_blocked_apps)
-
         remaining = self.time_left()
         if remaining <= 0:
-            clear_state()
             self.active = False
+            self.save_current_state()
             return
 
         self.status_label.config(text="Active", fg=self.WARNING)
@@ -1102,6 +1116,12 @@ class FocusBlockerApp:
         if self.active:
             self.save_current_state()
             log_event("Window closed while session still active.")
+            try:
+                self.root.iconify()
+                return
+            except Exception:
+                pass
+        self.save_current_state()
         self.root.destroy()
 
 
