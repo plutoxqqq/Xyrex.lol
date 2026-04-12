@@ -12,7 +12,6 @@ local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
-local VirtualUser = game:GetService("VirtualUser")
 local Debris = game:GetService("Debris")
 
 local lplr = Players.LocalPlayer
@@ -38,7 +37,8 @@ local function sayInChat(message)
 end
 
 -- ==================== BEDWARS CONTROLLER FETCH ====================
-local KnitClient, CombatController, BedwarsShopController, ClientHandler
+local KnitClient, CombatController, BedwarsShopController, BlockPlacementController, ClientHandler
+local resolvedCombatController, resolvedBlockPlacementController
 
 local function fetchControllers()
     local knitPaths = {
@@ -56,6 +56,7 @@ local function fetchControllers()
     if controllers then
         CombatController = controllers:FindFirstChild("CombatController")
         BedwarsShopController = controllers:FindFirstChild("BedwarsShopController")
+        BlockPlacementController = controllers:FindFirstChild("BlockPlacementController") or controllers:FindFirstChild("BlockController")
         ClientHandler = controllers:FindFirstChild("ClientHandler")
     end
 end
@@ -72,6 +73,83 @@ end
 
 local function getHRP(char)
     return char and char:FindFirstChild("HumanoidRootPart")
+end
+
+local function getCombatController()
+    if resolvedCombatController then
+        return resolvedCombatController
+    end
+    if not CombatController then return nil end
+    local ok, controller = pcall(require, CombatController)
+    if ok and controller then
+        resolvedCombatController = controller
+    end
+    return resolvedCombatController
+end
+
+local function getBlockPlacementController()
+    if resolvedBlockPlacementController then
+        return resolvedBlockPlacementController
+    end
+    if not BlockPlacementController then return nil end
+    local ok, controller = pcall(require, BlockPlacementController)
+    if ok and controller then
+        resolvedBlockPlacementController = controller
+    end
+    return resolvedBlockPlacementController
+end
+
+local function getHeldOrBackpackDaoTool()
+    local char = getCharacter(lplr)
+    if not char then return nil end
+    local heldTool = char:FindFirstChildOfClass("Tool")
+    if heldTool and heldTool.Name:lower():find("dao") then
+        return heldTool
+    end
+    local backpack = lplr:FindFirstChildOfClass("Backpack")
+    if not backpack then return nil end
+    for _, tool in ipairs(backpack:GetChildren()) do
+        if tool:IsA("Tool") and tool.Name:lower():find("dao") then
+            return tool
+        end
+    end
+    return nil
+end
+
+local function useDaoAbility()
+    local char = getCharacter(lplr)
+    local hum = getHumanoid(char)
+    if not char or not hum then return false end
+    local dao = getHeldOrBackpackDaoTool()
+    if not dao then return false end
+    if dao.Parent ~= char then
+        hum:EquipTool(dao)
+        task.wait()
+    end
+
+    local used = false
+    pcall(function()
+        dao:Activate()
+        used = true
+    end)
+
+    local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+    if remotes then
+        for _, remote in ipairs(remotes:GetDescendants()) do
+            if remote:IsA("RemoteEvent") and (remote.Name:lower():find("ability") or remote.Name:lower():find("use")) then
+                pcall(function()
+                    remote:FireServer(dao.Name)
+                    used = true
+                end)
+                pcall(function()
+                    remote:FireServer({item = dao.Name})
+                    used = true
+                end)
+            end
+        end
+    end
+
+    return used
 end
 
 -- Get nearest enemy (players + NPCs) excluding teammates
@@ -125,6 +203,42 @@ local function getNearestEnemy(range, ignoreTeam)
     end
 
     return nearest, shortest
+end
+
+local function attackTargetWithBedwarsApi(targetCharacter)
+    local char = getCharacter(lplr)
+    local tool = char and char:FindFirstChildOfClass("Tool")
+    local controller = getCombatController()
+    local attacked = false
+
+    if controller then
+        local targetHum = getHumanoid(targetCharacter)
+        local targetRoot = getHRP(targetCharacter)
+        for _, fnName in ipairs({"attackEntity", "AttackEntity", "swingSwordAtMouse", "swingSword"}) do
+            local fn = controller[fnName]
+            if type(fn) == "function" then
+                pcall(function()
+                    if fnName == "swingSwordAtMouse" then
+                        fn(controller)
+                    elseif fnName == "attackEntity" or fnName == "AttackEntity" then
+                        fn(controller, targetHum or targetCharacter, targetRoot and targetRoot.Position or nil)
+                    else
+                        fn(controller, targetHum or targetCharacter)
+                    end
+                    attacked = true
+                end)
+            end
+        end
+    end
+
+    if tool and not attacked then
+        pcall(function()
+            tool:Activate()
+            attacked = true
+        end)
+    end
+
+    return attacked
 end
 
 -- Safe connection management
@@ -459,10 +573,7 @@ local function toggleKillAura(enabled)
                 local now = tick()
                 if now - killAuraLastSwing >= 1 / settings.swingSpeed then
                     killAuraLastSwing = now
-                    -- Attack
-                    if tool and tool:IsA("Tool") then
-                        tool:Activate()
-                    end
+                    attackTargetWithBedwarsApi(targetChar)
                 end
             end
         end
@@ -1001,12 +1112,37 @@ local function toggleScaffold(enabled)
         end
         if blockExists then return end
 
+        local blockController = getBlockPlacementController()
+        if blockController then
+            local didPlace = false
+            for _, fnName in ipairs({"placeBlock", "PlaceBlock", "placeBlockAt", "placeBlockRequest"}) do
+                local fn = blockController[fnName]
+                if type(fn) == "function" then
+                    pcall(function()
+                        fn(blockController, CFrame.new(placePos))
+                        didPlace = true
+                    end)
+                    pcall(function()
+                        fn(blockController, placePos)
+                        didPlace = true
+                    end)
+                    pcall(function()
+                        fn(blockController, woolName, CFrame.new(placePos))
+                        didPlace = true
+                    end)
+                end
+            end
+            if didPlace then
+                return
+            end
+        end
+
         if BedwarsShopController then
             pcall(function()
-                local blockItem = require(BedwarsShopController):GetItem(woolName)
-                if blockItem then
-                    require(BedwarsShopController):PlaceBlock(blockItem, CFrame.new(placePos))
-                    performPrimaryClick()
+                local shopController = require(BedwarsShopController)
+                local blockItem = shopController.GetItem and shopController:GetItem(woolName)
+                if blockItem and shopController.PlaceBlock then
+                    shopController:PlaceBlock(blockItem, CFrame.new(placePos))
                 end
             end)
         else
@@ -1015,6 +1151,12 @@ local function toggleScaffold(enabled)
             if remotes then
                 for _, remote in ipairs(remotes:GetDescendants()) do
                     if remote:IsA("RemoteEvent") and remote.Name:lower():find("place") and remote.Name:lower():find("block") then
+                        pcall(function()
+                            remote:FireServer({
+                                position = placePos,
+                                blockType = woolName
+                            })
+                        end)
                         pcall(function()
                             remote:FireServer(placePos, woolName)
                         end)
@@ -1083,12 +1225,16 @@ local function toggleAutoClicker(enabled)
             local delay = 1 / moduleSettings["AutoClicker"].cps
             if now - lastClick >= delay then
                 lastClick = now
-                local char = getCharacter(lplr)
-                local tool = char and char:FindFirstChildOfClass("Tool")
-                if tool then
-                    pcall(function() tool:Activate() end)
+                local nearest = getNearestEnemy(18, true)
+                if nearest then
+                    attackTargetWithBedwarsApi(nearest)
+                else
+                    local char = getCharacter(lplr)
+                    local tool = char and char:FindFirstChildOfClass("Tool")
+                    if tool then
+                        pcall(function() tool:Activate() end)
+                    end
                 end
-                performPrimaryClick()
             end
         end
     end)
@@ -1208,7 +1354,7 @@ local function toggleLongJump(enabled)
 
         if boostUntil <= tick() then
             if tick() - lastDaoActivation > 0.2 then
-                pcall(function() heldTool:Activate() end)
+                useDaoAbility()
                 lastDaoActivation = tick()
             end
             boostUntil = tick() + 2
@@ -1282,23 +1428,7 @@ local function toggleNoFallDamage(enabled)
                 local hrp = getHRP(char)
                 if not hrp then return end
                 if hrp.AssemblyLinearVelocity.Y < -45 and tick() > daoCooldown then
-                    local tool = char:FindFirstChildOfClass("Tool")
-                    if not tool then
-                        local backpack = lplr:FindFirstChildOfClass("Backpack")
-                        if backpack then
-                            for _, candidate in ipairs(backpack:GetChildren()) do
-                                if candidate:IsA("Tool") and candidate.Name:lower():find("dao") then
-                                    hum:EquipTool(candidate)
-                                    tool = candidate
-                                    break
-                                end
-                            end
-                        end
-                    end
-                    if tool and tool.Name:lower():find("dao") then
-                        pcall(function()
-                            tool:Activate()
-                        end)
+                    if useDaoAbility() then
                         daoCooldown = tick() + 0.5
                     end
                 end
@@ -1649,13 +1779,6 @@ local function createModule(parent, name, defaultEnabled, toggleCallback, settin
     toggleButton.BackgroundTransparency = 1
     toggleButton.Text = ""
     toggleButton.Parent = header
-
-    local toggleButton = Instance.new("TextButton")
-    toggleButton.Name = "ToggleButton"
-    toggleButton.Size = UDim2.new(1, -90, 1, 0)
-    toggleButton.BackgroundTransparency = 1
-    toggleButton.Text = ""
-    toggleButton.Parent = frame
 
     -- Keybind display button
     local keybindBtn = Instance.new("TextButton")
