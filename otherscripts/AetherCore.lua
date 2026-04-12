@@ -116,6 +116,14 @@ local function getHeldOrBackpackDaoTool()
     return nil
 end
 
+local function isDaoTool(tool)
+    if not tool or not tool:IsA("Tool") then
+        return false
+    end
+    local lowered = tool.Name:lower()
+    return lowered:find("dao") ~= nil
+end
+
 local function useDaoAbility()
     local char = getCharacter(lplr)
     local hum = getHumanoid(char)
@@ -150,6 +158,60 @@ local function useDaoAbility()
     end
 
     return used
+end
+
+local function getTargetByFilters(range, attackPlayers, attackNPCs)
+    local myChar = getCharacter(lplr)
+    local myHRP = getHRP(myChar)
+    if not myHRP then
+        return nil
+    end
+    local nearest
+    local nearestDistance = range or math.huge
+
+    if attackPlayers then
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= lplr and player.Team ~= lplr.Team then
+                local targetChar = getCharacter(player)
+                local targetHum = getHumanoid(targetChar)
+                local targetHRP = getHRP(targetChar)
+                if targetHum and targetHRP and targetHum.Health > 0 then
+                    local distance = (targetHRP.Position - myHRP.Position).Magnitude
+                    if distance < nearestDistance then
+                        nearest = targetChar
+                        nearestDistance = distance
+                    end
+                end
+            end
+        end
+    end
+
+    if attackNPCs then
+        for _, model in ipairs(Workspace:GetDescendants()) do
+            if model:IsA("Model") and model ~= myChar then
+                local targetHum = model:FindFirstChildOfClass("Humanoid")
+                local targetHRP = model:FindFirstChild("HumanoidRootPart")
+                if targetHum and targetHRP and targetHum.Health > 0 then
+                    local isPlayerModel = false
+                    for _, plr in ipairs(Players:GetPlayers()) do
+                        if plr.Character == model then
+                            isPlayerModel = true
+                            break
+                        end
+                    end
+                    if not isPlayerModel then
+                        local distance = (targetHRP.Position - myHRP.Position).Magnitude
+                        if distance < nearestDistance then
+                            nearest = model
+                            nearestDistance = distance
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return nearest, nearestDistance
 end
 
 -- Get nearest enemy (players + NPCs) excluding teammates
@@ -539,7 +601,7 @@ local function toggleKillAura(enabled)
     cleanupModule("KillAura")
     if not enabled then return end
 
-    local connection = RunService.Heartbeat:Connect(function(deltaTime)
+    local connection = RunService.Heartbeat:Connect(function()
         if not moduleStates["KillAura"] then return end
         local settings = moduleSettings["KillAura"]
         local myChar = getCharacter(lplr)
@@ -548,14 +610,14 @@ local function toggleKillAura(enabled)
 
         local tool = myChar:FindFirstChildOfClass("Tool")
         if settings.requireSword then
-            if not tool or not tool:IsA("Tool") or not tool.Name:lower():find("sword") then
+            if not tool or not tool.Name:lower():find("sword") then
                 return
             end
         elseif not tool then
             return
         end
 
-        local targetChar = getNearestEnemy(settings.range, true) -- ignore team
+        local targetChar = getTargetByFilters(settings.range, settings.attackPlayers, settings.attackNPCs)
         if targetChar then
             local targetHRP = getHRP(targetChar)
             if targetHRP then
@@ -574,6 +636,7 @@ local function toggleKillAura(enabled)
                 if now - killAuraLastSwing >= 1 / settings.swingSpeed then
                     killAuraLastSwing = now
                     attackTargetWithBedwarsApi(targetChar)
+                    pcall(function() tool:Activate() end)
                 end
             end
         end
@@ -591,6 +654,55 @@ moduleSettings["Reach"] = {
 
 local function toggleReach(enabled)
     cleanupModule("Reach")
+
+    local function resetToolReach(tool)
+        local grip = tool:FindFirstChild("AetherOriginalGripPos")
+        if grip then
+            tool.GripPos = Vector3.new(grip.Value.X, grip.Value.Y, grip.Value.Z)
+            grip:Destroy()
+        end
+
+        local handle = tool:FindFirstChild("Handle")
+        if handle and handle:IsA("BasePart") then
+            local originalSize = handle:FindFirstChild("AetherOriginalHandleSize")
+            if originalSize then
+                handle.Size = Vector3.new(originalSize.Value.X, originalSize.Value.Y, originalSize.Value.Z)
+                originalSize:Destroy()
+            end
+            handle.Massless = false
+            handle.CanCollide = true
+            handle.Transparency = 0
+        end
+    end
+
+    local function applyToolReach(tool, rangeAmount)
+        if not tool:IsA("Tool") then
+            return
+        end
+        if not tool:FindFirstChild("AetherOriginalGripPos") then
+            local originalGripPos = Instance.new("Vector3Value")
+            originalGripPos.Name = "AetherOriginalGripPos"
+            originalGripPos.Value = tool.GripPos
+            originalGripPos.Parent = tool
+        end
+
+        local handle = tool:FindFirstChild("Handle")
+        if handle and handle:IsA("BasePart") then
+            if not handle:FindFirstChild("AetherOriginalHandleSize") then
+                local originalHandleSize = Instance.new("Vector3Value")
+                originalHandleSize.Name = "AetherOriginalHandleSize"
+                originalHandleSize.Value = handle.Size
+                originalHandleSize.Parent = handle
+            end
+            handle.Size = Vector3.new(math.max(handle.Size.X, 2), math.max(handle.Size.Y, 2), math.max(rangeAmount, 4))
+            handle.Massless = true
+            handle.CanCollide = false
+            handle.Transparency = 0.35
+        end
+
+        local gripExtension = -math.max(rangeAmount - 4, 0)
+        tool.GripPos = Vector3.new(tool.GripPos.X, tool.GripPos.Y, gripExtension)
+    end
 
     local function forEachTool(callback)
         local char = getCharacter(lplr)
@@ -612,21 +724,9 @@ local function toggleReach(enabled)
     end
 
     if not enabled then
-        -- Reset handle sizes
         forEachTool(function(tool)
-            if tool:FindFirstChild("Handle") then
-                local handle = tool.Handle
-                local orig = handle:FindFirstChild("OriginalReach")
-                if orig then
-                    handle.Size = Vector3.new(handle.Size.X, handle.Size.Y, orig.Value)
-                    orig:Destroy()
-                end
-                handle.Massless = false
-                handle.CanCollide = true
-                handle.Transparency = 0
-            end
+            resetToolReach(tool)
         end)
-        -- Reset character reach attribute if any
         lplr:SetAttribute("Reach", nil)
         return
     end
@@ -637,35 +737,17 @@ local function toggleReach(enabled)
         local settings = moduleSettings["Reach"]
 
         if settings.mode == "Attribute" or settings.mode == "Both" then
-            -- Set character reach (some games use this)
-            lplr:SetAttribute("Reach", settings.hitRange)
+            lplr:SetAttribute("Reach", math.max(settings.hitRange, settings.mineRange, settings.placeRange))
         else
             lplr:SetAttribute("Reach", nil)
         end
 
-        -- Extend tool handle for hit/place/mine
+        local maxRange = math.max(settings.hitRange, settings.mineRange, settings.placeRange)
         forEachTool(function(tool)
-            if tool:FindFirstChild("Handle") then
-                local handle = tool.Handle
-                if not handle:FindFirstChild("OriginalReach") then
-                    local orig = Instance.new("NumberValue", handle)
-                    orig.Name = "OriginalReach"
-                    orig.Value = handle.Size.Z
-                end
-                -- Use max of three ranges
-                if settings.mode == "Handle" or settings.mode == "Both" then
-                    local maxRange = math.max(settings.hitRange, settings.mineRange, settings.placeRange)
-                    handle.Size = Vector3.new(handle.Size.X, handle.Size.Y, maxRange)
-                    handle.Massless = true
-                    handle.CanCollide = false
-                    handle.Transparency = 0.5
-                else
-                    local orig = handle:FindFirstChild("OriginalReach")
-                    if orig then
-                        handle.Size = Vector3.new(handle.Size.X, handle.Size.Y, orig.Value)
-                    end
-                    handle.Transparency = 0
-                end
+            if settings.mode == "Handle" or settings.mode == "Both" then
+                applyToolReach(tool, maxRange)
+            else
+                resetToolReach(tool)
             end
         end)
     end
@@ -980,19 +1062,40 @@ moduleSettings["AutoToxic"] = {
 }
 
 local function setupAutoToxic()
-    if not CombatController then return end
-    local controller = require(CombatController)
-    local killSignal = controller.kill or controller.onKill or controller.KillEvent
-    if killSignal and typeof(killSignal) == "Instance" then
-        killSignal:Connect(function(victim, isFinalKill)
-            if autoToxicEnabled and moduleSettings["AutoToxic"].enabledFinalKill and isFinalKill and victim ~= lplr then
-                sayInChat(moduleSettings["AutoToxic"].finalKillMessage)
+    local lastMessageTime = 0
+    local function sendToxicMessage(kind)
+        if not autoToxicEnabled then
+            return
+        end
+        if tick() - lastMessageTime < 1.5 then
+            return
+        end
+        local settings = moduleSettings["AutoToxic"]
+        if kind == "final" and settings.enabledFinalKill then
+            sayInChat(settings.finalKillMessage)
+            lastMessageTime = tick()
+        elseif kind == "bed" and settings.enabledBedBreak then
+            sayInChat(settings.bedBreakMessage)
+            lastMessageTime = tick()
+        elseif kind == "win" and settings.enabledGameWin then
+            sayInChat(settings.gameWinMessage)
+            lastMessageTime = tick()
+        end
+    end
+
+    if TextChatService and TextChatService.MessageReceived then
+        TextChatService.MessageReceived:Connect(function(message)
+            local text = (message.Text or ""):lower()
+            local me = lplr.Name:lower()
+            if text:find(me) and text:find("final kill") then
+                sendToxicMessage("final")
+            elseif text:find(me) and text:find("bed") and (text:find("break") or text:find("destroy")) then
+                sendToxicMessage("bed")
+            elseif text:find("victory") or text:find("you win") then
+                sendToxicMessage("win")
             end
         end)
     end
-
-    -- For bed break and game win, we'd need to hook other events. Simplified for now.
-    -- We'll use remote listeners if available.
 end
 setupAutoToxic()
 
@@ -1222,18 +1325,17 @@ local function toggleAutoClicker(enabled)
     local conn3 = RunService.Heartbeat:Connect(function()
         if holding and moduleStates["AutoClicker"] then
             local now = tick()
-            local delay = 1 / moduleSettings["AutoClicker"].cps
+            local delay = 1 / math.max(moduleSettings["AutoClicker"].cps, 1)
             if now - lastClick >= delay then
                 lastClick = now
-                local nearest = getNearestEnemy(18, true)
+                local nearest = getTargetByFilters(18, true, true)
                 if nearest then
                     attackTargetWithBedwarsApi(nearest)
-                else
-                    local char = getCharacter(lplr)
-                    local tool = char and char:FindFirstChildOfClass("Tool")
-                    if tool then
-                        pcall(function() tool:Activate() end)
-                    end
+                end
+                local char = getCharacter(lplr)
+                local tool = char and char:FindFirstChildOfClass("Tool")
+                if tool then
+                    pcall(function() tool:Activate() end)
                 end
             end
         end
@@ -1245,7 +1347,10 @@ local function toggleAutoClicker(enabled)
 end
 
 -- 12. VELOCITY (Knockback reducer)
-moduleSettings["Velocity"] = { reductionPercent = 50 } -- 0% = full knockback, 100% = none
+moduleSettings["Velocity"] = {
+    horizontalReduction = 100, -- 100 = fully negate horizontal knockback
+    verticalReduction = 100 -- 100 = fully negate vertical knockback
+}
 
 local function toggleVelocity(enabled)
     cleanupModule("Velocity")
@@ -1267,10 +1372,15 @@ local function toggleVelocity(enabled)
         addConnection("Velocity", RunService.Heartbeat:Connect(function()
             if not moduleStates["Velocity"] or not root.Parent then return end
             if tick() > recentlyDamagedUntil then return end
-            local reduction = moduleSettings["Velocity"].reductionPercent / 100
+            local settings = moduleSettings["Velocity"]
+            local horizontalReduction = math.clamp(settings.horizontalReduction / 100, 0, 1)
+            local verticalReduction = math.clamp(settings.verticalReduction / 100, 0, 1)
             local current = root.AssemblyLinearVelocity
-            local horizontal = Vector3.new(current.X, 0, current.Z) * (1 - reduction)
-            root.AssemblyLinearVelocity = Vector3.new(horizontal.X, current.Y, horizontal.Z)
+            root.AssemblyLinearVelocity = Vector3.new(
+                current.X * (1 - horizontalReduction),
+                current.Y * (1 - verticalReduction),
+                current.Z * (1 - horizontalReduction)
+            )
         end))
     end
 
@@ -1279,7 +1389,7 @@ local function toggleVelocity(enabled)
 end
 
 -- 13. LONGJUMP (Yuzi Dao style)
-moduleSettings["LongJump"] = { speed = 100 }
+moduleSettings["LongJump"] = { speed = 110, duration = 2 }
 
 local function toggleLongJump(enabled)
     cleanupModule("LongJump")
@@ -1295,7 +1405,7 @@ local function toggleLongJump(enabled)
             if hrp then
                 local bv = hrp:FindFirstChild("LongJumpVelocity")
                 if bv then bv:Destroy() end
-                hrp.Velocity = Vector3.new(0, hrp.Velocity.Y, 0)
+                hrp.AssemblyLinearVelocity = Vector3.new(0, hrp.AssemblyLinearVelocity.Y, 0)
             end
         end
         return
@@ -1315,7 +1425,7 @@ local function toggleLongJump(enabled)
         return bv
     end
 
-    local originalMovement = {walkSpeed = 16, jumpPower = 50}
+    local originalMovement = {walkSpeed = nil, jumpPower = nil}
     local boostUntil = 0
     local lastDaoActivation = 0
 
@@ -1326,18 +1436,17 @@ local function toggleLongJump(enabled)
         local hrp = getHRP(char)
         if not char or not hum or not hrp then return end
 
-        if originalMovement.walkSpeed ~= 0 then
+        if not originalMovement.walkSpeed then
             originalMovement.walkSpeed = hum.WalkSpeed
             originalMovement.jumpPower = hum.JumpPower
         end
 
         local heldTool = char:FindFirstChildOfClass("Tool")
-        local toolName = heldTool and heldTool.Name:lower() or ""
-        local isHoldingDao = heldTool and (toolName:find("_dao") or toolName:find(" dao") or toolName:find("dao"))
+        local isHoldingDao = isDaoTool(heldTool)
         if not isHoldingDao then
             hum.WalkSpeed = 0
             hum.JumpPower = 0
-            hrp.Velocity = Vector3.zero
+            hrp.AssemblyLinearVelocity = Vector3.zero
             local waitingBv = hrp:FindFirstChild("LongJumpVelocity")
             if waitingBv then
                 waitingBv.Velocity = Vector3.zero
@@ -1357,11 +1466,12 @@ local function toggleLongJump(enabled)
                 useDaoAbility()
                 lastDaoActivation = tick()
             end
-            boostUntil = tick() + 2
+            boostUntil = tick() + moduleSettings["LongJump"].duration
         end
 
         if boostUntil > tick() then
-            local forward = Vector3.new(camera.CFrame.LookVector.X, 0, camera.CFrame.LookVector.Z)
+            local moveDirection = hum.MoveDirection
+            local forward = moveDirection.Magnitude > 0 and moveDirection or Vector3.new(camera.CFrame.LookVector.X, 0, camera.CFrame.LookVector.Z)
             if forward.Magnitude <= 0 then
                 forward = Vector3.new(0, 0, -1)
             else
@@ -1424,13 +1534,32 @@ local function toggleNoFallDamage(enabled)
             addConnection("NoFallDamage", conn)
         elseif moduleSettings["NoFallDamage"].method == "DaoExploit" then
             local daoCooldown = 0
+            local charging = false
             local conn = RunService.Heartbeat:Connect(function()
                 local hrp = getHRP(char)
                 if not hrp then return end
-                if hrp.AssemblyLinearVelocity.Y < -45 and tick() > daoCooldown then
-                    if useDaoAbility() then
-                        daoCooldown = tick() + 0.5
+
+                local velocityY = hrp.AssemblyLinearVelocity.Y
+                local ray = Workspace:Raycast(hrp.Position, Vector3.new(0, -30, 0))
+                local groundDistance = ray and (hrp.Position.Y - ray.Position.Y) or math.huge
+                local dao = getHeldOrBackpackDaoTool()
+
+                if velocityY < -30 and groundDistance > 10 and tick() > daoCooldown and dao and not charging then
+                    local activated = useDaoAbility()
+                    if activated then
+                        charging = true
                     end
+                end
+
+                if charging and (groundDistance < 8 or velocityY > -5) then
+                    local held = char:FindFirstChildOfClass("Tool")
+                    if held and isDaoTool(held) then
+                        pcall(function()
+                            held:Deactivate()
+                        end)
+                    end
+                    charging = false
+                    daoCooldown = tick() + 0.45
                 end
             end)
             addConnection("NoFallDamage", conn)
@@ -1477,8 +1606,9 @@ local function toggleAntiVoid(enabled)
     end
 
     local indicator = createAntiVoidVisual()
-    local baseSafeY = nil
     local pullVelocity = nil
+    local rescueTarget = nil
+    local voidTriggerY = nil
 
     local function getNearestGroundPosition(origin, character)
         local raycastParams = RaycastParams.new()
@@ -1508,46 +1638,70 @@ local function toggleAntiVoid(enabled)
         return best
     end
 
+    local function refreshVoidReference()
+        local myChar = getCharacter(lplr)
+        local hrp = getHRP(myChar)
+        if not myChar or not hrp then
+            return
+        end
+        local groundPos = getNearestGroundPosition(hrp.Position, myChar)
+        local referenceY = groundPos and groundPos.Y or hrp.Position.Y
+        voidTriggerY = referenceY - 38
+    end
+
+    refreshVoidReference()
+    addConnection("AntiVoid", lplr.CharacterAdded:Connect(function()
+        task.wait(0.2)
+        local existingIndicator = Workspace:FindFirstChild("AntiVoidIndicator")
+        if not existingIndicator then
+            indicator = createAntiVoidVisual()
+        end
+        refreshVoidReference()
+    end))
+
     local connection = RunService.Heartbeat:Connect(function()
         if not moduleStates["AntiVoid"] then return end
         local myChar = getCharacter(lplr)
         local hrp = getHRP(myChar)
         if not hrp then return end
-        if not baseSafeY then
-            baseSafeY = hrp.Position.Y
+        if not voidTriggerY then
+            refreshVoidReference()
         end
-        local groundPos = getNearestGroundPosition(hrp.Position, myChar)
-        local referenceY = groundPos and groundPos.Y or baseSafeY
-        local voidY = referenceY - 60
+        if not voidTriggerY then return end
+        indicator.Position = Vector3.new(hrp.Position.X, voidTriggerY, hrp.Position.Z)
 
-        -- Update visual position
-        indicator.Position = Vector3.new(hrp.Position.X, voidY, hrp.Position.Z)
-
-        if hrp.Position.Y <= voidY then
+        if hrp.Position.Y <= voidTriggerY then
             local method = moduleSettings["AntiVoid"].method
             if method == "Normal" then
-                if not groundPos then
-                    groundPos = Vector3.new(hrp.Position.X, baseSafeY, hrp.Position.Z)
+                if not rescueTarget then
+                    rescueTarget = getNearestGroundPosition(hrp.Position, myChar)
                 end
-                hrp.CFrame = CFrame.new(hrp.Position.X, groundPos.Y + 3, hrp.Position.Z)
-                if pullVelocity then
-                    pullVelocity:Destroy()
-                end
-                pullVelocity = Instance.new("BodyVelocity")
-                pullVelocity.Name = "AntiVoidPull"
-                pullVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-                pullVelocity.Parent = hrp
-                local target = Vector3.new(groundPos.X, groundPos.Y + 3, groundPos.Z)
-                local dir = target - hrp.Position
-                pullVelocity.Velocity = dir.Magnitude > 1 and (dir.Unit * 40) or Vector3.zero
-                task.delay(2, function()
+                if rescueTarget then
+                    hrp.CFrame = CFrame.new(hrp.Position.X, rescueTarget.Y + 3, hrp.Position.Z)
                     if pullVelocity then
                         pullVelocity:Destroy()
-                        pullVelocity = nil
                     end
-                end)
+                    pullVelocity = Instance.new("BodyVelocity")
+                    pullVelocity.Name = "AntiVoidPull"
+                    pullVelocity.MaxForce = Vector3.new(2e5, 0, 2e5)
+                    pullVelocity.Parent = hrp
+                end
             elseif method == "Bounce" then
-                hrp.Velocity = Vector3.new(hrp.Velocity.X, moduleSettings["AntiVoid"].bouncePower, hrp.Velocity.Z)
+                hrp.AssemblyLinearVelocity = Vector3.new(hrp.AssemblyLinearVelocity.X, moduleSettings["AntiVoid"].bouncePower, hrp.AssemblyLinearVelocity.Z)
+            end
+        end
+
+        if pullVelocity and rescueTarget then
+            local goal = Vector3.new(rescueTarget.X, hrp.Position.Y, rescueTarget.Z)
+            local planarDelta = goal - Vector3.new(hrp.Position.X, hrp.Position.Y, hrp.Position.Z)
+            pullVelocity.Velocity = planarDelta.Magnitude > 0.5 and planarDelta.Unit * 38 or Vector3.zero
+            local closeToGround = hrp.Position.Y <= rescueTarget.Y + 4
+            local closeToTarget = planarDelta.Magnitude < 3.5
+            if closeToGround and closeToTarget then
+                pullVelocity:Destroy()
+                pullVelocity = nil
+                rescueTarget = nil
+                refreshVoidReference()
             end
         end
 
@@ -1995,11 +2149,13 @@ createModule(columns["Legit"], "AutoClicker", false, toggleAutoClicker, {
 })
 
 createModule(columns["Movement"], "Velocity", false, toggleVelocity, {
-    {type = "slider", name = "Reduction %", min = 0, max = 100, settingName = "reductionPercent"}
+    {type = "slider", name = "Horizontal %", min = 0, max = 100, settingName = "horizontalReduction"},
+    {type = "slider", name = "Vertical %", min = 0, max = 100, settingName = "verticalReduction"}
 })
 
 createModule(columns["Movement"], "LongJump", false, toggleLongJump, {
-    {type = "slider", name = "Speed", min = 50, max = 200, settingName = "speed"}
+    {type = "slider", name = "Speed", min = 50, max = 200, settingName = "speed"},
+    {type = "slider", name = "Duration", min = 0.5, max = 3, settingName = "duration"}
 })
 
 createModule(columns["Movement"], "NoFallDamage", false, toggleNoFallDamage, {
