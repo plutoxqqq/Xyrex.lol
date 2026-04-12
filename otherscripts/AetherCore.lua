@@ -1006,6 +1006,7 @@ local function toggleScaffold(enabled)
                 local blockItem = require(BedwarsShopController):GetItem(woolName)
                 if blockItem then
                     require(BedwarsShopController):PlaceBlock(blockItem, CFrame.new(placePos))
+                    performPrimaryClick()
                 end
             end)
         else
@@ -1491,7 +1492,7 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(0, 140, 1, 0)
 title.Position = UDim2.new(0, 20, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "VAPE"
+title.Text = "AetherCore"
 title.TextColor3 = Color3.fromRGB(180, 80, 255)
 title.TextScaled = true
 title.Font = Enum.Font.GothamBlack
@@ -1648,6 +1649,13 @@ local function createModule(parent, name, defaultEnabled, toggleCallback, settin
     toggleButton.BackgroundTransparency = 1
     toggleButton.Text = ""
     toggleButton.Parent = header
+
+    local toggleButton = Instance.new("TextButton")
+    toggleButton.Name = "ToggleButton"
+    toggleButton.Size = UDim2.new(1, -90, 1, 0)
+    toggleButton.BackgroundTransparency = 1
+    toggleButton.Text = ""
+    toggleButton.Parent = frame
 
     -- Keybind display button
     local keybindBtn = Instance.new("TextButton")
