@@ -258,6 +258,15 @@ local function cleanupModule(moduleName)
     end
 end
 
+local function performPrimaryClick()
+    pcall(function()
+        VirtualUser:CaptureController()
+        VirtualUser:Button1Down(Vector2.new(mouse.X, mouse.Y), camera.CFrame)
+        task.wait()
+        VirtualUser:Button1Up(Vector2.new(mouse.X, mouse.Y), camera.CFrame)
+    end)
+end
+
 -- ==================== SETTINGS UI HELPERS ====================
 local function createSlider(parent, name, min, max, default, callback)
     local frame = Instance.new("Frame")
@@ -1613,7 +1622,7 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(0, 140, 1, 0)
 title.Position = UDim2.new(0, 20, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "VAPE"
+title.Text = "AetherCore"
 title.TextColor3 = Color3.fromRGB(180, 80, 255)
 title.TextScaled = true
 title.Font = Enum.Font.GothamBlack
