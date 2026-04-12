@@ -177,6 +177,42 @@ local function createSlider(parent, name, min, max, default, callback)
     fill.Parent = slider
     Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 4)
 
+    -- Double-click to enter value
+    local function openTextInput()
+        local inputBox = Instance.new("TextBox")
+        inputBox.Size = UDim2.new(0, 50, 0, 20)
+        inputBox.Position = UDim2.new(0, label.TextBounds.X + 5, 0, 0)
+        inputBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        inputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+        inputBox.Text = tostring(default)
+        inputBox.Font = Enum.Font.Gotham
+        inputBox.TextSize = 14
+        inputBox.Parent = frame
+        inputBox:CaptureFocus()
+
+        inputBox.FocusLost:Connect(function(enterPressed)
+            local num = tonumber(inputBox.Text)
+            if num then
+                num = math.clamp(num, min, max)
+                default = num
+                label.Text = name .. ": " .. tostring(num)
+                local newPercent = (num - min) / range
+                fill.Size = UDim2.new(newPercent, 0, 1, 0)
+                callback(num)
+            end
+            inputBox:Destroy()
+        end)
+    end
+
+    label.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton2 then
+            openTextInput()
+        elseif input.UserInputType == Enum.UserInputType.Touch and input.UserInputState == Enum.UserInputState.End then
+            -- Simulate double-tap for mobile? Not implemented fully
+        end
+    end)
+    label.MouseButton2Click:Connect(openTextInput)
+
     local dragging = false
     slider.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -288,7 +324,6 @@ local function createDropdown(parent, name, options, default, callback)
 
     local selected = default
     button.MouseButton1Click:Connect(function()
-        -- Simple cycle through options
         local idx = table.find(options, selected) or 1
         idx = idx % #options + 1
         selected = options[idx]
@@ -396,10 +431,14 @@ local function toggleKillAura(enabled)
                     if tool and tool:IsA("Tool") then
                         tool:Activate()
                     else
-                        -- If no tool, punch
+                        -- Punch
                         local hum = getHumanoid(myChar)
                         if hum then
-                            -- Simulate attack via animation or remote (fallback)
+                            -- Some games use a remote for punching; try to find it
+                            local punchRemote = ReplicatedStorage:FindFirstChild("Punch") or ReplicatedStorage:FindFirstChild("Remotes"):FindFirstChild("Punch")
+                            if punchRemote then
+                                punchRemote:FireServer()
+                            end
                         end
                     end
                 end
@@ -434,8 +473,8 @@ local function toggleReach(enabled)
                 end
             end
         end
-        -- Reset character reach attribute if any
         lplr:SetAttribute("Reach", nil)
+        camera.MaxZoomDistance = 20
         return
     end
 
@@ -444,10 +483,10 @@ local function toggleReach(enabled)
         if not char then return end
         local settings = moduleSettings["Reach"]
 
-        -- Set character reach (some games use this)
+        -- Set character reach attribute (common in BedWars)
         lplr:SetAttribute("Reach", settings.hitRange)
 
-        -- Extend tool handle for hit/place/mine
+        -- Extend tool handle
         for _, tool in ipairs(char:GetChildren()) do
             if tool:IsA("Tool") and tool:FindFirstChild("Handle") then
                 local handle = tool.Handle
@@ -456,12 +495,14 @@ local function toggleReach(enabled)
                     orig.Name = "OriginalReach"
                     orig.Value = handle.Size.Z
                 end
-                -- Use max of three ranges
                 local maxRange = math.max(settings.hitRange, settings.mineRange, settings.placeRange)
                 handle.Size = Vector3.new(handle.Size.X, handle.Size.Y, maxRange)
                 handle.Transparency = 0.5
             end
         end
+
+        -- Adjust camera max zoom (may affect place range)
+        camera.MaxZoomDistance = math.max(settings.placeRange, 20)
     end
 
     applyReach()
@@ -472,7 +513,7 @@ local function toggleReach(enabled)
     end))
 end
 
--- 3. SPEED (with configurable speed value)
+-- 3. SPEED
 moduleSettings["Speed"] = { speed = 24 }
 
 local function toggleSpeed(enabled)
@@ -507,14 +548,16 @@ local function toggleSpeed(enabled)
     end))
 end
 
--- 4. FLY (horizontal level maintained, with TP down)
+-- 4. FLY (with TP down fix)
 moduleSettings["Fly"] = {
     horizontalSpeed = 40,
     verticalSpeed = 40,
     tpDownEnabled = false,
-    tpDownInterval = 2.5,
-    tpDownLast = 0
+    tpDownInterval = 2.5
 }
+local tpDownLast = 0
+local tpDownOriginalPos = nil
+local tpDownActive = false
 
 local function toggleFly(enabled)
     cleanupModule("Fly")
@@ -527,6 +570,7 @@ local function toggleFly(enabled)
                 if bv then bv:Destroy() end
             end
         end
+        tpDownActive = false
         return
     end
 
@@ -551,9 +595,50 @@ local function toggleFly(enabled)
         if not bv then return end
         local settings = moduleSettings["Fly"]
 
-        local moveDir = Vector3.zero
+        -- TP Down logic
+        if settings.tpDownEnabled then
+            local char = getCharacter(lplr)
+            local hrp = getHRP(char)
+            if hrp then
+                local isAirborne = hrp.Velocity.Y ~= 0 or not char:IsGrounded()
+                if isAirborne and not tpDownActive then
+                    local now = tick()
+                    if now - tpDownLast >= settings.tpDownInterval then
+                        tpDownLast = now
+                        tpDownActive = true
+                        tpDownOriginalPos = hrp.Position
 
-        -- Horizontal (flatten camera vectors)
+                        -- Teleport down
+                        local rayOrigin = hrp.Position
+                        local rayDirection = Vector3.new(0, -500, 0)
+                        local raycastParams = RaycastParams.new()
+                        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+                        raycastParams.FilterDescendantsInstances = {char}
+                        local rayResult = Workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+                        if rayResult then
+                            local groundPos = rayResult.Position + Vector3.new(0, 3, 0)
+                            hrp.CFrame = CFrame.new(groundPos)
+                        end
+                        -- Wait a moment then return
+                        task.delay(0.2, function()
+                            if tpDownActive and tpDownOriginalPos then
+                                local charNow = getCharacter(lplr)
+                                local hrpNow = getHRP(charNow)
+                                if hrpNow then
+                                    hrpNow.CFrame = CFrame.new(tpDownOriginalPos)
+                                end
+                            end
+                            tpDownActive = false
+                            tpDownOriginalPos = nil
+                        end)
+                    end
+                elseif not isAirborne then
+                    tpDownActive = false
+                end
+            end
+        end
+
+        local moveDir = Vector3.zero
         local camLook = camera.CFrame.LookVector
         local camRight = camera.CFrame.RightVector
         local flatLook = Vector3.new(camLook.X, 0, camLook.Z).Unit
@@ -564,7 +649,6 @@ local function toggleFly(enabled)
         if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir -= flatRight end
         if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir += flatRight end
 
-        -- Vertical
         if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
             moveDir += Vector3.new(0, 1, 0)
         elseif UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
@@ -572,36 +656,15 @@ local function toggleFly(enabled)
         end
 
         if moveDir.Magnitude > 0 then
-            local hSpeed = settings.horizontalSpeed
-            local vSpeed = settings.verticalSpeed
-            local vel = Vector3.new(moveDir.X, moveDir.Y, moveDir.Z)
-            vel = Vector3.new(vel.X * hSpeed, vel.Y * vSpeed, vel.Z * hSpeed)
-            bv.Velocity = vel
+            -- Normalize horizontal part to prevent diagonal speed boost
+            local horiz = Vector3.new(moveDir.X, 0, moveDir.Z)
+            if horiz.Magnitude > 0 then
+                horiz = horiz.Unit * settings.horizontalSpeed
+            end
+            local vert = moveDir.Y * settings.verticalSpeed
+            bv.Velocity = Vector3.new(horiz.X, vert, horiz.Z)
         else
             bv.Velocity = Vector3.zero
-        end
-
-        -- TP Down
-        if settings.tpDownEnabled then
-            local now = tick()
-            if now - settings.tpDownLast >= settings.tpDownInterval then
-                settings.tpDownLast = now
-                local char = getCharacter(lplr)
-                local hrp = getHRP(char)
-                if hrp then
-                    -- Find nearest block below
-                    local rayOrigin = hrp.Position
-                    local rayDirection = Vector3.new(0, -50, 0)
-                    local raycastParams = RaycastParams.new()
-                    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
-                    raycastParams.FilterDescendantsInstances = {char}
-                    local rayResult = Workspace:Raycast(rayOrigin, rayDirection, raycastParams)
-                    if rayResult then
-                        local targetPos = rayResult.Position + Vector3.new(0, 3, 0)
-                        hrp.CFrame = CFrame.new(targetPos)
-                    end
-                end
-            end
         end
     end)
     addConnection("Fly", flyConnection)
@@ -638,7 +701,6 @@ local function toggleESP(enabled)
                 addESPtoModel(player.Character)
             end
         end
-        -- NPCs
         for _, model in ipairs(Workspace:GetDescendants()) do
             if model:IsA("Model") then
                 local hum = model:FindFirstChildOfClass("Humanoid")
@@ -659,7 +721,7 @@ local function toggleESP(enabled)
     addConnection("ESP", RunService.Heartbeat:Connect(scanAndAddESP))
 end
 
--- 6. TRACERS (works on NPCs too, transparency setting)
+-- 6. TRACERS (works on NPCs too)
 moduleSettings["Tracers"] = { transparency = 0.5 }
 
 local function toggleTracers(enabled)
@@ -752,9 +814,6 @@ local function setupAutoToxic()
             end
         end)
     end
-
-    -- For bed break and game win, we'd need to hook other events. Simplified for now.
-    -- We'll use remote listeners if available.
 end
 setupAutoToxic()
 
@@ -811,7 +870,7 @@ local function toggleNuker(enabled)
     addConnection("Nuker", connection)
 end
 
--- 9. SCAFFOLD (always place below, tower when jumping)
+-- 9. SCAFFOLD (improved block placement)
 moduleSettings["Scaffold"] = {
     allowTowering = true
 }
@@ -862,7 +921,7 @@ local function toggleScaffold(enabled)
             end
         end
 
-        -- Check if block already exists at placePos
+        -- Prevent placing on existing blocks
         local region = Region3.new(placePos - Vector3.new(1,1,1), placePos + Vector3.new(1,1,1))
         local parts = Workspace:FindPartsInRegion3(region, nil, 100)
         local blockExists = false
@@ -874,29 +933,19 @@ local function toggleScaffold(enabled)
         end
         if blockExists then return end
 
-        if BedwarsShopController then
-            pcall(function()
-                local blockItem = require(BedwarsShopController):GetItem(woolName)
-                if blockItem then
-                    require(BedwarsShopController):PlaceBlock(blockItem, CFrame.new(placePos))
-                end
-            end)
-        else
-            -- Fallback: try remote
-            local args = { [1] = "place_block", [2] = woolName, [3] = placePos }
-            local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-            if remotes then
-                local placeRemote = remotes:FindFirstChild("PlaceBlock")
-                if placeRemote then
-                    placeRemote:FireServer(unpack(args))
-                end
+        -- Attempt to place via remote
+        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+        if remotes then
+            local placeRemote = remotes:FindFirstChild("PlaceBlock") or remotes:FindFirstChild("PlaceBlockRemote")
+            if placeRemote then
+                placeRemote:FireServer(woolName, placePos)
             end
         end
     end)
     addConnection("Scaffold", connection)
 end
 
--- 10. AIM ASSIST (ignore teammates, speed setting)
+-- 10. AIM ASSIST (fixed speed)
 moduleSettings["AimAssist"] = {
     speed = 0.1,
     range = 30
@@ -906,10 +955,10 @@ local function toggleAimAssist(enabled)
     cleanupModule("AimAssist")
     if not enabled then return end
 
-    local connection = RunService.RenderStepped:Connect(function()
+    local connection = RunService.RenderStepped:Connect(function(deltaTime)
         if not moduleStates["AimAssist"] then return end
         local settings = moduleSettings["AimAssist"]
-        local nearest = getNearestEnemy(settings.range, true) -- ignore team
+        local nearest = getNearestEnemy(settings.range, true)
         if not nearest then return end
         local head = nearest:FindFirstChild("Head")
         if not head then return end
@@ -919,13 +968,13 @@ local function toggleAimAssist(enabled)
 
         local targetPos = Vector2.new(screenPos.X, screenPos.Y)
         local mousePos = Vector2.new(mouse.X, mouse.Y)
-        local delta = (targetPos - mousePos) * settings.speed
+        local delta = (targetPos - mousePos) * settings.speed * (deltaTime * 60) -- scale by framerate
         mousemoverel(delta.X, delta.Y)
     end)
     addConnection("AimAssist", connection)
 end
 
--- 11. AUTO CLICKER (works while holding left click, CPS setting)
+-- 11. AUTO CLICKER (fixed)
 moduleSettings["AutoClicker"] = { cps = 10 }
 
 local function toggleAutoClicker(enabled)
@@ -964,40 +1013,63 @@ local function toggleAutoClicker(enabled)
     addConnection("AutoClicker", conn3)
 end
 
--- 12. VELOCITY (Knockback reducer)
-moduleSettings["Velocity"] = { reductionPercent = 50 } -- 0% = full knockback, 100% = none
+-- 12. VELOCITY (fixed using LinearVelocity)
+moduleSettings["Velocity"] = { reductionPercent = 50 }
 
 local function toggleVelocity(enabled)
     cleanupModule("Velocity")
-    if not enabled then return end
+    if not enabled then
+        local char = getCharacter(lplr)
+        if char then
+            local hrp = getHRP(char)
+            if hrp then
+                local lv = hrp:FindFirstChild("KnockbackReducer")
+                if lv then lv:Destroy() end
+            end
+        end
+        return
+    end
 
     local function applyVelocity(char)
-        local hum = char:WaitForChild("Humanoid")
-        local oldState = hum:GetState()
-        hum.StateChanged:Connect(function(old, new)
-            if new == Enum.HumanoidStateType.FallingDown or new == Enum.HumanoidStateType.Ragdoll then
-                local root = char:FindFirstChild("HumanoidRootPart")
-                if root then
-                    local vel = root.Velocity
-                    local reduction = moduleSettings["Velocity"].reductionPercent / 100
-                    root.Velocity = vel * (1 - reduction)
-                end
-            end
+        local hrp = getHRP(char)
+        if not hrp then return end
+        local lv = Instance.new("LinearVelocity")
+        lv.Name = "KnockbackReducer"
+        lv.Attachment0 = hrp:FindFirstChild("RootAttachment") or Instance.new("Attachment", hrp)
+        lv.MaxForce = 1e5
+        lv.VectorVelocity = Vector3.zero
+        lv.RelativeTo = Enum.ActuatorRelativeTo.World
+        lv.Parent = hrp
+
+        -- Continuously apply counter-velocity
+        local conn = RunService.Heartbeat:Connect(function()
+            if not moduleStates["Velocity"] then return end
+            local vel = hrp.Velocity
+            local reduction = moduleSettings["Velocity"].reductionPercent / 100
+            -- Only reduce horizontal knockback
+            local newVel = Vector3.new(vel.X * (1 - reduction), vel.Y, vel.Z * (1 - reduction))
+            lv.VectorVelocity = newVel - vel
         end)
+        addConnection("Velocity", conn)
     end
 
     if lplr.Character then applyVelocity(lplr.Character) end
     addConnection("Velocity", lplr.CharacterAdded:Connect(applyVelocity))
 end
 
--- 13. LONGJUMP (Yuzi Dao style)
+-- 13. LONGJUMP (reworked)
 moduleSettings["LongJump"] = { speed = 100 }
+local longJumpWaiting = false
+local longJumpOriginalWalkSpeed = 16
 
 local function toggleLongJump(enabled)
     cleanupModule("LongJump")
     if not enabled then
+        longJumpWaiting = false
         local char = getCharacter(lplr)
         if char then
+            local hum = getHumanoid(char)
+            if hum then hum.WalkSpeed = 16 end
             local hrp = getHRP(char)
             if hrp then
                 local bv = hrp:FindFirstChild("LongJumpVelocity")
@@ -1007,47 +1079,45 @@ local function toggleLongJump(enabled)
         return
     end
 
-    local function setupLongJump()
+    -- Wait for Yuzi Dao
+    longJumpWaiting = true
+    local function checkForYuzi()
+        if not moduleStates["LongJump"] then return end
         local char = getCharacter(lplr)
         if not char then return end
-        local hrp = getHRP(char)
-        if not hrp then return end
-
-        local bv = hrp:FindFirstChild("LongJumpVelocity") or Instance.new("BodyVelocity")
-        bv.Name = "LongJumpVelocity"
-        bv.MaxForce = Vector3.new(1e5, 0, 1e5)
-        bv.Velocity = Vector3.zero
-        bv.Parent = hrp
-        return bv
+        local hum = getHumanoid(char)
+        if hum then
+            if longJumpWaiting then
+                hum.WalkSpeed = 0  -- Immobilise
+            end
+        end
+        local tool = char:FindFirstChildOfClass("Tool")
+        if tool and tool.Name:lower():find("yuzi") and longJumpWaiting then
+            longJumpWaiting = false
+            -- Launch
+            local hrp = getHRP(char)
+            if hrp then
+                local bv = Instance.new("BodyVelocity")
+                bv.Name = "LongJumpVelocity"
+                bv.MaxForce = Vector3.new(1e5, 0, 1e5)
+                bv.Velocity = (camera.CFrame.LookVector * Vector3.new(1,0,1)).Unit * moduleSettings["LongJump"].speed
+                bv.Parent = hrp
+                Debris:AddItem(bv, 5)
+                if hum then hum.WalkSpeed = 16 end
+            end
+        end
     end
 
-    local connection = RunService.Heartbeat:Connect(function()
-        if not moduleStates["LongJump"] then return end
-        local bv = setupLongJump()
-        if not bv then return end
-
-        local moveDir = Vector3.zero
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir += camera.CFrame.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir -= camera.CFrame.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir -= camera.CFrame.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir += camera.CFrame.RightVector end
-
-        if moveDir.Magnitude > 0 then
-            moveDir = Vector3.new(moveDir.X, 0, moveDir.Z).Unit
-            bv.Velocity = moveDir * moduleSettings["LongJump"].speed
-        else
-            bv.Velocity = Vector3.zero
+    local conn = RunService.Heartbeat:Connect(checkForYuzi)
+    addConnection("LongJump", conn)
+    addConnection("LongJump", lplr.CharacterAdded:Connect(function(char)
+        if moduleStates["LongJump"] then
+            longJumpWaiting = true
         end
-
-        -- Add small vertical boost occasionally to bypass anticheat
-        if math.random() < 0.1 then
-            bv.Velocity = bv.Velocity + Vector3.new(0, 5, 0)
-        end
-    end)
-    addConnection("LongJump", connection)
+    end))
 end
 
--- 14. NOFALLDAMAGE
+-- 14. NOFALLDAMAGE (fixed)
 moduleSettings["NoFallDamage"] = {
     method = "Landing" -- "Landing", "NegateVelocity", "Teleport"
 }
@@ -1056,11 +1126,9 @@ local function toggleNoFallDamage(enabled)
     cleanupModule("NoFallDamage")
     if not enabled then return end
 
-    local char = lplr.Character
-    if char then
+    local function apply(char)
         local hum = char:WaitForChild("Humanoid")
         if moduleSettings["NoFallDamage"].method == "Landing" then
-            -- Change state to Landing when falling
             local conn = hum.StateChanged:Connect(function(old, new)
                 if new == Enum.HumanoidStateType.Freefall then
                     hum:ChangeState(Enum.HumanoidStateType.Landed)
@@ -1079,20 +1147,23 @@ local function toggleNoFallDamage(enabled)
             local conn = RunService.Heartbeat:Connect(function()
                 local hrp = getHRP(char)
                 if hrp and hrp.Velocity.Y < -70 then
-                    -- Teleport up slightly
                     hrp.CFrame = hrp.CFrame + Vector3.new(0, 5, 0)
                 end
             end)
             addConnection("NoFallDamage", conn)
         end
     end
+
+    if lplr.Character then apply(lplr.Character) end
+    addConnection("NoFallDamage", lplr.CharacterAdded:Connect(apply))
 end
 
--- 15. ANTIVOID
+-- 15. ANTIVOID (fixed platform)
 moduleSettings["AntiVoid"] = {
     method = "Normal", -- "Normal", "Velocity", "Bounce"
     bouncePower = 100
 }
+local voidThreshold = -50  -- Fixed Y level for void detection
 
 local function createAntiVoidVisual()
     local indicator = Instance.new("Part")
@@ -1116,7 +1187,6 @@ local function toggleAntiVoid(enabled)
     end
 
     local indicator = createAntiVoidVisual()
-    local char = lplr.Character
 
     local connection = RunService.Heartbeat:Connect(function()
         if not moduleStates["AntiVoid"] then return end
@@ -1124,32 +1194,31 @@ local function toggleAntiVoid(enabled)
         local hrp = getHRP(myChar)
         if not hrp then return end
 
-        -- Find nearest ground below
-        local rayOrigin = hrp.Position
-        local rayDirection = Vector3.new(0, -500, 0)
-        local raycastParams = RaycastParams.new()
-        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
-        raycastParams.FilterDescendantsInstances = {myChar}
-        local rayResult = Workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+        -- Update indicator at fixed Y
+        indicator.Position = Vector3.new(hrp.Position.X, voidThreshold, hrp.Position.Z)
 
-        local groundY = rayResult and rayResult.Position.Y or -100
-        local voidY = groundY - 20
-
-        -- Update visual position
-        indicator.Position = Vector3.new(hrp.Position.X, voidY, hrp.Position.Z)
-
-        if hrp.Position.Y <= voidY then
+        if hrp.Position.Y <= voidThreshold then
             local method = moduleSettings["AntiVoid"].method
             if method == "Normal" then
-                -- TP up and float towards ground
-                hrp.CFrame = CFrame.new(hrp.Position.X, groundY + 5, hrp.Position.Z)
+                hrp.CFrame = CFrame.new(hrp.Position.X, voidThreshold + 10, hrp.Position.Z)
                 local bv = Instance.new("BodyVelocity")
-                bv.Velocity = Vector3.new(0, 5, 0)
+                bv.Velocity = Vector3.new(0, 10, 0)
                 bv.MaxForce = Vector3.new(0, 1e5, 0)
                 bv.Parent = hrp
                 Debris:AddItem(bv, 1)
+                -- Nudge towards nearest safe ground
+                local rayOrigin = hrp.Position + Vector3.new(0, 20, 0)
+                local rayDirection = Vector3.new(0, -50, 0)
+                local raycastParams = RaycastParams.new()
+                raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+                raycastParams.FilterDescendantsInstances = {myChar}
+                local rayResult = Workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+                if rayResult then
+                    local groundPos = rayResult.Position
+                    local dir = (groundPos - hrp.Position).Unit * Vector3.new(1,0,1)
+                    hrp.Velocity = hrp.Velocity + dir * 30
+                end
             elseif method == "Velocity" then
-                -- Push upwards strongly
                 hrp.Velocity = Vector3.new(hrp.Velocity.X, 50, hrp.Velocity.Z)
             elseif method == "Bounce" then
                 hrp.Velocity = Vector3.new(hrp.Velocity.X, moduleSettings["AntiVoid"].bouncePower, hrp.Velocity.Z)
@@ -1190,9 +1259,6 @@ local function toggleInfiniteJump(enabled)
 end
 
 -- ==================== GUI CONSTRUCTION ====================
--- (GUI code remains similar but enhanced with settings panel for each module)
--- We'll provide the complete GUI creation with dynamic settings.
-
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "VapeUtility"
 screenGui.ResetOnSpawn = false
@@ -1326,7 +1392,7 @@ for _, cat in ipairs(categories) do
     createCategory(cat)
 end
 
--- Module creation with Keybind and dynamic Settings
+-- Module creation with dynamic settings panel that expands below
 local keybindListening = false
 local currentModuleForKeybind = nil
 local keybindButton = nil
@@ -1353,7 +1419,6 @@ local function createModule(parent, name, defaultEnabled, toggleCallback, settin
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = frame
 
-    -- Keybind display button
     local keybindBtn = Instance.new("TextButton")
     keybindBtn.Size = UDim2.new(0, 30, 0, 30)
     keybindBtn.Position = UDim2.new(1, -80, 0.5, -15)
@@ -1394,7 +1459,6 @@ local function createModule(parent, name, defaultEnabled, toggleCallback, settin
         end)
     end)
 
-    -- Settings button
     local settingsBtn = Instance.new("TextButton")
     settingsBtn.Size = UDim2.new(0, 30, 0, 30)
     settingsBtn.Position = UDim2.new(1, -40, 0.5, -15)
@@ -1406,10 +1470,11 @@ local function createModule(parent, name, defaultEnabled, toggleCallback, settin
     settingsBtn.Parent = frame
     Instance.new("UICorner", settingsBtn).CornerRadius = UDim.new(0, 6)
 
-    -- Settings panel (hidden initially)
+    -- Settings panel as child of frame, positioned below
     local settingsPanel = Instance.new("Frame")
     settingsPanel.Name = "SettingsPanel"
     settingsPanel.Size = UDim2.new(1, 0, 0, 0)
+    settingsPanel.Position = UDim2.new(0, 0, 1, 0) -- start just below the module button
     settingsPanel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     settingsPanel.BorderSizePixel = 0
     settingsPanel.ClipsDescendants = true
@@ -1421,7 +1486,6 @@ local function createModule(parent, name, defaultEnabled, toggleCallback, settin
     settingsLayout.Padding = UDim.new(0, 4)
     settingsLayout.Parent = settingsPanel
 
-    -- Populate settings based on definition
     local settingControls = {}
     if settingsDefinition then
         for _, setting in ipairs(settingsDefinition) do
@@ -1456,6 +1520,14 @@ local function createModule(parent, name, defaultEnabled, toggleCallback, settin
         local tween = TweenService:Create(settingsPanel, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Size = UDim2.new(1, 0, 0, targetHeight)})
         tween:Play()
         settingsPanel.Visible = true
+        -- The UIListLayout in the parent column will automatically reposition items because the frame's size changes
+        -- But we need to ensure the frame itself expands to accommodate the panel.
+        -- The module frame's height is fixed, but the panel is outside its bounds? No, it's inside, so frame should auto-size?
+        -- Actually we want the panel to push down other modules, so the module frame's height must change.
+        -- We'll animate the frame's Size as well.
+        local frameHeight = 58 + targetHeight
+        local frameTween = TweenService:Create(frame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Size = UDim2.new(1, -16, 0, frameHeight)})
+        frameTween:Play()
     end)
 
     local enabled = defaultEnabled
