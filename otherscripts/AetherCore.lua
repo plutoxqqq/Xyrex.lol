@@ -12,7 +12,7 @@ local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
-local VirtualInputManager = game:GetService("VirtualInputManager")
+local VirtualUser = game:GetService("VirtualUser")
 local Debris = game:GetService("Debris")
 
 local lplr = Players.LocalPlayer
@@ -144,26 +144,45 @@ local function cleanupModule(moduleName)
     end
 end
 
+local function performPrimaryClick()
+    pcall(function()
+        VirtualUser:CaptureController()
+        VirtualUser:Button1Down(Vector2.new(mouse.X, mouse.Y), camera.CFrame)
+        task.wait()
+        VirtualUser:Button1Up(Vector2.new(mouse.X, mouse.Y), camera.CFrame)
+    end)
+end
+
 -- ==================== SETTINGS UI HELPERS ====================
 local function createSlider(parent, name, min, max, default, callback)
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -10, 0, 40)
+    frame.Size = UDim2.new(1, -10, 0, 44)
     frame.BackgroundTransparency = 1
     frame.Parent = parent
 
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, 0, 0, 20)
+    label.Size = UDim2.new(0.7, 0, 0, 20)
     label.BackgroundTransparency = 1
-    label.Text = name .. ": " .. tostring(default)
+    label.Text = name
     label.TextColor3 = Color3.fromRGB(200, 200, 200)
     label.Font = Enum.Font.Gotham
     label.TextSize = 14
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = frame
 
+    local valueButton = Instance.new("TextButton")
+    valueButton.Size = UDim2.new(0.3, -4, 0, 20)
+    valueButton.Position = UDim2.new(0.7, 4, 0, 0)
+    valueButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    valueButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    valueButton.Font = Enum.Font.Gotham
+    valueButton.TextSize = 12
+    valueButton.Parent = frame
+    Instance.new("UICorner", valueButton).CornerRadius = UDim.new(0, 4)
+
     local slider = Instance.new("Frame")
-    slider.Size = UDim2.new(1, 0, 0, 20)
-    slider.Position = UDim2.new(0, 0, 0, 20)
+    slider.Size = UDim2.new(1, 0, 0, 18)
+    slider.Position = UDim2.new(0, 0, 0, 24)
     slider.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     slider.Parent = frame
     Instance.new("UICorner", slider).CornerRadius = UDim.new(0, 4)
@@ -178,6 +197,22 @@ local function createSlider(parent, name, min, max, default, callback)
     Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 4)
 
     local dragging = false
+    local function formatValue(v)
+        if math.abs(v - math.floor(v)) < 0.001 then
+            return tostring(math.floor(v))
+        end
+        return string.format("%.2f", v)
+    end
+    local function setValue(v)
+        default = math.clamp(v, min, max)
+        local newPercent = (default - min) / range
+        fill.Size = UDim2.new(newPercent, 0, 1, 0)
+        valueButton.Text = formatValue(default)
+        callback(default)
+    end
+
+    valueButton.Text = formatValue(default)
+
     slider.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
@@ -192,23 +227,49 @@ local function createSlider(parent, name, min, max, default, callback)
         if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
             local relativeX = math.clamp((input.Position.X - slider.AbsolutePosition.X) / slider.AbsoluteSize.X, 0, 1)
             local val = min + relativeX * range
-            if math.abs(val - default) > 0.01 then
-                default = val
-                label.Text = name .. ": " .. string.format("%.1f", val)
-                fill.Size = UDim2.new(relativeX, 0, 1, 0)
-                callback(val)
+            if math.abs(val - default) > 0.001 then
+                setValue(val)
             end
         end
+    end)
+
+    local lastClick = 0
+    valueButton.MouseButton1Click:Connect(function()
+        local now = tick()
+        if now - lastClick > 0.35 then
+            lastClick = now
+            return
+        end
+        lastClick = 0
+
+        local inputBox = Instance.new("TextBox")
+        inputBox.Size = valueButton.Size
+        inputBox.Position = valueButton.Position
+        inputBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        inputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+        inputBox.Font = Enum.Font.Gotham
+        inputBox.TextSize = 12
+        inputBox.Text = valueButton.Text
+        inputBox.ClearTextOnFocus = false
+        inputBox.Parent = frame
+        Instance.new("UICorner", inputBox).CornerRadius = UDim.new(0, 4)
+        inputBox:CaptureFocus()
+
+        inputBox.FocusLost:Connect(function(enterPressed)
+            if enterPressed then
+                local typed = tonumber(inputBox.Text)
+                if typed then
+                    setValue(typed)
+                end
+            end
+            inputBox:Destroy()
+        end)
     end)
 
     return {
         GetValue = function() return default end,
         SetValue = function(v)
-            default = v
-            label.Text = name .. ": " .. string.format("%.1f", v)
-            local newPercent = (v - min) / range
-            fill.Size = UDim2.new(newPercent, 0, 1, 0)
-            callback(v)
+            setValue(v)
         end
     }
 end
@@ -352,6 +413,7 @@ end
 moduleSettings["KillAura"] = {
     faceTarget = true,
     range = 12,
+    fovRadius = 180,
     swingSpeed = 10, -- swings per second
     requireSword = false,
     attackPlayers = true,
@@ -370,18 +432,24 @@ local function toggleKillAura(enabled)
         local myHRP = getHRP(myChar)
         if not myHRP then return end
 
-        -- Check sword requirement
+        local tool = myChar:FindFirstChildOfClass("Tool")
         if settings.requireSword then
-            local tool = myChar:FindFirstChildOfClass("Tool")
             if not tool or not tool:IsA("Tool") or not tool.Name:lower():find("sword") then
                 return
             end
+        elseif not tool then
+            return
         end
 
         local targetChar = getNearestEnemy(settings.range, true) -- ignore team
         if targetChar then
             local targetHRP = getHRP(targetChar)
             if targetHRP then
+                local screenPos, onScreen = camera:WorldToViewportPoint(targetHRP.Position)
+                if not onScreen then return end
+                local mouseDelta = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(mouse.X, mouse.Y)).Magnitude
+                if mouseDelta > settings.fovRadius then return end
+
                 -- Face target
                 if settings.faceTarget then
                     myHRP.CFrame = CFrame.lookAt(myHRP.Position, Vector3.new(targetHRP.Position.X, myHRP.Position.Y, targetHRP.Position.Z))
@@ -392,15 +460,8 @@ local function toggleKillAura(enabled)
                 if now - killAuraLastSwing >= 1 / settings.swingSpeed then
                     killAuraLastSwing = now
                     -- Attack
-                    local tool = myChar:FindFirstChildOfClass("Tool")
                     if tool and tool:IsA("Tool") then
                         tool:Activate()
-                    else
-                        -- If no tool, punch
-                        local hum = getHumanoid(myChar)
-                        if hum then
-                            -- Simulate attack via animation or remote (fallback)
-                        end
                     end
                 end
             end
@@ -411,6 +472,7 @@ end
 
 -- 2. REACH
 moduleSettings["Reach"] = {
+    mode = "Both",
     hitRange = 12,
     mineRange = 12,
     placeRange = 12
@@ -418,22 +480,41 @@ moduleSettings["Reach"] = {
 
 local function toggleReach(enabled)
     cleanupModule("Reach")
-    if not enabled then
-        -- Reset handle sizes
+
+    local function forEachTool(callback)
         local char = getCharacter(lplr)
+        local backpack = lplr:FindFirstChildOfClass("Backpack")
         if char then
             for _, tool in ipairs(char:GetChildren()) do
-                if tool:IsA("Tool") and tool:FindFirstChild("Handle") then
-                    local handle = tool.Handle
-                    local orig = handle:FindFirstChild("OriginalReach")
-                    if orig then
-                        handle.Size = Vector3.new(handle.Size.X, handle.Size.Y, orig.Value)
-                        orig:Destroy()
-                    end
-                    handle.Transparency = 0
+                if tool:IsA("Tool") then
+                    callback(tool)
                 end
             end
         end
+        if backpack then
+            for _, tool in ipairs(backpack:GetChildren()) do
+                if tool:IsA("Tool") then
+                    callback(tool)
+                end
+            end
+        end
+    end
+
+    if not enabled then
+        -- Reset handle sizes
+        forEachTool(function(tool)
+            if tool:FindFirstChild("Handle") then
+                local handle = tool.Handle
+                local orig = handle:FindFirstChild("OriginalReach")
+                if orig then
+                    handle.Size = Vector3.new(handle.Size.X, handle.Size.Y, orig.Value)
+                    orig:Destroy()
+                end
+                handle.Massless = false
+                handle.CanCollide = true
+                handle.Transparency = 0
+            end
+        end)
         -- Reset character reach attribute if any
         lplr:SetAttribute("Reach", nil)
         return
@@ -444,12 +525,16 @@ local function toggleReach(enabled)
         if not char then return end
         local settings = moduleSettings["Reach"]
 
-        -- Set character reach (some games use this)
-        lplr:SetAttribute("Reach", settings.hitRange)
+        if settings.mode == "Attribute" or settings.mode == "Both" then
+            -- Set character reach (some games use this)
+            lplr:SetAttribute("Reach", settings.hitRange)
+        else
+            lplr:SetAttribute("Reach", nil)
+        end
 
         -- Extend tool handle for hit/place/mine
-        for _, tool in ipairs(char:GetChildren()) do
-            if tool:IsA("Tool") and tool:FindFirstChild("Handle") then
+        forEachTool(function(tool)
+            if tool:FindFirstChild("Handle") then
                 local handle = tool.Handle
                 if not handle:FindFirstChild("OriginalReach") then
                     local orig = Instance.new("NumberValue", handle)
@@ -457,15 +542,34 @@ local function toggleReach(enabled)
                     orig.Value = handle.Size.Z
                 end
                 -- Use max of three ranges
-                local maxRange = math.max(settings.hitRange, settings.mineRange, settings.placeRange)
-                handle.Size = Vector3.new(handle.Size.X, handle.Size.Y, maxRange)
-                handle.Transparency = 0.5
+                if settings.mode == "Handle" or settings.mode == "Both" then
+                    local maxRange = math.max(settings.hitRange, settings.mineRange, settings.placeRange)
+                    handle.Size = Vector3.new(handle.Size.X, handle.Size.Y, maxRange)
+                    handle.Massless = true
+                    handle.CanCollide = false
+                    handle.Transparency = 0.5
+                else
+                    local orig = handle:FindFirstChild("OriginalReach")
+                    if orig then
+                        handle.Size = Vector3.new(handle.Size.X, handle.Size.Y, orig.Value)
+                    end
+                    handle.Transparency = 0
+                end
             end
-        end
+        end)
     end
 
     applyReach()
     addConnection("Reach", lplr.CharacterAdded:Connect(applyReach))
+    local backpack = lplr:FindFirstChildOfClass("Backpack")
+    if backpack then
+        addConnection("Reach", backpack.ChildAdded:Connect(function()
+            if moduleStates["Reach"] then
+                task.wait()
+                applyReach()
+            end
+        end))
+    end
     addConnection("Reach", RunService.Heartbeat:Connect(function()
         if not moduleStates["Reach"] then return end
         applyReach()
@@ -513,7 +617,9 @@ moduleSettings["Fly"] = {
     verticalSpeed = 40,
     tpDownEnabled = false,
     tpDownInterval = 2.5,
-    tpDownLast = 0
+    tpDownLast = 0,
+    tpDownAirStart = nil,
+    tpDownReturnDelay = 0.2
 }
 
 local function toggleFly(enabled)
@@ -571,10 +677,15 @@ local function toggleFly(enabled)
             moveDir -= Vector3.new(0, 1, 0)
         end
 
+        local horizontal = Vector3.new(moveDir.X, 0, moveDir.Z)
+        if horizontal.Magnitude > 1 then
+            horizontal = horizontal.Unit
+        end
+
         if moveDir.Magnitude > 0 then
             local hSpeed = settings.horizontalSpeed
             local vSpeed = settings.verticalSpeed
-            local vel = Vector3.new(moveDir.X, moveDir.Y, moveDir.Z)
+            local vel = Vector3.new(horizontal.X, moveDir.Y, horizontal.Z)
             vel = Vector3.new(vel.X * hSpeed, vel.Y * vSpeed, vel.Z * hSpeed)
             bv.Velocity = vel
         else
@@ -584,22 +695,38 @@ local function toggleFly(enabled)
         -- TP Down
         if settings.tpDownEnabled then
             local now = tick()
-            if now - settings.tpDownLast >= settings.tpDownInterval then
+            local char = getCharacter(lplr)
+            local hrp = getHRP(char)
+            local hum = getHumanoid(char)
+            local isAirborne = hum and (hum.FloorMaterial == Enum.Material.Air or hum:GetState() == Enum.HumanoidStateType.Freefall)
+            if not isAirborne then
+                settings.tpDownAirStart = nil
+            end
+            if hrp and isAirborne then
+                settings.tpDownAirStart = settings.tpDownAirStart or now
+            end
+            if hrp and isAirborne and settings.tpDownAirStart and now - settings.tpDownAirStart >= settings.tpDownInterval then
                 settings.tpDownLast = now
-                local char = getCharacter(lplr)
-                local hrp = getHRP(char)
-                if hrp then
-                    -- Find nearest block below
-                    local rayOrigin = hrp.Position
-                    local rayDirection = Vector3.new(0, -50, 0)
-                    local raycastParams = RaycastParams.new()
-                    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
-                    raycastParams.FilterDescendantsInstances = {char}
-                    local rayResult = Workspace:Raycast(rayOrigin, rayDirection, raycastParams)
-                    if rayResult then
-                        local targetPos = rayResult.Position + Vector3.new(0, 3, 0)
-                        hrp.CFrame = CFrame.new(targetPos)
-                    end
+                settings.tpDownAirStart = now
+                local airbornePosition = hrp.Position
+                local rayOrigin = hrp.Position
+                local rayDirection = Vector3.new(0, -120, 0)
+                local raycastParams = RaycastParams.new()
+                raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+                raycastParams.FilterDescendantsInstances = {char}
+                local rayResult = Workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+                if rayResult then
+                    local targetPos = rayResult.Position + Vector3.new(0, 2.5, 0)
+                    hrp.CFrame = CFrame.new(targetPos)
+                    task.delay(settings.tpDownReturnDelay, function()
+                        if moduleStates["Fly"] then
+                            local liveChar = getCharacter(lplr)
+                            local liveHrp = getHRP(liveChar)
+                            if liveHrp then
+                                liveHrp.CFrame = CFrame.new(airbornePosition)
+                            end
+                        end
+                    end)
                 end
             end
         end
@@ -883,12 +1010,14 @@ local function toggleScaffold(enabled)
             end)
         else
             -- Fallback: try remote
-            local args = { [1] = "place_block", [2] = woolName, [3] = placePos }
-            local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+            local remotes = ReplicatedStorage:FindFirstChild("Remotes") or ReplicatedStorage
             if remotes then
-                local placeRemote = remotes:FindFirstChild("PlaceBlock")
-                if placeRemote then
-                    placeRemote:FireServer(unpack(args))
+                for _, remote in ipairs(remotes:GetDescendants()) do
+                    if remote:IsA("RemoteEvent") and remote.Name:lower():find("place") and remote.Name:lower():find("block") then
+                        pcall(function()
+                            remote:FireServer(placePos, woolName)
+                        end)
+                    end
                 end
             end
         end
@@ -906,7 +1035,7 @@ local function toggleAimAssist(enabled)
     cleanupModule("AimAssist")
     if not enabled then return end
 
-    local connection = RunService.RenderStepped:Connect(function()
+    local connection = RunService.RenderStepped:Connect(function(deltaTime)
         if not moduleStates["AimAssist"] then return end
         local settings = moduleSettings["AimAssist"]
         local nearest = getNearestEnemy(settings.range, true) -- ignore team
@@ -919,7 +1048,8 @@ local function toggleAimAssist(enabled)
 
         local targetPos = Vector2.new(screenPos.X, screenPos.Y)
         local mousePos = Vector2.new(mouse.X, mouse.Y)
-        local delta = (targetPos - mousePos) * settings.speed
+        local smoothing = math.clamp(settings.speed * deltaTime * 60, 0.01, 1)
+        local delta = (targetPos - mousePos) * smoothing
         mousemoverel(delta.X, delta.Y)
     end)
     addConnection("AimAssist", connection)
@@ -952,9 +1082,12 @@ local function toggleAutoClicker(enabled)
             local delay = 1 / moduleSettings["AutoClicker"].cps
             if now - lastClick >= delay then
                 lastClick = now
-                VirtualInputManager:SendMouseButtonEvent(mouse.X, mouse.Y, 0, true, game, 1)
-                task.wait()
-                VirtualInputManager:SendMouseButtonEvent(mouse.X, mouse.Y, 0, false, game, 1)
+                local char = getCharacter(lplr)
+                local tool = char and char:FindFirstChildOfClass("Tool")
+                if tool then
+                    pcall(function() tool:Activate() end)
+                end
+                performPrimaryClick()
             end
         end
     end)
@@ -973,17 +1106,25 @@ local function toggleVelocity(enabled)
 
     local function applyVelocity(char)
         local hum = char:WaitForChild("Humanoid")
-        local oldState = hum:GetState()
-        hum.StateChanged:Connect(function(old, new)
-            if new == Enum.HumanoidStateType.FallingDown or new == Enum.HumanoidStateType.Ragdoll then
-                local root = char:FindFirstChild("HumanoidRootPart")
-                if root then
-                    local vel = root.Velocity
-                    local reduction = moduleSettings["Velocity"].reductionPercent / 100
-                    root.Velocity = vel * (1 - reduction)
-                end
+        local root = char:WaitForChild("HumanoidRootPart")
+        local recentlyDamagedUntil = 0
+        local lastHealth = hum.Health
+
+        addConnection("Velocity", hum.HealthChanged:Connect(function(newHealth)
+            if newHealth < lastHealth then
+                recentlyDamagedUntil = tick() + 0.35
             end
-        end)
+            lastHealth = newHealth
+        end))
+
+        addConnection("Velocity", RunService.Heartbeat:Connect(function()
+            if not moduleStates["Velocity"] or not root.Parent then return end
+            if tick() > recentlyDamagedUntil then return end
+            local reduction = moduleSettings["Velocity"].reductionPercent / 100
+            local current = root.AssemblyLinearVelocity
+            local horizontal = Vector3.new(current.X, 0, current.Z) * (1 - reduction)
+            root.AssemblyLinearVelocity = Vector3.new(horizontal.X, current.Y, horizontal.Z)
+        end))
     end
 
     if lplr.Character then applyVelocity(lplr.Character) end
@@ -998,10 +1139,16 @@ local function toggleLongJump(enabled)
     if not enabled then
         local char = getCharacter(lplr)
         if char then
+            local hum = getHumanoid(char)
             local hrp = getHRP(char)
+            if hum then
+                hum.WalkSpeed = 16
+                hum.JumpPower = 50
+            end
             if hrp then
                 local bv = hrp:FindFirstChild("LongJumpVelocity")
                 if bv then bv:Destroy() end
+                hrp.Velocity = Vector3.new(0, hrp.Velocity.Y, 0)
             end
         end
         return
@@ -1021,27 +1168,61 @@ local function toggleLongJump(enabled)
         return bv
     end
 
+    local originalMovement = {walkSpeed = 16, jumpPower = 50}
+    local boostUntil = 0
+    local lastDaoActivation = 0
+
     local connection = RunService.Heartbeat:Connect(function()
         if not moduleStates["LongJump"] then return end
+        local char = getCharacter(lplr)
+        local hum = getHumanoid(char)
+        local hrp = getHRP(char)
+        if not char or not hum or not hrp then return end
+
+        if originalMovement.walkSpeed ~= 0 then
+            originalMovement.walkSpeed = hum.WalkSpeed
+            originalMovement.jumpPower = hum.JumpPower
+        end
+
+        local heldTool = char:FindFirstChildOfClass("Tool")
+        local toolName = heldTool and heldTool.Name:lower() or ""
+        local isHoldingDao = heldTool and (toolName:find("_dao") or toolName:find(" dao") or toolName:find("dao"))
+        if not isHoldingDao then
+            hum.WalkSpeed = 0
+            hum.JumpPower = 0
+            hrp.Velocity = Vector3.zero
+            local waitingBv = hrp:FindFirstChild("LongJumpVelocity")
+            if waitingBv then
+                waitingBv.Velocity = Vector3.zero
+            end
+            boostUntil = 0
+            return
+        end
+
+        hum.WalkSpeed = originalMovement.walkSpeed
+        hum.JumpPower = originalMovement.jumpPower
+
         local bv = setupLongJump()
         if not bv then return end
 
-        local moveDir = Vector3.zero
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir += camera.CFrame.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir -= camera.CFrame.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir -= camera.CFrame.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir += camera.CFrame.RightVector end
-
-        if moveDir.Magnitude > 0 then
-            moveDir = Vector3.new(moveDir.X, 0, moveDir.Z).Unit
-            bv.Velocity = moveDir * moduleSettings["LongJump"].speed
-        else
-            bv.Velocity = Vector3.zero
+        if boostUntil <= tick() then
+            if tick() - lastDaoActivation > 0.2 then
+                pcall(function() heldTool:Activate() end)
+                lastDaoActivation = tick()
+            end
+            boostUntil = tick() + 2
         end
 
-        -- Add small vertical boost occasionally to bypass anticheat
-        if math.random() < 0.1 then
-            bv.Velocity = bv.Velocity + Vector3.new(0, 5, 0)
+        if boostUntil > tick() then
+            local forward = Vector3.new(camera.CFrame.LookVector.X, 0, camera.CFrame.LookVector.Z)
+            if forward.Magnitude <= 0 then
+                forward = Vector3.new(0, 0, -1)
+            else
+                forward = forward.Unit
+            end
+            bv.Velocity = forward * moduleSettings["LongJump"].speed
+        else
+            bv.Velocity = Vector3.zero
         end
     end)
     addConnection("LongJump", connection)
@@ -1049,48 +1230,91 @@ end
 
 -- 14. NOFALLDAMAGE
 moduleSettings["NoFallDamage"] = {
-    method = "Landing" -- "Landing", "NegateVelocity", "Teleport"
+    method = "Landing" -- "Landing", "NegateVelocity", "Teleport", "DaoExploit"
 }
 
 local function toggleNoFallDamage(enabled)
     cleanupModule("NoFallDamage")
     if not enabled then return end
 
-    local char = lplr.Character
-    if char then
+    local function applyNoFall(char)
         local hum = char:WaitForChild("Humanoid")
         if moduleSettings["NoFallDamage"].method == "Landing" then
-            -- Change state to Landing when falling
             local conn = hum.StateChanged:Connect(function(old, new)
                 if new == Enum.HumanoidStateType.Freefall then
-                    hum:ChangeState(Enum.HumanoidStateType.Landed)
+                    task.delay(0.1, function()
+                        local hrp = getHRP(char)
+                        if moduleStates["NoFallDamage"] and hum.Parent and hrp then
+                            local ray = Workspace:Raycast(hrp.Position, Vector3.new(0, -8, 0))
+                            if ray then
+                                hum:ChangeState(Enum.HumanoidStateType.Landed)
+                            end
+                        end
+                    end)
                 end
             end)
             addConnection("NoFallDamage", conn)
         elseif moduleSettings["NoFallDamage"].method == "NegateVelocity" then
             local conn = RunService.Heartbeat:Connect(function()
                 local hrp = getHRP(char)
-                if hrp and hrp.Velocity.Y < -50 then
-                    hrp.Velocity = Vector3.new(hrp.Velocity.X, 0, hrp.Velocity.Z)
+                if hrp and hrp.AssemblyLinearVelocity.Y < -35 then
+                    hrp.AssemblyLinearVelocity = Vector3.new(hrp.AssemblyLinearVelocity.X, -2, hrp.AssemblyLinearVelocity.Z)
                 end
             end)
             addConnection("NoFallDamage", conn)
         elseif moduleSettings["NoFallDamage"].method == "Teleport" then
             local conn = RunService.Heartbeat:Connect(function()
                 local hrp = getHRP(char)
-                if hrp and hrp.Velocity.Y < -70 then
-                    -- Teleport up slightly
-                    hrp.CFrame = hrp.CFrame + Vector3.new(0, 5, 0)
+                if hrp and hrp.AssemblyLinearVelocity.Y < -65 then
+                    local ray = Workspace:Raycast(hrp.Position, Vector3.new(0, -25, 0))
+                    if ray then
+                        hrp.CFrame = CFrame.new(hrp.Position.X, ray.Position.Y + 4, hrp.Position.Z)
+                    else
+                        hrp.CFrame = hrp.CFrame + Vector3.new(0, 3, 0)
+                    end
+                end
+            end)
+            addConnection("NoFallDamage", conn)
+        elseif moduleSettings["NoFallDamage"].method == "DaoExploit" then
+            local daoCooldown = 0
+            local conn = RunService.Heartbeat:Connect(function()
+                local hrp = getHRP(char)
+                if not hrp then return end
+                if hrp.AssemblyLinearVelocity.Y < -45 and tick() > daoCooldown then
+                    local tool = char:FindFirstChildOfClass("Tool")
+                    if not tool then
+                        local backpack = lplr:FindFirstChildOfClass("Backpack")
+                        if backpack then
+                            for _, candidate in ipairs(backpack:GetChildren()) do
+                                if candidate:IsA("Tool") and candidate.Name:lower():find("dao") then
+                                    hum:EquipTool(candidate)
+                                    tool = candidate
+                                    break
+                                end
+                            end
+                        end
+                    end
+                    if tool and tool.Name:lower():find("dao") then
+                        pcall(function()
+                            tool:Activate()
+                        end)
+                        daoCooldown = tick() + 0.5
+                    end
                 end
             end)
             addConnection("NoFallDamage", conn)
         end
     end
+
+    if lplr.Character then
+        applyNoFall(lplr.Character)
+    end
+    addConnection("NoFallDamage", lplr.CharacterAdded:Connect(applyNoFall))
 end
 
 -- 15. ANTIVOID
 moduleSettings["AntiVoid"] = {
-    method = "Normal", -- "Normal", "Velocity", "Bounce"
+    method = "Normal", -- "Normal", "Bounce"
     bouncePower = 100
 }
 
@@ -1112,28 +1336,58 @@ local function toggleAntiVoid(enabled)
     if not enabled then
         local indicator = Workspace:FindFirstChild("AntiVoidIndicator")
         if indicator then indicator:Destroy() end
+        local char = getCharacter(lplr)
+        local hrp = getHRP(char)
+        if hrp then
+            local existingPull = hrp:FindFirstChild("AntiVoidPull")
+            if existingPull then existingPull:Destroy() end
+        end
         return
     end
 
     local indicator = createAntiVoidVisual()
-    local char = lplr.Character
+    local baseSafeY = nil
+    local pullVelocity = nil
+
+    local function getNearestGroundPosition(origin, character)
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+        raycastParams.FilterDescendantsInstances = {character}
+
+        local offsets = {
+            Vector3.new(0, 0, 0),
+            Vector3.new(6, 0, 0), Vector3.new(-6, 0, 0),
+            Vector3.new(0, 0, 6), Vector3.new(0, 0, -6),
+            Vector3.new(12, 0, 0), Vector3.new(-12, 0, 0),
+            Vector3.new(0, 0, 12), Vector3.new(0, 0, -12)
+        }
+        local best
+        local bestDist = math.huge
+        for _, offset in ipairs(offsets) do
+            local start = origin + offset + Vector3.new(0, 20, 0)
+            local hit = Workspace:Raycast(start, Vector3.new(0, -300, 0), raycastParams)
+            if hit then
+                local dist = (Vector3.new(origin.X, 0, origin.Z) - Vector3.new(hit.Position.X, 0, hit.Position.Z)).Magnitude
+                if dist < bestDist then
+                    bestDist = dist
+                    best = hit.Position
+                end
+            end
+        end
+        return best
+    end
 
     local connection = RunService.Heartbeat:Connect(function()
         if not moduleStates["AntiVoid"] then return end
         local myChar = getCharacter(lplr)
         local hrp = getHRP(myChar)
         if not hrp then return end
-
-        -- Find nearest ground below
-        local rayOrigin = hrp.Position
-        local rayDirection = Vector3.new(0, -500, 0)
-        local raycastParams = RaycastParams.new()
-        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
-        raycastParams.FilterDescendantsInstances = {myChar}
-        local rayResult = Workspace:Raycast(rayOrigin, rayDirection, raycastParams)
-
-        local groundY = rayResult and rayResult.Position.Y or -100
-        local voidY = groundY - 20
+        if not baseSafeY then
+            baseSafeY = hrp.Position.Y
+        end
+        local groundPos = getNearestGroundPosition(hrp.Position, myChar)
+        local referenceY = groundPos and groundPos.Y or baseSafeY
+        local voidY = referenceY - 60
 
         -- Update visual position
         indicator.Position = Vector3.new(hrp.Position.X, voidY, hrp.Position.Z)
@@ -1141,18 +1395,36 @@ local function toggleAntiVoid(enabled)
         if hrp.Position.Y <= voidY then
             local method = moduleSettings["AntiVoid"].method
             if method == "Normal" then
-                -- TP up and float towards ground
-                hrp.CFrame = CFrame.new(hrp.Position.X, groundY + 5, hrp.Position.Z)
-                local bv = Instance.new("BodyVelocity")
-                bv.Velocity = Vector3.new(0, 5, 0)
-                bv.MaxForce = Vector3.new(0, 1e5, 0)
-                bv.Parent = hrp
-                Debris:AddItem(bv, 1)
-            elseif method == "Velocity" then
-                -- Push upwards strongly
-                hrp.Velocity = Vector3.new(hrp.Velocity.X, 50, hrp.Velocity.Z)
+                if not groundPos then
+                    groundPos = Vector3.new(hrp.Position.X, baseSafeY, hrp.Position.Z)
+                end
+                hrp.CFrame = CFrame.new(hrp.Position.X, groundPos.Y + 3, hrp.Position.Z)
+                if pullVelocity then
+                    pullVelocity:Destroy()
+                end
+                pullVelocity = Instance.new("BodyVelocity")
+                pullVelocity.Name = "AntiVoidPull"
+                pullVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+                pullVelocity.Parent = hrp
+                local target = Vector3.new(groundPos.X, groundPos.Y + 3, groundPos.Z)
+                local dir = target - hrp.Position
+                pullVelocity.Velocity = dir.Magnitude > 1 and (dir.Unit * 40) or Vector3.zero
+                task.delay(2, function()
+                    if pullVelocity then
+                        pullVelocity:Destroy()
+                        pullVelocity = nil
+                    end
+                end)
             elseif method == "Bounce" then
                 hrp.Velocity = Vector3.new(hrp.Velocity.X, moduleSettings["AntiVoid"].bouncePower, hrp.Velocity.Z)
+            end
+        end
+
+        if pullVelocity and groundPos then
+            local horizontal = (Vector3.new(hrp.Position.X, 0, hrp.Position.Z) - Vector3.new(groundPos.X, 0, groundPos.Z)).Magnitude
+            if horizontal < 4 and hrp.Position.Y <= groundPos.Y + 5 then
+                pullVelocity:Destroy()
+                pullVelocity = nil
             end
         end
     end)
@@ -1225,6 +1497,17 @@ title.TextScaled = true
 title.Font = Enum.Font.GothamBlack
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = topBar
+
+local uninjectButton = Instance.new("TextButton")
+uninjectButton.Size = UDim2.new(0, 110, 0, 30)
+uninjectButton.Position = UDim2.new(1, -130, 0.5, -15)
+uninjectButton.BackgroundColor3 = Color3.fromRGB(120, 45, 45)
+uninjectButton.Text = "Uninject"
+uninjectButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+uninjectButton.Font = Enum.Font.GothamBold
+uninjectButton.TextSize = 13
+uninjectButton.Parent = topBar
+Instance.new("UICorner", uninjectButton).CornerRadius = UDim.new(0, 8)
 
 local sidebar = Instance.new("Frame")
 sidebar.Size = UDim2.new(0, 160, 1, -48)
@@ -1342,6 +1625,12 @@ local function createModule(parent, name, defaultEnabled, toggleCallback, settin
 
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
 
+    local header = Instance.new("Frame")
+    header.Name = "Header"
+    header.Size = UDim2.new(1, 0, 0, 58)
+    header.BackgroundTransparency = 1
+    header.Parent = frame
+
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(0.6, 0, 1, 0)
     label.Position = UDim2.new(0, 10, 0, 0)
@@ -1351,7 +1640,14 @@ local function createModule(parent, name, defaultEnabled, toggleCallback, settin
     label.Font = Enum.Font.GothamSemibold
     label.TextSize = 15
     label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = frame
+    label.Parent = header
+
+    local toggleButton = Instance.new("TextButton")
+    toggleButton.Name = "ToggleButton"
+    toggleButton.Size = UDim2.new(1, -90, 1, 0)
+    toggleButton.BackgroundTransparency = 1
+    toggleButton.Text = ""
+    toggleButton.Parent = header
 
     -- Keybind display button
     local keybindBtn = Instance.new("TextButton")
@@ -1362,7 +1658,7 @@ local function createModule(parent, name, defaultEnabled, toggleCallback, settin
     keybindBtn.Text = moduleKeybinds[name] and moduleKeybinds[name].Name or "🔑"
     keybindBtn.Font = Enum.Font.Gotham
     keybindBtn.TextSize = 14
-    keybindBtn.Parent = frame
+    keybindBtn.Parent = header
     Instance.new("UICorner", keybindBtn).CornerRadius = UDim.new(0, 6)
 
     keybindBtn.MouseButton1Click:Connect(function()
@@ -1403,17 +1699,18 @@ local function createModule(parent, name, defaultEnabled, toggleCallback, settin
     settingsBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     settingsBtn.Font = Enum.Font.GothamBold
     settingsBtn.TextSize = 24
-    settingsBtn.Parent = frame
+    settingsBtn.Parent = header
     Instance.new("UICorner", settingsBtn).CornerRadius = UDim.new(0, 6)
 
     -- Settings panel (hidden initially)
     local settingsPanel = Instance.new("Frame")
     settingsPanel.Name = "SettingsPanel"
     settingsPanel.Size = UDim2.new(1, 0, 0, 0)
+    settingsPanel.Position = UDim2.new(0, 0, 0, 58)
     settingsPanel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     settingsPanel.BorderSizePixel = 0
     settingsPanel.ClipsDescendants = true
-    settingsPanel.Visible = false
+    settingsPanel.Visible = true
     settingsPanel.Parent = frame
 
     Instance.new("UICorner", settingsPanel).CornerRadius = UDim.new(0, 6)
@@ -1452,10 +1749,13 @@ local function createModule(parent, name, defaultEnabled, toggleCallback, settin
     local settingsOpen = false
     settingsBtn.MouseButton1Click:Connect(function()
         settingsOpen = not settingsOpen
-        local targetHeight = settingsOpen and (#settingsDefinition * 35 + 10) or 0
-        local tween = TweenService:Create(settingsPanel, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Size = UDim2.new(1, 0, 0, targetHeight)})
-        tween:Play()
-        settingsPanel.Visible = true
+        local targetHeight = 0
+        if settingsOpen then
+            task.wait()
+            targetHeight = settingsLayout.AbsoluteContentSize.Y + 8
+        end
+        TweenService:Create(settingsPanel, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Size = UDim2.new(1, 0, 0, targetHeight)}):Play()
+        TweenService:Create(frame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Size = UDim2.new(1, -16, 0, 58 + targetHeight)}):Play()
     end)
 
     local enabled = defaultEnabled
@@ -1465,18 +1765,22 @@ local function createModule(parent, name, defaultEnabled, toggleCallback, settin
         frame.BackgroundColor3 = enabled and Color3.fromRGB(140, 80, 255) or Color3.fromRGB(35, 35, 35)
     end
 
-    frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            enabled = not enabled
-            moduleStates[name] = enabled
-            updateVisual()
-            if name == "AutoToxic" then
-                autoToxicEnabled = enabled
-            end
-            if toggleCallback then
-                toggleCallback(enabled)
-            end
+    local toggleDebounce = false
+    toggleButton.MouseButton1Click:Connect(function()
+        if toggleDebounce then return end
+        toggleDebounce = true
+        enabled = not enabled
+        moduleStates[name] = enabled
+        updateVisual()
+        if name == "AutoToxic" then
+            autoToxicEnabled = enabled
         end
+        if toggleCallback then
+            toggleCallback(enabled)
+        end
+        task.delay(0.1, function()
+            toggleDebounce = false
+        end)
     end)
 
     frame.MouseEnter:Connect(function()
@@ -1495,6 +1799,7 @@ end
 -- Define modules with settings
 createModule(columns["Combat"], "KillAura", false, toggleKillAura, {
     {type = "toggle", name = "Face Target", settingName = "faceTarget"},
+    {type = "slider", name = "FOV Radius", min = 50, max = 600, settingName = "fovRadius"},
     {type = "slider", name = "Range", min = 5, max = 20, settingName = "range"},
     {type = "slider", name = "Swing Speed", min = 1, max = 20, settingName = "swingSpeed"},
     {type = "toggle", name = "Require Sword", settingName = "requireSword"},
@@ -1503,6 +1808,7 @@ createModule(columns["Combat"], "KillAura", false, toggleKillAura, {
 })
 
 createModule(columns["Combat"], "Reach", false, toggleReach, {
+    {type = "dropdown", name = "Mode", options = {"Both", "Attribute", "Handle"}, settingName = "mode"},
     {type = "slider", name = "Hit Range", min = 6, max = 20, settingName = "hitRange"},
     {type = "slider", name = "Mine Range", min = 6, max = 20, settingName = "mineRange"},
     {type = "slider", name = "Place Range", min = 6, max = 20, settingName = "placeRange"}
@@ -1516,7 +1822,8 @@ createModule(columns["Blatant"], "Fly", false, toggleFly, {
     {type = "slider", name = "Horizontal Speed", min = 10, max = 100, settingName = "horizontalSpeed"},
     {type = "slider", name = "Vertical Speed", min = 10, max = 100, settingName = "verticalSpeed"},
     {type = "toggle", name = "TP Down", settingName = "tpDownEnabled"},
-    {type = "slider", name = "TP Interval", min = 1, max = 5, settingName = "tpDownInterval"}
+    {type = "slider", name = "TP Interval", min = 1, max = 5, settingName = "tpDownInterval"},
+    {type = "slider", name = "TP Return Delay", min = 0.05, max = 1, settingName = "tpDownReturnDelay"}
 })
 
 createModule(columns["Render"], "ESP", false, toggleESP, {})
@@ -1565,15 +1872,45 @@ createModule(columns["Movement"], "LongJump", false, toggleLongJump, {
 })
 
 createModule(columns["Movement"], "NoFallDamage", false, toggleNoFallDamage, {
-    {type = "dropdown", name = "Method", options = {"Landing", "NegateVelocity", "Teleport"}, settingName = "method"}
+    {type = "dropdown", name = "Method", options = {"Landing", "NegateVelocity", "Teleport", "DaoExploit"}, settingName = "method"}
 })
 
 createModule(columns["Movement"], "AntiVoid", false, toggleAntiVoid, {
-    {type = "dropdown", name = "Method", options = {"Normal", "Velocity", "Bounce"}, settingName = "method"},
+    {type = "dropdown", name = "Method", options = {"Normal", "Bounce"}, settingName = "method"},
     {type = "slider", name = "Bounce Power", min = 50, max = 200, settingName = "bouncePower"}
 })
 
 createModule(columns["Movement"], "InfiniteJump", false, toggleInfiniteJump, {})
+
+local function applyModuleToggle(moduleName, enabled)
+    if moduleName == "KillAura" then toggleKillAura(enabled)
+    elseif moduleName == "Reach" then toggleReach(enabled)
+    elseif moduleName == "Speed" then toggleSpeed(enabled)
+    elseif moduleName == "Fly" then toggleFly(enabled)
+    elseif moduleName == "ESP" then toggleESP(enabled)
+    elseif moduleName == "Tracers" then toggleTracers(enabled)
+    elseif moduleName == "AutoToxic" then autoToxicEnabled = enabled
+    elseif moduleName == "Nuker" then toggleNuker(enabled)
+    elseif moduleName == "Scaffold" then toggleScaffold(enabled)
+    elseif moduleName == "AimAssist" then toggleAimAssist(enabled)
+    elseif moduleName == "AutoClicker" then toggleAutoClicker(enabled)
+    elseif moduleName == "Velocity" then toggleVelocity(enabled)
+    elseif moduleName == "LongJump" then toggleLongJump(enabled)
+    elseif moduleName == "NoFallDamage" then toggleNoFallDamage(enabled)
+    elseif moduleName == "AntiVoid" then toggleAntiVoid(enabled)
+    elseif moduleName == "InfiniteJump" then toggleInfiniteJump(enabled)
+    end
+end
+
+uninjectButton.MouseButton1Click:Connect(function()
+    for name, enabled in pairs(moduleStates) do
+        if enabled then
+            moduleStates[name] = false
+            applyModuleToggle(name, false)
+        end
+    end
+    screenGui:Destroy()
+end)
 
 -- ==================== DRAGGING ====================
 local function makeDraggable(frame, dragBar)
@@ -1627,24 +1964,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
                     moduleFrame.BackgroundColor3 = enabled and Color3.fromRGB(140, 80, 255) or Color3.fromRGB(35, 35, 35)
                 end
             end
-            -- Trigger toggle callback
-            if moduleName == "KillAura" then toggleKillAura(enabled)
-            elseif moduleName == "Reach" then toggleReach(enabled)
-            elseif moduleName == "Speed" then toggleSpeed(enabled)
-            elseif moduleName == "Fly" then toggleFly(enabled)
-            elseif moduleName == "ESP" then toggleESP(enabled)
-            elseif moduleName == "Tracers" then toggleTracers(enabled)
-            elseif moduleName == "AutoToxic" then autoToxicEnabled = enabled
-            elseif moduleName == "Nuker" then toggleNuker(enabled)
-            elseif moduleName == "Scaffold" then toggleScaffold(enabled)
-            elseif moduleName == "AimAssist" then toggleAimAssist(enabled)
-            elseif moduleName == "AutoClicker" then toggleAutoClicker(enabled)
-            elseif moduleName == "Velocity" then toggleVelocity(enabled)
-            elseif moduleName == "LongJump" then toggleLongJump(enabled)
-            elseif moduleName == "NoFallDamage" then toggleNoFallDamage(enabled)
-            elseif moduleName == "AntiVoid" then toggleAntiVoid(enabled)
-            elseif moduleName == "InfiniteJump" then toggleInfiniteJump(enabled)
-            end
+            applyModuleToggle(moduleName, enabled)
             break
         end
     end
@@ -1659,22 +1979,7 @@ end)
 lplr.CharacterAdded:Connect(function(char)
     for name, enabled in pairs(moduleStates) do
         if enabled then
-            if name == "KillAura" then toggleKillAura(true)
-            elseif name == "Reach" then toggleReach(true)
-            elseif name == "Speed" then toggleSpeed(true)
-            elseif name == "Fly" then toggleFly(true)
-            elseif name == "ESP" then toggleESP(true)
-            elseif name == "Tracers" then toggleTracers(true)
-            elseif name == "Nuker" then toggleNuker(true)
-            elseif name == "Scaffold" then toggleScaffold(true)
-            elseif name == "AimAssist" then toggleAimAssist(true)
-            elseif name == "AutoClicker" then toggleAutoClicker(true)
-            elseif name == "Velocity" then toggleVelocity(true)
-            elseif name == "LongJump" then toggleLongJump(true)
-            elseif name == "NoFallDamage" then toggleNoFallDamage(true)
-            elseif name == "AntiVoid" then toggleAntiVoid(true)
-            elseif name == "InfiniteJump" then toggleInfiniteJump(true)
-            end
+            applyModuleToggle(name, true)
         end
     end
 end)
