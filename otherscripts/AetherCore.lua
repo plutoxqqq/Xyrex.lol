@@ -1151,7 +1151,7 @@ local function toggleLongJump(enabled)
         end
 
         local heldTool = char:FindFirstChildOfClass("Tool")
-        local isHoldingYuziDao = heldTool and heldTool.Name:lower():find("yuzi") and heldTool.Name:lower():find("dao")
+        local isHoldingYuziDao = heldTool and heldTool.Name:lower():find("wood_dao") and heldTool.Name:lower():find("dao") and heldTool.Name:lower():find("stone_dao") and heldTool.Name:lower():find("iron_dao") and heldTool.Name:lower():find("diamond_dao") and heldTool.Name:lower():find("emerald_dao")
         if not isHoldingYuziDao then
             hum.WalkSpeed = 0
             hum.JumpPower = 0
