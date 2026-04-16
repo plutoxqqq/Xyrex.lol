@@ -215,22 +215,6 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 }
 
 .card-body{ padding:14px; display:flex; flex-direction:column; gap:10px; flex:1; }
-.card-alert-pill{
-  display:inline-flex;
-  align-items:center;
-  width:fit-content;
-  max-width:100%;
-  padding:6px 10px;
-  border-radius:999px;
-  border:1px solid rgba(255, 95, 95, .9);
-  background:rgba(120, 0, 0, .55);
-  color:#ffd6d6;
-  font-size:.74rem;
-  font-weight:800;
-  letter-spacing:.2px;
-  text-transform:uppercase;
-  animation:velocityWarningPulse 1150ms ease-in-out infinite;
-}
 .card-header{ display:flex; align-items:start; justify-content:space-between; gap:10px; }
 .card-header-left{ display:flex; flex-direction:column; gap:7px; }
 .card-header-right{ display:flex; align-items:center; gap:8px; }
