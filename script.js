@@ -1536,15 +1536,6 @@ function initScriptsHub() {
   qs('#deleteScriptBtn').addEventListener('click', deleteSelectedScript);
 }
 
-function initSiteAlertBanner() {
-  const banner = qs('.site-alert-banner');
-  const dismissButton = qs('.site-alert-dismiss');
-  if (!banner || !dismissButton) return;
-  dismissButton.addEventListener('click', () => {
-    banner.classList.add('is-dismissed');
-  });
-}
-
 function syncNavigationLayoutMetrics() {
   const topnav = qs('.topnav');
   if (!topnav) return;
@@ -1574,7 +1565,6 @@ window.addEventListener('xyrex:account-changed', () => {
 
 function init() {
   setBetaFeaturesEnabled(getBetaFeaturesEnabled());
-  initSiteAlertBanner();
   syncNavigationLayoutMetrics();
   renderProducts(products);
   initScriptsHub();
