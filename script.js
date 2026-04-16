@@ -826,7 +826,6 @@ function applyAllFilters() {
 function openModal(product) {
   const overlay = qs('#modalOverlay');
   const content = qs('#modalContent');
-  const isVelocity = product.name === 'Velocity';
 
   const officialSite = product.officialSite || '';
   const consMarkup = Array.isArray(product.cons) && product.cons.length
@@ -860,14 +859,6 @@ function openModal(product) {
   content.innerHTML = `
     <h2>${escapeHtml(product.name)}</h2>
     <p class="modal-headline">${escapeHtml(stripTrailingPeriod(product.description))}</p>
-    ${
-      isVelocity
-        ? `<div class="modal-velocity-warning" role="alert" aria-live="assertive">
-             <strong>⚠ Status Update</strong>
-             Velocity is currently down due to the adware incident.
-           </div>`
-        : ''
-    }
     <div class="modal-layout">
       <div>
         <div class="modal-section"><strong>Pros</strong><ul>${product.pros.map(f => `<li>${escapeHtml(f)}</li>`).join('')}</ul></div>
