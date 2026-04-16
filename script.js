@@ -698,12 +698,6 @@ function createProductCard(product, index) {
   body.appendChild(header);
   body.appendChild(createPlatformChips(product.platform));
   body.appendChild(summary);
-  if (product.name === 'Velocity') {
-    const warningPill = document.createElement('div');
-    warningPill.className = 'card-alert-pill';
-    warningPill.textContent = 'Down';
-    body.appendChild(warningPill);
-  }
   body.appendChild(price);
 
   const infoBtn = document.createElement('button');
