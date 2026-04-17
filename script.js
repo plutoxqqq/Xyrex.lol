@@ -1631,6 +1631,7 @@ function setActiveSubtab(targetSubtabId) {
     qsa('.subtab-panel').forEach(panel => {
       panel.hidden = panel.id !== targetSubtabId;
     });
+    animateSubtabChildren(nextPanel);
   } else {
     const transitionToken = ++activeSubtabTransitionToken;
     const wrapper = previousPanel.parentElement;
@@ -1664,6 +1665,7 @@ function setActiveSubtab(targetSubtabId) {
         panel.style.width = '';
         panel.style.opacity = '';
         panel.style.transform = '';
+        panel.style.filter = '';
       });
       nextPanel.style.pointerEvents = '';
       wrapper.style.minHeight = '';
