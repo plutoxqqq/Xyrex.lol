@@ -1,24 +1,5 @@
 const products = [
   {
-    name: 'Pluton',
-    featured: false,
-    platform: ['Windows', 'Android', 'iOS', 'macOS'],
-    cheatType: 'Internal',
-    keySystem: 'Keyless',
-    tags: ['Trending', 'Internal'],
-    features: [],
-    sunc: 100,
-    description: 'Pluton Executor is a next-gen Roblox executor built for raw performance and stealth, featuring a custom Lua VM, instant injection, and adaptive hot-patching to stay resilient against modern anti-cheat updates',
-    pros: ['High sUNC', 'AntiCheat Bypass', 'Instant Injection', 'High stability'],
-    cons: ['Can conflict with antivirus software', 'Setup complexity is higher than average'],
-    pricingOptions: ['Free plan available', '1 Week — $4.99', '1 Month — $13.99'],
-    freeOrPaid: 'both',
-    stability: 'Stable',
-    trustLevel: 'High',
-    status: 'Undetected',
-    officialSite: 'https://github.com/plutoxqq/Pluton-Executor'
-  },
-  {
     name: 'Potassium',
     featured: true,
     platform: ['Windows'],
@@ -26,7 +7,7 @@ const products = [
     keySystem: 'Keyless',
     tags: ['Verified', 'Internal'],
     features: ['Decompiler', 'Kernel', 'Multi-instance'],
-    sunc: 98,
+    sunc: 100,
     description: 'Solid lifetime Windows executor with reliable execution performance',
     pros: ['Lifetime access', 'Solid execution'],
     cons: ['Higher upfront cost'],
@@ -77,7 +58,7 @@ const products = [
   },
   {
     name: 'Xeno',
-    featured: false,
+    featured: true,
     platform: ['Windows'],
     cheatType: 'Internal',
     keySystem: 'Keyless',
@@ -153,7 +134,7 @@ const products = [
   },
   {
     name: 'Seliware',
-    featured: true,
+    featured: false,
     platform: ['Windows'],
     cheatType: 'Internal',
     keySystem: 'Keyless',
@@ -534,18 +515,12 @@ const products = [
 ];
 
 const scriptsHubData = {
-  tierListPaid: [
-    { tier: '1', executor: 'Pluton', notes: 'Top paid pick for balanced performance, consistency, and support coverage' },
-    { tier: '2', executor: 'Potassium', notes: 'Strong feature depth with excellent sUNC support, but trust concerns remain' },
-    { tier: '3', executor: 'Seliware', notes: 'Smooth execution and polished UX, with occasional detection instability' },
-    { tier: '4', executor: 'Volcano', notes: 'Stable long-term option with reliable execution, but comparatively expensive' }
-  ],
-  tierListFree: [
-    { tier: '1', executor: 'Pluton', notes: 'Best free overall package right now with broad platform support' },
-    { tier: '2', executor: 'Velocity', notes: 'Fast keyless free option with modern tooling and customization' },
-    { tier: '3', executor: 'Solara', notes: 'Reliable free Windows option with steady day-to-day stability' },
-    { tier: '4', executor: 'JJSploit', notes: 'Beginner-friendly choice with a simplified workflow' }
-  ],
+  smartRankingLabels: {
+    bestFree: 'Best Free',
+    safest: 'Safest Right Now',
+    beginners: 'Best for Beginners',
+    powerful: 'Most Powerful'
+  },
   popularScripts: [
     {
       name: 'Voidware Bedwars',
@@ -555,20 +530,14 @@ const scriptsHubData = {
     }
   ],
   recentChanges: [
-    'Expanded the Executors tab with updated free, paid, premium, mobile, Mac, and legacy options plus normalized pricing, pros, and cons formatting',
-    'Revamped the New UI with a modern visual refresh and a modal-based Theme Customizer',
-    'Added route-aware navigation for /scripthub and /newui paths, including Script Hub subtabs and browser history support',
-    'Improved AI Insight reliability with retry and backoff handling, stronger timeout behavior, and cached successful responses',
-    'Added Official Discord links in the top navigation and executor modal, then refined the top navigation to a clean icon-only Discord logo',
-    'Fixed refresh behavior for subpage routes by funneling all route entrypoints to the latest root build',
-    'Reworked Theme Customizer to control the full site mood with complete palette overrides',
-    'Redesigned Theme Customizer with Basic and Advanced subtabs and added five pastel preset circles for one-click themes',
-    'Fixed pink theme mood mapping so New UI surfaces, panels, cards, and overlays now fully follow the selected palette',
-    'Expanded New UI theme application so all blue UI surfaces now follow the selected palette, including buttons, search, Script Hub controls, and form elements',
-    'Hardened route bootstrap parsing so refreshing any tab reliably restores executors and New UI state',
-    'Finalized full theme propagation for tier lists, popular scripts, saved scripts, recent changes, featured executor highlights, and themed scrollbars'
+    'Rebuilt AI Insight output to use concise expert analysis with best-fit guidance, clear avoidance criteria, explicit risk level, and confidence scoring',
+    'Replaced static free and paid tier tabs with dynamic Smart Rankings that rotate categories for Best Free, Safest, Beginner Friendly, and Most Powerful picks',
+    'Added a full executor comparison system in Scripts Hub with 2 to 3 selection controls, value highlighting, and side-by-side reliability metrics',
+    'Expanded Dodge progression with daily claim streak tracking, streak-based bonus rewards, and unlockable visual themes that can be purchased and equipped',
+    'Improved mobile usability with larger touch targets, responsive comparison layouts, and overflow-safe panels to keep one-thumb navigation clean and stable'
   ]
 };
+
 
 const XYREX_OFFICIAL_DISCORD_URL = 'https://discord.gg/6YXCAQYY';
 
@@ -596,6 +565,10 @@ const tagSymbolMap = {
   Internal: { symbol: 'I', cls: 'internal' },
   External: { symbol: 'E', cls: 'external' }
 };
+
+const trustRiskMap = { High: 2, Medium: 5, Low: 8, Unknown: 7 };
+const stabilityScoreMap = { Stable: 9, High: 8, Mixed: 6, Basic: 4, Unstable: 3, Unknown: 4 };
+
 
 function escapeHtml(str) {
   if (!str) return '';
@@ -659,6 +632,10 @@ function createProductCard(product, index) {
   card.dataset.status = product.status || '';
   card.dataset.trustLevel = product.trustLevel || '';
   card.dataset.stability = product.stability || '';
+  card.dataset.platform = (product.platform || []).join(', ');
+  card.dataset.keySystem = product.keySystem || '';
+  card.dataset.tags = (product.tags || []).join(', ');
+  card.dataset.execution = Number.isFinite(product.sunc) ? (product.sunc >= 95 ? 'High' : product.sunc >= 80 ? 'Medium' : 'Low') : 'Unknown';
 
   const body = document.createElement('div');
   body.className = 'card-body';
@@ -956,7 +933,7 @@ function openSettingsModal() {
         <h3>Gameplay</h3>
         <div class="settings-actions">
           <button id="settingsPlayDodgeBtn" class="btn-primary settings-action-btn" type="button">Play Dodge</button>
-          <button id="settingsBetaFeaturesBtn" class="btn-primary settings-action-btn" type="button">${getBetaFeaturesEnabled() ? 'Disable BETA Features' : 'Enable BETA Features'}</button>
+          <button id="settingsBetaFeaturesBtn" class="btn-primary settings-action-btn" type="button">BETA Features (Coming Soon)</button>
         </div>
       </div>
       <div class="settings-group">
@@ -1006,9 +983,7 @@ function openSettingsModal() {
 
   const betaBtn = qs('#settingsBetaFeaturesBtn');
   betaBtn?.addEventListener('click', () => {
-    const enabled = !getBetaFeaturesEnabled();
-    setBetaFeaturesEnabled(enabled);
-    openSettingsModal();
+    window.alert('BETA toggle is temporarily disabled. All Dodge features are already enabled by default.');
   });
 
   const authFeedback = qs('#settingsAuthFeedback');
@@ -1075,14 +1050,155 @@ function closeModal() {
   }, 190);
 }
 
-function renderTierList(containerId, entries) {
-  const wrap = qs(`#${containerId}`);
+function detectionRiskScore(product) {
+  let score = trustRiskMap[product.trustLevel] ?? 7;
+  const status = String(product.status || '').toLowerCase();
+  if (status.includes('detected')) score += 2;
+  if (status.includes('down')) score += 2;
+  if (status.includes('issue')) score += 1;
+  if (status.includes('undetected')) score -= 1;
+  return Math.max(1, Math.min(10, score));
+}
+
+function detectionRiskLabel(product) {
+  const score = detectionRiskScore(product);
+  if (score <= 3) return 'Low';
+  if (score <= 6) return 'Medium';
+  return 'High';
+}
+
+function estimatedPriceValue(product) {
+  const joined = (product.pricingOptions || []).join(' ');
+  const numbers = (joined.match(/\d+(?:\.\d+)?/g) || []).map(Number).filter(Number.isFinite);
+  if (!numbers.length) return product.freeOrPaid === 'free' ? 0 : 999;
+  return Math.min(...numbers);
+}
+
+function computeSmartRanking() {
+  const byName = name => products.find(item => item.name.toLowerCase() === name.toLowerCase()) || null;
+  return {
+    monthLabel: new Date().toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
+    categories: [
+      { id: 'bestFree', title: scriptsHubData.smartRankingLabels.bestFree, executor: byName('Velocity'), note: 'Velocity is the current best free option for users prioritizing quick setup and no upfront payment.' },
+      { id: 'safest', title: scriptsHubData.smartRankingLabels.safest, executor: byName('Xeno'), note: 'Xeno is the safest right now for users who want stable baseline behavior with lower practical risk.' },
+      { id: 'beginners', title: scriptsHubData.smartRankingLabels.beginners, executor: byName('JJSploit'), note: 'JJSploit is the best starting point for beginners because of its simple workflow and low onboarding friction.' },
+      { id: 'powerful', title: scriptsHubData.smartRankingLabels.powerful, executor: byName('Potassium'), note: 'Potassium is currently the most powerful pick with top-end execution strength and full 100% sUNC.' }
+    ]
+  };
+}
+
+let smartRankingRotationTimer = 0;
+let activeSmartRankingIndex = 0;
+
+function renderSmartRankings() {
+  const wrap = qs('#smartRankingSections');
   if (!wrap) return;
-  wrap.innerHTML = entries.map(entry => `
-    <article class="rank-item rank-tier-${escapeHtml(String(entry.tier || '').toLowerCase())}">
-      <div class="rank-badge"><span>${escapeHtml(entry.tier)}</span></div>
-      <div><h4>${escapeHtml(entry.executor)}</h4><p>${escapeHtml(entry.notes)}</p></div>
-    </article>`).join('');
+  const ranking = computeSmartRanking();
+  const selected = ranking.categories[activeSmartRankingIndex % ranking.categories.length];
+
+  wrap.innerHTML = `
+    <article class="smart-ranking-hero">
+      <p class="smart-ranking-kicker">Updated for ${escapeHtml(ranking.monthLabel)}</p>
+      <h4>${escapeHtml(selected.title)}</h4>
+      <p class="smart-ranking-executor">${escapeHtml(selected.executor?.name || 'Unavailable')}</p>
+      <p>${escapeHtml(selected.note)}</p>
+    </article>
+    <div class="smart-ranking-grid">
+      ${ranking.categories.map((entry, index) => `
+        <button class="smart-ranking-card ${index === (activeSmartRankingIndex % ranking.categories.length) ? 'is-active' : ''}" data-smart-ranking-index="${index}" type="button">
+          <span>${escapeHtml(entry.title)}</span>
+          <strong>${escapeHtml(entry.executor?.name || 'Unavailable')}</strong>
+          <small>Risk: ${escapeHtml(detectionRiskLabel(entry.executor || {}))}</small>
+        </button>
+      `).join('')}
+    </div>
+  `;
+
+  wrap.querySelectorAll('[data-smart-ranking-index]').forEach(button => {
+    button.addEventListener('click', () => {
+      activeSmartRankingIndex = Number(button.getAttribute('data-smart-ranking-index')) || 0;
+      renderSmartRankings();
+    });
+  });
+
+  if (smartRankingRotationTimer) window.clearInterval(smartRankingRotationTimer);
+  smartRankingRotationTimer = window.setInterval(() => {
+    const smartPanel = qs('#smartRankingsPanel');
+    const scriptsPage = qs('#scriptsPage');
+    if (!smartPanel || !scriptsPage || scriptsPage.hidden || smartPanel.hidden) return;
+    activeSmartRankingIndex = (activeSmartRankingIndex + 1) % ranking.categories.length;
+    renderSmartRankings();
+  }, 9000);
+}
+
+let comparisonSelection = [];
+
+function renderComparisonSystem() {
+  const selector = qs('#comparisonSelector');
+  const tableWrap = qs('#comparisonTableWrap');
+  const table = qs('#comparisonTable');
+  if (!selector || !tableWrap || !table) return;
+
+  const sorted = [...products].sort((a, b) => a.name.localeCompare(b.name));
+  selector.innerHTML = sorted.map(product => {
+    const selected = comparisonSelection.includes(product.name);
+    return `<button type="button" class="compare-pick ${selected ? 'is-active' : ''}" data-compare-name="${escapeHtml(product.name)}">${escapeHtml(product.name)}</button>`;
+  }).join('');
+
+  selector.querySelectorAll('[data-compare-name]').forEach(button => {
+    button.addEventListener('click', () => {
+      const name = button.getAttribute('data-compare-name');
+      if (!name) return;
+      if (comparisonSelection.includes(name)) {
+        comparisonSelection = comparisonSelection.filter(item => item !== name);
+      } else if (comparisonSelection.length < 3) {
+        comparisonSelection = [...comparisonSelection, name];
+      }
+      renderComparisonSystem();
+    });
+  });
+
+  if (comparisonSelection.length < 2) {
+    tableWrap.hidden = true;
+    return;
+  }
+
+  const selectedProducts = comparisonSelection
+    .map(name => products.find(item => item.name === name))
+    .filter(Boolean)
+    .slice(0, 3);
+
+  const suncValues = selectedProducts.map(item => Number.isFinite(item.sunc) ? item.sunc : -1);
+  const stabilityValues = selectedProducts.map(item => stabilityScoreMap[item.stability] || 0);
+  const riskValues = selectedProducts.map(item => detectionRiskScore(item));
+  const priceValues = selectedProducts.map(item => estimatedPriceValue(item));
+  const platformValues = selectedProducts.map(item => (item.platform || []).length);
+
+  const bestSunc = Math.max(...suncValues);
+  const bestStability = Math.max(...stabilityValues);
+  const bestRisk = Math.min(...riskValues);
+  const bestPrice = Math.min(...priceValues);
+  const bestPlatform = Math.max(...platformValues);
+
+  const cell = (value, isBest) => `<td class="${isBest ? 'is-best' : ''}">${escapeHtml(String(value))}</td>`;
+
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Metric</th>
+        ${selectedProducts.map(item => `<th>${escapeHtml(item.name)}</th>`).join('')}
+      </tr>
+    </thead>
+    <tbody>
+      <tr><th>sUNC</th>${selectedProducts.map((item, idx) => cell(Number.isFinite(item.sunc) ? `${item.sunc}%` : 'None', suncValues[idx] === bestSunc)).join('')}</tr>
+      <tr><th>Stability</th>${selectedProducts.map((item, idx) => cell(item.stability, stabilityValues[idx] === bestStability)).join('')}</tr>
+      <tr><th>Detection risk</th>${selectedProducts.map((item, idx) => cell(`${detectionRiskLabel(item)} (${riskValues[idx]}/10)`, riskValues[idx] === bestRisk)).join('')}</tr>
+      <tr><th>Price</th>${selectedProducts.map((item, idx) => cell(item.pricingOptions?.[0] || item.freeOrPaid, priceValues[idx] === bestPrice)).join('')}</tr>
+      <tr><th>Platform</th>${selectedProducts.map((item, idx) => cell((item.platform || []).join(', '), platformValues[idx] === bestPlatform)).join('')}</tr>
+    </tbody>
+  `;
+
+  tableWrap.hidden = false;
 }
 
 function renderPopularScripts() {
@@ -1091,7 +1207,7 @@ function renderPopularScripts() {
   wrap.innerHTML = scriptsHubData.popularScripts.map(item => `
     <article class="script-card">
       <div class="script-card-head">
-        <h4 class="script-card-title"><span class="script-file-icon">${popularScriptFileSvg}</span>${escapeHtml(item.name)}</h4>
+        <h4 class="script-card-title">${escapeHtml(item.name)}</h4>
         <div class="script-card-meta">
           <span>${escapeHtml(stripTrailingPeriod(item.game))}</span>
           <button class="script-copy-btn" type="button" data-script-copy="${escapeHtml(item.script)}" title="Copy script" aria-label="Copy script">
@@ -1254,12 +1370,12 @@ async function applyUiMode() {
 }
 
 let activePageId = null;
-let activeSubtabId = 'tierPaidPanel';
+let activeSubtabId = 'smartRankingsPanel';
 let suppressRouteSync = false;
 
 const subtabPathSlugMap = {
-  tierPaidPanel: 'executortierlistpaid',
-  tierFreePanel: 'executortierlistfree',
+  smartRankingsPanel: 'rankings',
+  comparisonPanel: 'comparison',
   popularScriptsPanel: 'popularscripts',
   savedScriptsPanel: 'savedscripts',
   recentChangesPanel: 'recentchanges'
@@ -1285,7 +1401,7 @@ function getRouteStateFromPath(pathname) {
   }
 
   let pageId = 'executorsPage';
-  let subtabId = 'tierPaidPanel';
+  let subtabId = 'smartRankingsPanel';
 
   if (segments[cursor] === 'dodge') {
     pageId = 'easterEggPage';
@@ -1310,7 +1426,7 @@ function buildPathFromState() {
   const base = isNewUiMode ? '/newui' : '';
   if (activePageId === 'scriptsPage') {
     const subtabSegment = subtabPathSlugMap[activeSubtabId];
-    if (subtabSegment && activeSubtabId !== 'tierPaidPanel') return `${base}/scripthub/${subtabSegment}`;
+    if (subtabSegment && activeSubtabId !== 'smartRankingsPanel') return `${base}/scripthub/${subtabSegment}`;
     return `${base}/scripthub`;
   }
 
@@ -1390,6 +1506,80 @@ function animateMainContentTransition() {
   restartAnimationClass(qs('.main-content'), 'is-view-switching');
 }
 
+function shouldReduceMotion() {
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+}
+
+function getSubtabMotionItems(panel) {
+  if (!panel) return [];
+  return Array.from(
+    panel.querySelectorAll(':scope > *:not([hidden]), .rank-item, .script-card, .saved-script-item, .smart-ranking-card, .smart-ranking-hero, .comparison-table-wrap, .comparison-selector')
+  );
+}
+
+function stopAnimations(animations = []) {
+  animations.forEach(animation => {
+    try {
+      animation.cancel();
+    } catch {
+      // no-op
+    }
+  });
+}
+
+function animateSubtabMotion(panel, { direction, phase }) {
+  if (!panel) return [];
+  const animations = [];
+  const offset = direction === 'forward' ? 28 : -28;
+  const isEntering = phase === 'enter';
+  const panelAnimation = panel.animate(
+    isEntering
+      ? [
+          { opacity: 0, transform: `translate3d(${offset}px,0,0) scale(0.998)` },
+          { opacity: 1, transform: 'translate3d(0,0,0) scale(1)' }
+        ]
+      : [
+          { opacity: 1, transform: 'translate3d(0,0,0) scale(1)' },
+          { opacity: 0, transform: `translate3d(${-offset * 0.72}px,0,0) scale(0.998)` }
+        ],
+    {
+      duration: isEntering ? 300 : 240,
+      easing: 'cubic-bezier(.33,.74,.2,1)',
+      fill: 'both'
+    }
+  );
+  animations.push(panelAnimation);
+
+  const motionItems = getSubtabMotionItems(panel).slice(0, 20);
+  motionItems.forEach((item, index) => {
+    if (item === panel) return;
+    const itemOffset = offset * (isEntering ? 0.74 : 0.5);
+    const animation = item.animate(
+      isEntering
+        ? [
+            { opacity: 0, transform: `translate3d(${itemOffset}px,0,0)` },
+            { opacity: 1, transform: 'translate3d(0,0,0)' }
+          ]
+        : [
+            { opacity: 1, transform: 'translate3d(0,0,0)' },
+            { opacity: 0, transform: `translate3d(${-itemOffset}px,0,0)` }
+          ],
+      {
+        duration: isEntering ? 280 : 210,
+        delay: Math.min(index * 16, 120),
+        easing: 'cubic-bezier(.33,.74,.2,1)',
+        fill: 'both'
+      }
+    );
+    animations.push(animation);
+  });
+
+  return animations;
+}
+
+let activeSubtabTransitionToken = 0;
+let activeSubtabAnimations = [];
+
 function setActivePage(targetPageId) {
   if (targetPageId === activePageId) return;
 
@@ -1430,20 +1620,23 @@ function setActiveSubtab(targetSubtabId) {
   const previousPanel = qs(`#${activeSubtabId}`);
   if (!nextPanel) return;
 
-  const tabOrder = ['tierPaidPanel', 'tierFreePanel', 'popularScriptsPanel', 'savedScriptsPanel', 'recentChangesPanel'];
+  const tabOrder = ['smartRankingsPanel', 'comparisonPanel', 'popularScriptsPanel', 'savedScriptsPanel', 'recentChangesPanel'];
   const previousIndex = tabOrder.indexOf(activeSubtabId);
   const nextIndex = tabOrder.indexOf(targetSubtabId);
   const direction = nextIndex > previousIndex ? 'forward' : 'backward';
-  if (!previousPanel || typeof nextPanel.animate !== 'function' || typeof previousPanel.animate !== 'function') {
+  stopAnimations(activeSubtabAnimations);
+  activeSubtabAnimations = [];
+
+  if (!previousPanel || typeof nextPanel.animate !== 'function' || typeof previousPanel.animate !== 'function' || shouldReduceMotion()) {
     qsa('.subtab-panel').forEach(panel => {
       panel.hidden = panel.id !== targetSubtabId;
     });
   } else {
+    const transitionToken = ++activeSubtabTransitionToken;
     const wrapper = previousPanel.parentElement;
-    const outgoingTransform = direction === 'forward' ? 'translateX(-42px)' : 'translateX(42px)';
-    const incomingFrom = direction === 'forward' ? 'translateX(42px)' : 'translateX(-42px)';
     const wrapperHeight = Math.max(previousPanel.offsetHeight, nextPanel.offsetHeight);
     wrapper.style.position = 'relative';
+    wrapper.style.overflow = 'clip';
     wrapper.style.minHeight = `${wrapperHeight}px`;
 
     previousPanel.hidden = false;
@@ -1455,17 +1648,15 @@ function setActiveSubtab(targetSubtabId) {
     nextPanel.style.position = 'absolute';
     nextPanel.style.inset = '0';
     nextPanel.style.width = '100%';
+    nextPanel.style.pointerEvents = 'none';
 
-    const outgoing = previousPanel.animate(
-      [{ opacity: 1, transform: 'translateX(0)' }, { opacity: 0, transform: outgoingTransform }],
-      { duration: 260, easing: 'cubic-bezier(.22,.84,.25,1)', fill: 'forwards' }
-    );
-    const incoming = nextPanel.animate(
-      [{ opacity: 0, transform: incomingFrom }, { opacity: 1, transform: 'translateX(0)' }],
-      { duration: 300, easing: 'cubic-bezier(.2,.9,.26,1)', fill: 'forwards' }
-    );
+    const outgoingAnimations = animateSubtabMotion(previousPanel, { direction, phase: 'exit' });
+    const incomingAnimations = animateSubtabMotion(nextPanel, { direction, phase: 'enter' });
+    activeSubtabAnimations = [...outgoingAnimations, ...incomingAnimations];
+    const finishedAnimations = activeSubtabAnimations.map(animation => animation.finished.catch(() => null));
 
-    Promise.allSettled([outgoing.finished, incoming.finished]).then(() => {
+    Promise.allSettled(finishedAnimations).then(() => {
+      if (transitionToken !== activeSubtabTransitionToken) return;
       previousPanel.hidden = true;
       [previousPanel, nextPanel].forEach(panel => {
         panel.style.position = '';
@@ -1474,7 +1665,10 @@ function setActiveSubtab(targetSubtabId) {
         panel.style.opacity = '';
         panel.style.transform = '';
       });
+      nextPanel.style.pointerEvents = '';
       wrapper.style.minHeight = '';
+      wrapper.style.overflow = '';
+      activeSubtabAnimations = [];
     });
   }
   activeSubtabId = targetSubtabId;
@@ -1490,8 +1684,8 @@ function injectLegendIcons() {
 }
 
 function initScriptsHub() {
-  renderTierList('tierPaidList', scriptsHubData.tierListPaid);
-  renderTierList('tierFreeList', scriptsHubData.tierListFree);
+  renderSmartRankings();
+  renderComparisonSystem();
   renderPopularScripts();
   renderRecentChanges();
   renderSavedScriptsList();
