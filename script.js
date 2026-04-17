@@ -1,24 +1,5 @@
 const products = [
   {
-    name: 'Pluton',
-    featured: false,
-    platform: ['Windows', 'Android', 'iOS', 'macOS'],
-    cheatType: 'Internal',
-    keySystem: 'Keyless',
-    tags: ['Trending', 'Internal'],
-    features: [],
-    sunc: 100,
-    description: 'Pluton Executor is a next-gen Roblox executor built for raw performance and stealth, featuring a custom Lua VM, instant injection, and adaptive hot-patching to stay resilient against modern anti-cheat updates',
-    pros: ['High sUNC', 'AntiCheat Bypass', 'Instant Injection', 'High stability'],
-    cons: ['Can conflict with antivirus software', 'Setup complexity is higher than average'],
-    pricingOptions: ['Free plan available', '1 Week — $4.99', '1 Month — $13.99'],
-    freeOrPaid: 'both',
-    stability: 'Stable',
-    trustLevel: 'High',
-    status: 'Undetected',
-    officialSite: 'https://github.com/plutoxqq/Pluton-Executor'
-  },
-  {
     name: 'Potassium',
     featured: true,
     platform: ['Windows'],
@@ -26,7 +7,7 @@ const products = [
     keySystem: 'Keyless',
     tags: ['Verified', 'Internal'],
     features: ['Decompiler', 'Kernel', 'Multi-instance'],
-    sunc: 98,
+    sunc: 100,
     description: 'Solid lifetime Windows executor with reliable execution performance',
     pros: ['Lifetime access', 'Solid execution'],
     cons: ['Higher upfront cost'],
@@ -77,7 +58,7 @@ const products = [
   },
   {
     name: 'Xeno',
-    featured: false,
+    featured: true,
     platform: ['Windows'],
     cheatType: 'Internal',
     keySystem: 'Keyless',
@@ -153,7 +134,7 @@ const products = [
   },
   {
     name: 'Seliware',
-    featured: true,
+    featured: false,
     platform: ['Windows'],
     cheatType: 'Internal',
     keySystem: 'Keyless',
@@ -952,7 +933,7 @@ function openSettingsModal() {
         <h3>Gameplay</h3>
         <div class="settings-actions">
           <button id="settingsPlayDodgeBtn" class="btn-primary settings-action-btn" type="button">Play Dodge</button>
-          <button id="settingsBetaFeaturesBtn" class="btn-primary settings-action-btn" type="button">${getBetaFeaturesEnabled() ? 'Disable BETA Features' : 'Enable BETA Features'}</button>
+          <button id="settingsBetaFeaturesBtn" class="btn-primary settings-action-btn" type="button">BETA Features (Coming Soon)</button>
         </div>
       </div>
       <div class="settings-group">
@@ -1002,9 +983,7 @@ function openSettingsModal() {
 
   const betaBtn = qs('#settingsBetaFeaturesBtn');
   betaBtn?.addEventListener('click', () => {
-    const enabled = !getBetaFeaturesEnabled();
-    setBetaFeaturesEnabled(enabled);
-    openSettingsModal();
+    window.alert('BETA toggle is temporarily disabled. All Dodge features are already enabled by default.');
   });
 
   const authFeedback = qs('#settingsAuthFeedback');
@@ -1096,24 +1075,14 @@ function estimatedPriceValue(product) {
 }
 
 function computeSmartRanking() {
-  const monthSeed = Number(new Date().toISOString().slice(0, 7).replace('-', '')) || 0;
-  const freeCandidates = products.filter(item => item.freeOrPaid !== 'paid').sort((a, b) => (b.sunc || 0) - (a.sunc || 0));
-  const safestCandidates = [...products].sort((a, b) => detectionRiskScore(a) - detectionRiskScore(b) || (b.sunc || 0) - (a.sunc || 0));
-  const beginnerCandidates = [...products].sort((a, b) => {
-    const aScore = (a.freeOrPaid !== 'paid' ? 2 : 0) + (a.keySystem === 'Keyless' ? 2 : 0) + (stabilityScoreMap[a.stability] || 4) + (10 - detectionRiskScore(a));
-    const bScore = (b.freeOrPaid !== 'paid' ? 2 : 0) + (b.keySystem === 'Keyless' ? 2 : 0) + (stabilityScoreMap[b.stability] || 4) + (10 - detectionRiskScore(b));
-    return bScore - aScore;
-  });
-  const powerCandidates = [...products].sort((a, b) => (b.sunc || 0) - (a.sunc || 0));
-
-  const freePick = freeCandidates.length ? freeCandidates[monthSeed % Math.min(4, freeCandidates.length)] : null;
+  const byName = name => products.find(item => item.name.toLowerCase() === name.toLowerCase()) || null;
   return {
     monthLabel: new Date().toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
     categories: [
-      { id: 'bestFree', title: scriptsHubData.smartRankingLabels.bestFree, executor: freePick, note: 'Prioritizes free access, solid stability, and consistent script compatibility this month.' },
-      { id: 'safest', title: scriptsHubData.smartRankingLabels.safest, executor: safestCandidates[0] || null, note: 'Favors lower detection pressure, healthier trust indicators, and stable availability.' },
-      { id: 'beginners', title: scriptsHubData.smartRankingLabels.beginners, executor: beginnerCandidates[0] || null, note: 'Balances accessibility, simpler setup, and lower practical risk for new users.' },
-      { id: 'powerful', title: scriptsHubData.smartRankingLabels.powerful, executor: powerCandidates[0] || null, note: 'Targets high execution strength with stronger capability ceilings and speed.' }
+      { id: 'bestFree', title: scriptsHubData.smartRankingLabels.bestFree, executor: byName('Velocity'), note: 'Velocity is the current best free option for users prioritizing quick setup and no upfront payment.' },
+      { id: 'safest', title: scriptsHubData.smartRankingLabels.safest, executor: byName('Xeno'), note: 'Xeno is the safest right now for users who want stable baseline behavior with lower practical risk.' },
+      { id: 'beginners', title: scriptsHubData.smartRankingLabels.beginners, executor: byName('JJSploit'), note: 'JJSploit is the best starting point for beginners because of its simple workflow and low onboarding friction.' },
+      { id: 'powerful', title: scriptsHubData.smartRankingLabels.powerful, executor: byName('Potassium'), note: 'Potassium is currently the most powerful pick with top-end execution strength and full 100% sUNC.' }
     ]
   };
 }
@@ -1235,7 +1204,7 @@ function renderPopularScripts() {
   wrap.innerHTML = scriptsHubData.popularScripts.map(item => `
     <article class="script-card">
       <div class="script-card-head">
-        <h4 class="script-card-title"><span class="script-file-icon">${popularScriptFileSvg}</span>${escapeHtml(item.name)}</h4>
+        <h4 class="script-card-title">${escapeHtml(item.name)}</h4>
         <div class="script-card-meta">
           <span>${escapeHtml(stripTrailingPeriod(item.game))}</span>
           <button class="script-copy-btn" type="button" data-script-copy="${escapeHtml(item.script)}" title="Copy script" aria-label="Copy script">

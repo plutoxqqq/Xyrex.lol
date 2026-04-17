@@ -164,7 +164,7 @@
     return fallback;
   };
   const pick = items => items[Math.floor(Math.random() * items.length)];
-  const betaFeaturesEnabled = () => localStorage.getItem('xyrex_beta_features') === 'enabled';
+  const betaFeaturesEnabled = () => true;
   const localDayKey = () => {
     const now = new Date();
     const year = now.getFullYear();
@@ -422,7 +422,7 @@
     }
 
     isBetaEnabled() {
-      return betaFeaturesEnabled();
+      return true;
     }
     isTouchDevice() {
       const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
@@ -543,9 +543,9 @@
         <section class="xy-dodge-shell" data-beta="${betaEnabled}" aria-label="Xyrex Dodge">
           <section class="xy-dodge-hero">
             <div class="xy-dodge-heading">
-              <span class="xy-dodge-kicker">${betaEnabled ? 'Beta Features active' : 'Classic layout active'}</span>
+              <span class="xy-dodge-kicker">Full features enabled</span>
               <h2>Xyrex Dodge</h2>
-              <p class="xy-dodge-hero-copy">The beta overhaul is now tighter and easier to read, with compact tabs, animations, and progression features that stay gated behind Beta Features.</p>
+              <p class="xy-dodge-hero-copy">Dodge is running with the full feature set enabled, including progression systems, missions, and responsive controls.</p>
               <div class="xy-dodge-stat-grid">
                 <div class="xy-dodge-chip"><span>Coins</span><strong id="xyBank">0</strong></div>
                 <div class="xy-dodge-chip"><span>Best</span><strong id="xyBest">0</strong></div>
@@ -561,7 +561,7 @@
                 <div class="xy-dodge-mini-card"><span>Story</span><strong id="xyStoryProgressLabel">0 / ${STORY_CHAPTERS.length}</strong><small>Sector progress.</small></div>
                 <div class="xy-dodge-mini-card"><span>Theme</span><strong id="xyVisualThemeLabel">Neon</strong><small>Unlockable visuals.</small></div>
               </div>
-              <div id="xyBetaNotice" class="xy-dodge-toast" data-tone="warning" ${betaEnabled ? 'hidden' : ''}>Beta Features are disabled. Enable them in Settings to unlock Story mode, additional game modes, missions, and the new responsive interface.</div>
+              <div id="xyBetaNotice" class="xy-dodge-toast" data-tone="ok">All advanced Dodge features are enabled by default in this build.</div>
             </div>
           </section>
 
@@ -599,7 +599,7 @@
               <section class="xy-dodge-panel">
                 <h3>Status</h3>
                 <div id="xyStatus" class="xy-dodge-toast">Ready</div>
-                <small>${betaEnabled ? 'Compact beta layout enabled. Tabs, animations, and advanced progression are active.' : 'Beta Features are disabled, so Dodge stays on the compact classic layout with only progression boosts.'}</small>
+                <small>${betaEnabled ? 'Full feature layout enabled with tabs, animations, and advanced progression active.' : 'Full feature layout enabled with tabs, animations, and advanced progression active.'}</small>
               </section>
               <section class="xy-dodge-panel xy-dodge-panel--mission">
                 <h3>Daily objective</h3>
@@ -614,7 +614,7 @@
                 </div>
               </section>
               <section class="xy-dodge-panel xy-dodge-panel--beta" id="xyCheatCard" ${betaEnabled ? '' : 'hidden'}>
-                <h3>Beta Utilities</h3>
+                <h3>Utilities</h3>
                 <label class="xy-dodge-utility-label"><input type="checkbox" data-cheat="autoplay" /> Auto Play</label>
                 <label class="xy-dodge-utility-label"><input type="checkbox" data-cheat="nodeath" /> No Death</label>
                 <label class="xy-dodge-utility-label"><input type="checkbox" data-cheat="slowtime" /> Slow Time</label>
@@ -723,10 +723,21 @@
       this.handleKeyUp = () => {};
     }
 
+
+    refreshThemePresentation() {
+      this.updateThemeColors();
+      const styleTag = document.getElementById('xyrex-dodge-beta-style');
+      if (styleTag) styleTag.remove();
+      injectStyles();
+      this.syncUi();
+    }
+
     attachGlobalListeners() {
       this.keys = { left: false, right: false };
       this.onResize = () => this.applyResponsiveState();
+      this.onThemeUpdate = () => this.refreshThemePresentation();
       window.addEventListener('resize', this.onResize);
+      window.addEventListener('xyrex:theme-updated', this.onThemeUpdate);
       window.XyrexAccountScope?.onAccountChange?.(() => {
         this.data = this.loadData();
         this.storyChapter = this.resolveStoryChapter();
@@ -760,7 +771,7 @@
           </button>
         `).join('');
       const selected = GAME_MODES[betaEnabled ? this.data.selectedMode : 'Classic'] || GAME_MODES.Classic;
-      return `<div class="xy-dodge-panel"><p>${betaEnabled ? 'Switching modes instantly restarts the current run so the rules always stay accurate.' : 'Classic layout keeps only Classic mode active until Beta Features are enabled in Settings.'}</p></div><div class="xy-dodge-mode-grid">${cards}</div><div class="xy-dodge-panel"><strong>Current mode effect</strong><p>${selected.description}</p><small>${selected.objective}</small></div>`;
+      return `<div class="xy-dodge-panel"><p>${betaEnabled ? 'Switching modes instantly restarts the current run so the rules always stay accurate.' : 'Switching modes instantly restarts the current run so the rules always stay accurate.'}</p></div><div class="xy-dodge-mode-grid">${cards}</div><div class="xy-dodge-panel"><strong>Current mode effect</strong><p>${selected.description}</p><small>${selected.objective}</small></div>`;
     }
 
     renderProgressionTab() {
@@ -784,14 +795,14 @@
         <div class="xy-dodge-panel" style="padding:0; background:none; border:none; box-shadow:none;">
           <div class="xy-dodge-story-card">
             <strong>Progress overview</strong>
-            <p>${this.isBetaEnabled() ? this.storyChapter.briefing : 'Classic mode keeps your score, runs, and unlocks active while advanced progression stays disabled.'}</p>
+            <p>${this.storyChapter.briefing}</p>
             <div class="xy-dodge-progress"><span style="width:${((storyProgress) / STORY_CHAPTERS.length) * 100}%"></span></div>
           </div>
           ${storyCards}
           <div class="xy-dodge-story-card">
             <strong>Long-term progression</strong>
             <p>Your best score is <strong>${this.data.bestScore || 0}</strong>, total runs are <strong>${this.data.totalRuns || 0}</strong>, and your best combo is <strong>${this.data.longestCombo || 0}</strong>.</p>
-            <small>${this.isBetaEnabled() ? 'Story sectors unlock in order and reward coins once.' : 'Enable Beta Features to unlock multi-mode progression and story sectors.'}</small>
+            <small>Story sectors unlock in order and reward coins once.</small>
           </div>
         </div>
       `;
@@ -1107,6 +1118,7 @@
       clearTimeout(this.statusTimer);
       clearTimeout(this.syncTimer);
       window.removeEventListener('resize', this.onResize);
+      window.removeEventListener('xyrex:theme-updated', this.onThemeUpdate);
       this.mount.innerHTML = '';
     }
 

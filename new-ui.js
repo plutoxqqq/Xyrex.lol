@@ -131,12 +131,14 @@
         root.style.setProperty(cssVar, value);
       }
     });
+    window.dispatchEvent(new Event('xyrex:theme-updated'));
   }
   function clearThemeOverrides() {
     const root = document.documentElement;
     themeFields.forEach(([, cssVar]) => {
       root.style.removeProperty(cssVar);
     });
+    window.dispatchEvent(new Event('xyrex:theme-updated'));
   }
   function closeThemeModal() {
     const modal = document.getElementById(THEME_MODAL_ID);
