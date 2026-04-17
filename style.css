@@ -268,7 +268,7 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 .subtab-panel.subtab-slide-backward-in{ animation:subtabSlideBackwardIn .26s var(--motion-ease-entrance); }
 .subtab-panel.subtab-slide-backward-out{ animation:subtabSlideBackwardOut .22s var(--motion-ease-exit); pointer-events:none; }
 .script-card,.rank-item,.saved-script-item,.smart-ranking-card{ transition:transform 360ms cubic-bezier(.2,.8,.2,1), opacity 320ms cubic-bezier(.2,.8,.2,1), border-color 220ms cubic-bezier(.22,.64,.24,1), box-shadow 280ms cubic-bezier(.22,.64,.24,1); }
-.script-card:hover,.rank-item:hover,.saved-script-item:hover,.smart-ranking-card:hover{ transform:translate3d(0,-2px,0); }
+.script-card:hover,.rank-item:hover,.saved-script-item:hover,.smart-ranking-card:hover{ transform:scale(1.006); }
 .subtab-panel.animate-in-subtab .script-card,.subtab-panel.animate-in-subtab .rank-item{ animation:cardEnter var(--motion-med) var(--motion-ease-entrance); }
 .subtab-panel h3{ margin:0; }
 .rank-list,.script-list,.saved-script-list{ margin-top:12px; display:grid; gap:10px; }
@@ -418,8 +418,8 @@ body.easter-game-mode .xy-sidepanel{ max-height:min(56dvh, 560px); overflow-y:au
 }
 
 @keyframes subtabFadeIn{
-  0%{ opacity:0; transform:translate3d(0,10px,0) scale(.992); }
-  100%{ opacity:1; transform:translate3d(0,0,0) scale(1); }
+  0%{ opacity:0; transform:translate3d(18px,0,0); }
+  100%{ opacity:1; transform:translate3d(0,0,0); }
 }
 @keyframes subtabSlideForwardIn{
   0%{ opacity:.22; transform:translate3d(36px,0,0); }
@@ -439,8 +439,8 @@ body.easter-game-mode .xy-sidepanel{ max-height:min(56dvh, 560px); overflow-y:au
 }
 
 @keyframes cardEnter{
-  0%{ opacity:0; transform:translate3d(0,14px,0) scale(.986); filter:saturate(.9); }
-  100%{ opacity:1; transform:translate3d(0,0,0) scale(1); filter:saturate(1); }
+  0%{ opacity:0; transform:translate3d(16px,0,0); filter:saturate(.92); }
+  100%{ opacity:1; transform:translate3d(0,0,0); filter:saturate(1); }
 }
 
 @keyframes overlayFadeIn{

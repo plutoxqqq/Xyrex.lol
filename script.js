@@ -1530,21 +1530,21 @@ function stopAnimations(animations = []) {
 function animateSubtabMotion(panel, { direction, phase }) {
   if (!panel) return [];
   const animations = [];
-  const offset = direction === 'forward' ? 28 : -28;
+  const offset = direction === 'forward' ? 34 : -34;
   const isEntering = phase === 'enter';
   const panelAnimation = panel.animate(
     isEntering
       ? [
-          { opacity: 0, transform: `translate3d(${offset}px,0,0) scale(0.998)` },
-          { opacity: 1, transform: 'translate3d(0,0,0) scale(1)' }
+          { opacity: 0, transform: `translate3d(${offset}px,0,0)` },
+          { opacity: 1, transform: 'translate3d(0,0,0)' }
         ]
       : [
-          { opacity: 1, transform: 'translate3d(0,0,0) scale(1)' },
-          { opacity: 0, transform: `translate3d(${-offset * 0.72}px,0,0) scale(0.998)` }
+          { opacity: 1, transform: 'translate3d(0,0,0)' },
+          { opacity: 0, transform: `translate3d(${-offset * 0.74}px,0,0)` }
         ],
     {
-      duration: isEntering ? 300 : 240,
-      easing: 'cubic-bezier(.33,.74,.2,1)',
+      duration: isEntering ? 320 : 250,
+      easing: 'cubic-bezier(.4,0,.2,1)',
       fill: 'both'
     }
   );
@@ -1565,9 +1565,9 @@ function animateSubtabMotion(panel, { direction, phase }) {
             { opacity: 0, transform: `translate3d(${-itemOffset}px,0,0)` }
           ],
       {
-        duration: isEntering ? 280 : 210,
-        delay: Math.min(index * 16, 120),
-        easing: 'cubic-bezier(.33,.74,.2,1)',
+        duration: isEntering ? 300 : 230,
+        delay: Math.min(index * 14, 110),
+        easing: 'cubic-bezier(.4,0,.2,1)',
         fill: 'both'
       }
     );
