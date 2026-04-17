@@ -534,18 +534,12 @@ const products = [
 ];
 
 const scriptsHubData = {
-  tierListPaid: [
-    { tier: '1', executor: 'Pluton', notes: 'Top paid pick for balanced performance, consistency, and support coverage' },
-    { tier: '2', executor: 'Potassium', notes: 'Strong feature depth with excellent sUNC support, but trust concerns remain' },
-    { tier: '3', executor: 'Seliware', notes: 'Smooth execution and polished UX, with occasional detection instability' },
-    { tier: '4', executor: 'Volcano', notes: 'Stable long-term option with reliable execution, but comparatively expensive' }
-  ],
-  tierListFree: [
-    { tier: '1', executor: 'Pluton', notes: 'Best free overall package right now with broad platform support' },
-    { tier: '2', executor: 'Velocity', notes: 'Fast keyless free option with modern tooling and customization' },
-    { tier: '3', executor: 'Solara', notes: 'Reliable free Windows option with steady day-to-day stability' },
-    { tier: '4', executor: 'JJSploit', notes: 'Beginner-friendly choice with a simplified workflow' }
-  ],
+  smartRankingLabels: {
+    bestFree: 'Best Free',
+    safest: 'Safest Right Now',
+    beginners: 'Best for Beginners',
+    powerful: 'Most Powerful'
+  },
   popularScripts: [
     {
       name: 'Voidware Bedwars',
@@ -555,20 +549,14 @@ const scriptsHubData = {
     }
   ],
   recentChanges: [
-    'Expanded the Executors tab with updated free, paid, premium, mobile, Mac, and legacy options plus normalized pricing, pros, and cons formatting',
-    'Revamped the New UI with a modern visual refresh and a modal-based Theme Customizer',
-    'Added route-aware navigation for /scripthub and /newui paths, including Script Hub subtabs and browser history support',
-    'Improved AI Insight reliability with retry and backoff handling, stronger timeout behavior, and cached successful responses',
-    'Added Official Discord links in the top navigation and executor modal, then refined the top navigation to a clean icon-only Discord logo',
-    'Fixed refresh behavior for subpage routes by funneling all route entrypoints to the latest root build',
-    'Reworked Theme Customizer to control the full site mood with complete palette overrides',
-    'Redesigned Theme Customizer with Basic and Advanced subtabs and added five pastel preset circles for one-click themes',
-    'Fixed pink theme mood mapping so New UI surfaces, panels, cards, and overlays now fully follow the selected palette',
-    'Expanded New UI theme application so all blue UI surfaces now follow the selected palette, including buttons, search, Script Hub controls, and form elements',
-    'Hardened route bootstrap parsing so refreshing any tab reliably restores executors and New UI state',
-    'Finalized full theme propagation for tier lists, popular scripts, saved scripts, recent changes, featured executor highlights, and themed scrollbars'
+    'Rebuilt AI Insight output to use concise expert analysis with best-fit guidance, clear avoidance criteria, explicit risk level, and confidence scoring',
+    'Replaced static free and paid tier tabs with dynamic Smart Rankings that rotate categories for Best Free, Safest, Beginner Friendly, and Most Powerful picks',
+    'Added a full executor comparison system in Scripts Hub with 2 to 3 selection controls, value highlighting, and side-by-side reliability metrics',
+    'Expanded Dodge progression with daily claim streak tracking, streak-based bonus rewards, and unlockable visual themes that can be purchased and equipped',
+    'Improved mobile usability with larger touch targets, responsive comparison layouts, and overflow-safe panels to keep one-thumb navigation clean and stable'
   ]
 };
+
 
 const XYREX_OFFICIAL_DISCORD_URL = 'https://discord.gg/6YXCAQYY';
 
@@ -596,6 +584,10 @@ const tagSymbolMap = {
   Internal: { symbol: 'I', cls: 'internal' },
   External: { symbol: 'E', cls: 'external' }
 };
+
+const trustRiskMap = { High: 2, Medium: 5, Low: 8, Unknown: 7 };
+const stabilityScoreMap = { Stable: 9, High: 8, Mixed: 6, Basic: 4, Unstable: 3, Unknown: 4 };
+
 
 function escapeHtml(str) {
   if (!str) return '';
@@ -659,6 +651,10 @@ function createProductCard(product, index) {
   card.dataset.status = product.status || '';
   card.dataset.trustLevel = product.trustLevel || '';
   card.dataset.stability = product.stability || '';
+  card.dataset.platform = (product.platform || []).join(', ');
+  card.dataset.keySystem = product.keySystem || '';
+  card.dataset.tags = (product.tags || []).join(', ');
+  card.dataset.execution = Number.isFinite(product.sunc) ? (product.sunc >= 95 ? 'High' : product.sunc >= 80 ? 'Medium' : 'Low') : 'Unknown';
 
   const body = document.createElement('div');
   body.className = 'card-body';
@@ -1075,14 +1071,162 @@ function closeModal() {
   }, 190);
 }
 
-function renderTierList(containerId, entries) {
-  const wrap = qs(`#${containerId}`);
+function detectionRiskScore(product) {
+  let score = trustRiskMap[product.trustLevel] ?? 7;
+  const status = String(product.status || '').toLowerCase();
+  if (status.includes('detected')) score += 2;
+  if (status.includes('down')) score += 2;
+  if (status.includes('issue')) score += 1;
+  if (status.includes('undetected')) score -= 1;
+  return Math.max(1, Math.min(10, score));
+}
+
+function detectionRiskLabel(product) {
+  const score = detectionRiskScore(product);
+  if (score <= 3) return 'Low';
+  if (score <= 6) return 'Medium';
+  return 'High';
+}
+
+function estimatedPriceValue(product) {
+  const joined = (product.pricingOptions || []).join(' ');
+  const numbers = (joined.match(/\d+(?:\.\d+)?/g) || []).map(Number).filter(Number.isFinite);
+  if (!numbers.length) return product.freeOrPaid === 'free' ? 0 : 999;
+  return Math.min(...numbers);
+}
+
+function computeSmartRanking() {
+  const monthSeed = Number(new Date().toISOString().slice(0, 7).replace('-', '')) || 0;
+  const freeCandidates = products.filter(item => item.freeOrPaid !== 'paid').sort((a, b) => (b.sunc || 0) - (a.sunc || 0));
+  const safestCandidates = [...products].sort((a, b) => detectionRiskScore(a) - detectionRiskScore(b) || (b.sunc || 0) - (a.sunc || 0));
+  const beginnerCandidates = [...products].sort((a, b) => {
+    const aScore = (a.freeOrPaid !== 'paid' ? 2 : 0) + (a.keySystem === 'Keyless' ? 2 : 0) + (stabilityScoreMap[a.stability] || 4) + (10 - detectionRiskScore(a));
+    const bScore = (b.freeOrPaid !== 'paid' ? 2 : 0) + (b.keySystem === 'Keyless' ? 2 : 0) + (stabilityScoreMap[b.stability] || 4) + (10 - detectionRiskScore(b));
+    return bScore - aScore;
+  });
+  const powerCandidates = [...products].sort((a, b) => (b.sunc || 0) - (a.sunc || 0));
+
+  const freePick = freeCandidates.length ? freeCandidates[monthSeed % Math.min(4, freeCandidates.length)] : null;
+  return {
+    monthLabel: new Date().toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
+    categories: [
+      { id: 'bestFree', title: scriptsHubData.smartRankingLabels.bestFree, executor: freePick, note: 'Prioritizes free access, solid stability, and consistent script compatibility this month.' },
+      { id: 'safest', title: scriptsHubData.smartRankingLabels.safest, executor: safestCandidates[0] || null, note: 'Favors lower detection pressure, healthier trust indicators, and stable availability.' },
+      { id: 'beginners', title: scriptsHubData.smartRankingLabels.beginners, executor: beginnerCandidates[0] || null, note: 'Balances accessibility, simpler setup, and lower practical risk for new users.' },
+      { id: 'powerful', title: scriptsHubData.smartRankingLabels.powerful, executor: powerCandidates[0] || null, note: 'Targets high execution strength with stronger capability ceilings and speed.' }
+    ]
+  };
+}
+
+let smartRankingRotationTimer = 0;
+let activeSmartRankingIndex = 0;
+
+function renderSmartRankings() {
+  const wrap = qs('#smartRankingSections');
   if (!wrap) return;
-  wrap.innerHTML = entries.map(entry => `
-    <article class="rank-item rank-tier-${escapeHtml(String(entry.tier || '').toLowerCase())}">
-      <div class="rank-badge"><span>${escapeHtml(entry.tier)}</span></div>
-      <div><h4>${escapeHtml(entry.executor)}</h4><p>${escapeHtml(entry.notes)}</p></div>
-    </article>`).join('');
+  const ranking = computeSmartRanking();
+  const selected = ranking.categories[activeSmartRankingIndex % ranking.categories.length];
+
+  wrap.innerHTML = `
+    <article class="smart-ranking-hero">
+      <p class="smart-ranking-kicker">Updated for ${escapeHtml(ranking.monthLabel)}</p>
+      <h4>${escapeHtml(selected.title)}</h4>
+      <p class="smart-ranking-executor">${escapeHtml(selected.executor?.name || 'Unavailable')}</p>
+      <p>${escapeHtml(selected.note)}</p>
+    </article>
+    <div class="smart-ranking-grid">
+      ${ranking.categories.map((entry, index) => `
+        <button class="smart-ranking-card ${index === (activeSmartRankingIndex % ranking.categories.length) ? 'is-active' : ''}" data-smart-ranking-index="${index}" type="button">
+          <span>${escapeHtml(entry.title)}</span>
+          <strong>${escapeHtml(entry.executor?.name || 'Unavailable')}</strong>
+          <small>Risk: ${escapeHtml(detectionRiskLabel(entry.executor || {}))}</small>
+        </button>
+      `).join('')}
+    </div>
+  `;
+
+  wrap.querySelectorAll('[data-smart-ranking-index]').forEach(button => {
+    button.addEventListener('click', () => {
+      activeSmartRankingIndex = Number(button.getAttribute('data-smart-ranking-index')) || 0;
+      renderSmartRankings();
+    });
+  });
+
+  if (smartRankingRotationTimer) window.clearInterval(smartRankingRotationTimer);
+  smartRankingRotationTimer = window.setInterval(() => {
+    activeSmartRankingIndex = (activeSmartRankingIndex + 1) % ranking.categories.length;
+    renderSmartRankings();
+  }, 9000);
+}
+
+let comparisonSelection = [];
+
+function renderComparisonSystem() {
+  const selector = qs('#comparisonSelector');
+  const tableWrap = qs('#comparisonTableWrap');
+  const table = qs('#comparisonTable');
+  if (!selector || !tableWrap || !table) return;
+
+  const sorted = [...products].sort((a, b) => a.name.localeCompare(b.name));
+  selector.innerHTML = sorted.map(product => {
+    const selected = comparisonSelection.includes(product.name);
+    return `<button type="button" class="compare-pick ${selected ? 'is-active' : ''}" data-compare-name="${escapeHtml(product.name)}">${escapeHtml(product.name)}</button>`;
+  }).join('');
+
+  selector.querySelectorAll('[data-compare-name]').forEach(button => {
+    button.addEventListener('click', () => {
+      const name = button.getAttribute('data-compare-name');
+      if (!name) return;
+      if (comparisonSelection.includes(name)) {
+        comparisonSelection = comparisonSelection.filter(item => item !== name);
+      } else if (comparisonSelection.length < 3) {
+        comparisonSelection = [...comparisonSelection, name];
+      }
+      renderComparisonSystem();
+    });
+  });
+
+  if (comparisonSelection.length < 2) {
+    tableWrap.hidden = true;
+    return;
+  }
+
+  const selectedProducts = comparisonSelection
+    .map(name => products.find(item => item.name === name))
+    .filter(Boolean)
+    .slice(0, 3);
+
+  const suncValues = selectedProducts.map(item => Number.isFinite(item.sunc) ? item.sunc : -1);
+  const stabilityValues = selectedProducts.map(item => stabilityScoreMap[item.stability] || 0);
+  const riskValues = selectedProducts.map(item => detectionRiskScore(item));
+  const priceValues = selectedProducts.map(item => estimatedPriceValue(item));
+  const platformValues = selectedProducts.map(item => (item.platform || []).length);
+
+  const bestSunc = Math.max(...suncValues);
+  const bestStability = Math.max(...stabilityValues);
+  const bestRisk = Math.min(...riskValues);
+  const bestPrice = Math.min(...priceValues);
+  const bestPlatform = Math.max(...platformValues);
+
+  const cell = (value, isBest) => `<td class="${isBest ? 'is-best' : ''}">${escapeHtml(String(value))}</td>`;
+
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Metric</th>
+        ${selectedProducts.map(item => `<th>${escapeHtml(item.name)}</th>`).join('')}
+      </tr>
+    </thead>
+    <tbody>
+      <tr><th>sUNC</th>${selectedProducts.map((item, idx) => cell(Number.isFinite(item.sunc) ? `${item.sunc}%` : 'None', suncValues[idx] === bestSunc)).join('')}</tr>
+      <tr><th>Stability</th>${selectedProducts.map((item, idx) => cell(item.stability, stabilityValues[idx] === bestStability)).join('')}</tr>
+      <tr><th>Detection risk</th>${selectedProducts.map((item, idx) => cell(`${detectionRiskLabel(item)} (${riskValues[idx]}/10)`, riskValues[idx] === bestRisk)).join('')}</tr>
+      <tr><th>Price</th>${selectedProducts.map((item, idx) => cell(item.pricingOptions?.[0] || item.freeOrPaid, priceValues[idx] === bestPrice)).join('')}</tr>
+      <tr><th>Platform</th>${selectedProducts.map((item, idx) => cell((item.platform || []).join(', '), platformValues[idx] === bestPlatform)).join('')}</tr>
+    </tbody>
+  `;
+
+  tableWrap.hidden = false;
 }
 
 function renderPopularScripts() {
@@ -1254,12 +1398,12 @@ async function applyUiMode() {
 }
 
 let activePageId = null;
-let activeSubtabId = 'tierPaidPanel';
+let activeSubtabId = 'smartRankingsPanel';
 let suppressRouteSync = false;
 
 const subtabPathSlugMap = {
-  tierPaidPanel: 'executortierlistpaid',
-  tierFreePanel: 'executortierlistfree',
+  smartRankingsPanel: 'rankings',
+  comparisonPanel: 'comparison',
   popularScriptsPanel: 'popularscripts',
   savedScriptsPanel: 'savedscripts',
   recentChangesPanel: 'recentchanges'
@@ -1285,7 +1429,7 @@ function getRouteStateFromPath(pathname) {
   }
 
   let pageId = 'executorsPage';
-  let subtabId = 'tierPaidPanel';
+  let subtabId = 'smartRankingsPanel';
 
   if (segments[cursor] === 'dodge') {
     pageId = 'easterEggPage';
@@ -1310,7 +1454,7 @@ function buildPathFromState() {
   const base = isNewUiMode ? '/newui' : '';
   if (activePageId === 'scriptsPage') {
     const subtabSegment = subtabPathSlugMap[activeSubtabId];
-    if (subtabSegment && activeSubtabId !== 'tierPaidPanel') return `${base}/scripthub/${subtabSegment}`;
+    if (subtabSegment && activeSubtabId !== 'smartRankingsPanel') return `${base}/scripthub/${subtabSegment}`;
     return `${base}/scripthub`;
   }
 
@@ -1430,7 +1574,7 @@ function setActiveSubtab(targetSubtabId) {
   const previousPanel = qs(`#${activeSubtabId}`);
   if (!nextPanel) return;
 
-  const tabOrder = ['tierPaidPanel', 'tierFreePanel', 'popularScriptsPanel', 'savedScriptsPanel', 'recentChangesPanel'];
+  const tabOrder = ['smartRankingsPanel', 'comparisonPanel', 'popularScriptsPanel', 'savedScriptsPanel', 'recentChangesPanel'];
   const previousIndex = tabOrder.indexOf(activeSubtabId);
   const nextIndex = tabOrder.indexOf(targetSubtabId);
   const direction = nextIndex > previousIndex ? 'forward' : 'backward';
@@ -1490,8 +1634,8 @@ function injectLegendIcons() {
 }
 
 function initScriptsHub() {
-  renderTierList('tierPaidList', scriptsHubData.tierListPaid);
-  renderTierList('tierFreeList', scriptsHubData.tierListFree);
+  renderSmartRankings();
+  renderComparisonSystem();
   renderPopularScripts();
   renderRecentChanges();
   renderSavedScriptsList();
