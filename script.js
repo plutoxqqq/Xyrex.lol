@@ -1510,29 +1510,75 @@ function shouldReduceMotion() {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
 }
 
-function animateSubtabChildren(panel) {
-  if (!panel || shouldReduceMotion()) return;
-  const items = Array.from(panel.querySelectorAll('.rank-item, .script-card, .saved-script-item, .smart-ranking-card, .smart-ranking-hero, .comparison-table-wrap, .comparison-selector'));
-  if (!items.length) return;
-  const maxAnimatedItems = 18;
-  const batch = items.slice(0, maxAnimatedItems);
-  batch.forEach((item, index) => {
-    item.animate(
-      [
-        { opacity: 0, transform: 'translate3d(0, 10px, 0) scale(0.992)' },
-        { opacity: 1, transform: 'translate3d(0, 0, 0) scale(1)' }
-      ],
-      {
-        duration: 420,
-        delay: Math.min(index * 22, 180),
-        easing: 'cubic-bezier(.18,.86,.22,1)',
-        fill: 'both'
-      }
-    );
+function getSubtabMotionItems(panel) {
+  if (!panel) return [];
+  return Array.from(
+    panel.querySelectorAll(':scope > *:not([hidden]), .rank-item, .script-card, .saved-script-item, .smart-ranking-card, .smart-ranking-hero, .comparison-table-wrap, .comparison-selector')
+  );
+}
+
+function stopAnimations(animations = []) {
+  animations.forEach(animation => {
+    try {
+      animation.cancel();
+    } catch {
+      // no-op
+    }
   });
 }
 
+function animateSubtabMotion(panel, { direction, phase }) {
+  if (!panel) return [];
+  const animations = [];
+  const offset = direction === 'forward' ? 28 : -28;
+  const isEntering = phase === 'enter';
+  const panelAnimation = panel.animate(
+    isEntering
+      ? [
+          { opacity: 0, transform: `translate3d(${offset}px,0,0) scale(0.998)` },
+          { opacity: 1, transform: 'translate3d(0,0,0) scale(1)' }
+        ]
+      : [
+          { opacity: 1, transform: 'translate3d(0,0,0) scale(1)' },
+          { opacity: 0, transform: `translate3d(${-offset * 0.72}px,0,0) scale(0.998)` }
+        ],
+    {
+      duration: isEntering ? 300 : 240,
+      easing: 'cubic-bezier(.33,.74,.2,1)',
+      fill: 'both'
+    }
+  );
+  animations.push(panelAnimation);
+
+  const motionItems = getSubtabMotionItems(panel).slice(0, 20);
+  motionItems.forEach((item, index) => {
+    if (item === panel) return;
+    const itemOffset = offset * (isEntering ? 0.74 : 0.5);
+    const animation = item.animate(
+      isEntering
+        ? [
+            { opacity: 0, transform: `translate3d(${itemOffset}px,0,0)` },
+            { opacity: 1, transform: 'translate3d(0,0,0)' }
+          ]
+        : [
+            { opacity: 1, transform: 'translate3d(0,0,0)' },
+            { opacity: 0, transform: `translate3d(${-itemOffset}px,0,0)` }
+          ],
+      {
+        duration: isEntering ? 280 : 210,
+        delay: Math.min(index * 16, 120),
+        easing: 'cubic-bezier(.33,.74,.2,1)',
+        fill: 'both'
+      }
+    );
+    animations.push(animation);
+  });
+
+  return animations;
+}
+
 let activeSubtabTransitionToken = 0;
+let activeSubtabAnimations = [];
 
 function setActivePage(targetPageId) {
   if (targetPageId === activePageId) return;
@@ -1578,6 +1624,9 @@ function setActiveSubtab(targetSubtabId) {
   const previousIndex = tabOrder.indexOf(activeSubtabId);
   const nextIndex = tabOrder.indexOf(targetSubtabId);
   const direction = nextIndex > previousIndex ? 'forward' : 'backward';
+  stopAnimations(activeSubtabAnimations);
+  activeSubtabAnimations = [];
+
   if (!previousPanel || typeof nextPanel.animate !== 'function' || typeof previousPanel.animate !== 'function' || shouldReduceMotion()) {
     qsa('.subtab-panel').forEach(panel => {
       panel.hidden = panel.id !== targetSubtabId;
@@ -1586,8 +1635,6 @@ function setActiveSubtab(targetSubtabId) {
   } else {
     const transitionToken = ++activeSubtabTransitionToken;
     const wrapper = previousPanel.parentElement;
-    const outgoingTransform = direction === 'forward' ? 'translate3d(-24px,0,0)' : 'translate3d(24px,0,0)';
-    const incomingFrom = direction === 'forward' ? 'translate3d(24px,0,0)' : 'translate3d(-24px,0,0)';
     const wrapperHeight = Math.max(previousPanel.offsetHeight, nextPanel.offsetHeight);
     wrapper.style.position = 'relative';
     wrapper.style.overflow = 'clip';
@@ -1604,22 +1651,12 @@ function setActiveSubtab(targetSubtabId) {
     nextPanel.style.width = '100%';
     nextPanel.style.pointerEvents = 'none';
 
-    const outgoing = previousPanel.animate(
-      [
-        { opacity: 1, transform: 'translate3d(0,0,0) scale(1)', filter: 'blur(0px)' },
-        { opacity: 0, transform: `${outgoingTransform} scale(0.996)`, filter: 'blur(1.6px)' }
-      ],
-      { duration: 300, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' }
-    );
-    const incoming = nextPanel.animate(
-      [
-        { opacity: 0, transform: `${incomingFrom} scale(0.998)`, filter: 'blur(1.6px)' },
-        { opacity: 1, transform: 'translate3d(0,0,0) scale(1)', filter: 'blur(0px)' }
-      ],
-      { duration: 420, easing: 'cubic-bezier(.18,.86,.22,1)', fill: 'forwards' }
-    );
+    const outgoingAnimations = animateSubtabMotion(previousPanel, { direction, phase: 'exit' });
+    const incomingAnimations = animateSubtabMotion(nextPanel, { direction, phase: 'enter' });
+    activeSubtabAnimations = [...outgoingAnimations, ...incomingAnimations];
+    const finishedAnimations = activeSubtabAnimations.map(animation => animation.finished.catch(() => null));
 
-    Promise.allSettled([outgoing.finished, incoming.finished]).then(() => {
+    Promise.allSettled(finishedAnimations).then(() => {
       if (transitionToken !== activeSubtabTransitionToken) return;
       previousPanel.hidden = true;
       [previousPanel, nextPanel].forEach(panel => {
@@ -1633,7 +1670,7 @@ function setActiveSubtab(targetSubtabId) {
       nextPanel.style.pointerEvents = '';
       wrapper.style.minHeight = '';
       wrapper.style.overflow = '';
-      animateSubtabChildren(nextPanel);
+      activeSubtabAnimations = [];
     });
   }
   activeSubtabId = targetSubtabId;
