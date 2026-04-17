@@ -261,13 +261,14 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 .subpage-header h2{ margin:0; color:var(--periwinkle-2); }
 .subtabs{ display:flex; flex-wrap:wrap; gap:8px; padding:10px; border-radius:12px; border:1px solid rgba(178,188,255,.18); background:rgba(18,23,43,.65); }
 .subtabs .subtab-btn{ white-space:normal; text-wrap:pretty; text-align:left; }
-.subtab-panel{ border:1px solid rgba(178,188,255,.2); border-radius:12px; background:rgba(10,14,28,.72); padding:14px; transition:opacity var(--motion-med) var(--motion-ease-soft), transform var(--motion-med) var(--motion-ease-soft), border-color var(--motion-fast) var(--motion-ease); }
+.subtab-panel{ border:1px solid rgba(178,188,255,.2); border-radius:12px; background:rgba(10,14,28,.72); padding:14px; transform-origin:center top; backface-visibility:hidden; transition:opacity 420ms cubic-bezier(.18,.86,.22,1), transform 420ms cubic-bezier(.18,.86,.22,1), border-color 260ms cubic-bezier(.22,.64,.24,1), filter 420ms cubic-bezier(.18,.86,.22,1); will-change:transform, opacity; }
 .subtab-panel.animate-in-subtab{ animation:subtabFadeIn var(--motion-slow) var(--motion-ease-entrance); will-change:transform, opacity; }
 .subtab-panel.subtab-slide-forward-in{ animation:subtabSlideForwardIn .26s var(--motion-ease-entrance); }
 .subtab-panel.subtab-slide-forward-out{ animation:subtabSlideForwardOut .22s var(--motion-ease-exit); pointer-events:none; }
 .subtab-panel.subtab-slide-backward-in{ animation:subtabSlideBackwardIn .26s var(--motion-ease-entrance); }
 .subtab-panel.subtab-slide-backward-out{ animation:subtabSlideBackwardOut .22s var(--motion-ease-exit); pointer-events:none; }
-.script-card,.rank-item{ transition:transform var(--motion-med) var(--motion-ease-soft), opacity var(--motion-med) var(--motion-ease-soft), border-color var(--motion-fast) var(--motion-ease); }
+.script-card,.rank-item,.saved-script-item,.smart-ranking-card{ transition:transform 360ms cubic-bezier(.2,.8,.2,1), opacity 320ms cubic-bezier(.2,.8,.2,1), border-color 220ms cubic-bezier(.22,.64,.24,1), box-shadow 280ms cubic-bezier(.22,.64,.24,1); }
+.script-card:hover,.rank-item:hover,.saved-script-item:hover,.smart-ranking-card:hover{ transform:translate3d(0,-2px,0); }
 .subtab-panel.animate-in-subtab .script-card,.subtab-panel.animate-in-subtab .rank-item{ animation:cardEnter var(--motion-med) var(--motion-ease-entrance); }
 .subtab-panel h3{ margin:0; }
 .rank-list,.script-list,.saved-script-list{ margin-top:12px; display:grid; gap:10px; }

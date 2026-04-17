@@ -1123,6 +1123,9 @@ function renderSmartRankings() {
 
   if (smartRankingRotationTimer) window.clearInterval(smartRankingRotationTimer);
   smartRankingRotationTimer = window.setInterval(() => {
+    const smartPanel = qs('#smartRankingsPanel');
+    const scriptsPage = qs('#scriptsPage');
+    if (!smartPanel || !scriptsPage || scriptsPage.hidden || smartPanel.hidden) return;
     activeSmartRankingIndex = (activeSmartRankingIndex + 1) % ranking.categories.length;
     renderSmartRankings();
   }, 9000);
@@ -1503,6 +1506,34 @@ function animateMainContentTransition() {
   restartAnimationClass(qs('.main-content'), 'is-view-switching');
 }
 
+function shouldReduceMotion() {
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+}
+
+function animateSubtabChildren(panel) {
+  if (!panel || shouldReduceMotion()) return;
+  const items = Array.from(panel.querySelectorAll('.rank-item, .script-card, .saved-script-item, .smart-ranking-card, .smart-ranking-hero, .comparison-table-wrap, .comparison-selector'));
+  if (!items.length) return;
+  const maxAnimatedItems = 18;
+  const batch = items.slice(0, maxAnimatedItems);
+  batch.forEach((item, index) => {
+    item.animate(
+      [
+        { opacity: 0, transform: 'translate3d(0, 10px, 0) scale(0.992)' },
+        { opacity: 1, transform: 'translate3d(0, 0, 0) scale(1)' }
+      ],
+      {
+        duration: 420,
+        delay: Math.min(index * 22, 180),
+        easing: 'cubic-bezier(.18,.86,.22,1)',
+        fill: 'both'
+      }
+    );
+  });
+}
+
+let activeSubtabTransitionToken = 0;
+
 function setActivePage(targetPageId) {
   if (targetPageId === activePageId) return;
 
@@ -1547,16 +1578,19 @@ function setActiveSubtab(targetSubtabId) {
   const previousIndex = tabOrder.indexOf(activeSubtabId);
   const nextIndex = tabOrder.indexOf(targetSubtabId);
   const direction = nextIndex > previousIndex ? 'forward' : 'backward';
-  if (!previousPanel || typeof nextPanel.animate !== 'function' || typeof previousPanel.animate !== 'function') {
+  if (!previousPanel || typeof nextPanel.animate !== 'function' || typeof previousPanel.animate !== 'function' || shouldReduceMotion()) {
     qsa('.subtab-panel').forEach(panel => {
       panel.hidden = panel.id !== targetSubtabId;
     });
+    animateSubtabChildren(nextPanel);
   } else {
+    const transitionToken = ++activeSubtabTransitionToken;
     const wrapper = previousPanel.parentElement;
-    const outgoingTransform = direction === 'forward' ? 'translateX(-42px)' : 'translateX(42px)';
-    const incomingFrom = direction === 'forward' ? 'translateX(42px)' : 'translateX(-42px)';
+    const outgoingTransform = direction === 'forward' ? 'translate3d(-24px,0,0)' : 'translate3d(24px,0,0)';
+    const incomingFrom = direction === 'forward' ? 'translate3d(24px,0,0)' : 'translate3d(-24px,0,0)';
     const wrapperHeight = Math.max(previousPanel.offsetHeight, nextPanel.offsetHeight);
     wrapper.style.position = 'relative';
+    wrapper.style.overflow = 'clip';
     wrapper.style.minHeight = `${wrapperHeight}px`;
 
     previousPanel.hidden = false;
@@ -1568,17 +1602,25 @@ function setActiveSubtab(targetSubtabId) {
     nextPanel.style.position = 'absolute';
     nextPanel.style.inset = '0';
     nextPanel.style.width = '100%';
+    nextPanel.style.pointerEvents = 'none';
 
     const outgoing = previousPanel.animate(
-      [{ opacity: 1, transform: 'translateX(0)' }, { opacity: 0, transform: outgoingTransform }],
-      { duration: 260, easing: 'cubic-bezier(.22,.84,.25,1)', fill: 'forwards' }
+      [
+        { opacity: 1, transform: 'translate3d(0,0,0) scale(1)', filter: 'blur(0px)' },
+        { opacity: 0, transform: `${outgoingTransform} scale(0.996)`, filter: 'blur(1.6px)' }
+      ],
+      { duration: 300, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' }
     );
     const incoming = nextPanel.animate(
-      [{ opacity: 0, transform: incomingFrom }, { opacity: 1, transform: 'translateX(0)' }],
-      { duration: 300, easing: 'cubic-bezier(.2,.9,.26,1)', fill: 'forwards' }
+      [
+        { opacity: 0, transform: `${incomingFrom} scale(0.998)`, filter: 'blur(1.6px)' },
+        { opacity: 1, transform: 'translate3d(0,0,0) scale(1)', filter: 'blur(0px)' }
+      ],
+      { duration: 420, easing: 'cubic-bezier(.18,.86,.22,1)', fill: 'forwards' }
     );
 
     Promise.allSettled([outgoing.finished, incoming.finished]).then(() => {
+      if (transitionToken !== activeSubtabTransitionToken) return;
       previousPanel.hidden = true;
       [previousPanel, nextPanel].forEach(panel => {
         panel.style.position = '';
@@ -1586,8 +1628,12 @@ function setActiveSubtab(targetSubtabId) {
         panel.style.width = '';
         panel.style.opacity = '';
         panel.style.transform = '';
+        panel.style.filter = '';
       });
+      nextPanel.style.pointerEvents = '';
       wrapper.style.minHeight = '';
+      wrapper.style.overflow = '';
+      animateSubtabChildren(nextPanel);
     });
   }
   activeSubtabId = targetSubtabId;
