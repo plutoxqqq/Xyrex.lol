@@ -165,21 +165,25 @@
         </header>
 
         <div class="subtabs" role="tablist" aria-label="Scripts hub tabs">
-          <button class="subtab-btn is-active" role="tab" aria-selected="true" data-subtab-target="tierPaidPanel">Executor Tier List (Paid)</button>
-          <button class="subtab-btn" role="tab" aria-selected="false" data-subtab-target="tierFreePanel">Executor Tier List (Free)</button>
+          <button class="subtab-btn is-active" role="tab" aria-selected="true" data-subtab-target="smartRankingsPanel">Smart Rankings</button>
+          <button class="subtab-btn" role="tab" aria-selected="false" data-subtab-target="comparisonPanel">Executor Comparison</button>
           <button class="subtab-btn" role="tab" aria-selected="false" data-subtab-target="popularScriptsPanel">Popular Scripts</button>
           <button class="subtab-btn" role="tab" aria-selected="false" data-subtab-target="savedScriptsPanel">Saved Scripts</button>
           <button class="subtab-btn" role="tab" aria-selected="false" data-subtab-target="recentChangesPanel">Recent Changes</button>
         </div>
 
-        <section id="tierPaidPanel" class="subtab-panel" role="tabpanel">
-          <h3>Paid Executor Tier List</h3>
-          <div id="tierPaidList" class="rank-list"></div>
+        <section id="smartRankingsPanel" class="subtab-panel" role="tabpanel">
+          <h3>Smart Rankings</h3>
+          <div id="smartRankingSections" class="smart-ranking-sections"></div>
         </section>
 
-        <section id="tierFreePanel" class="subtab-panel" role="tabpanel" hidden>
-          <h3>Free Executor Tier List</h3>
-          <div id="tierFreeList" class="rank-list"></div>
+        <section id="comparisonPanel" class="subtab-panel" role="tabpanel" hidden>
+          <h3>Executor Comparison</h3>
+          <p class="comparison-note">Select 2 to 3 executors to compare reliability, pricing, and risk at a glance.</p>
+          <div id="comparisonSelector" class="comparison-selector"></div>
+          <div id="comparisonTableWrap" class="comparison-table-wrap" hidden>
+            <table id="comparisonTable" class="comparison-table"></table>
+          </div>
         </section>
 
         <section id="popularScriptsPanel" class="subtab-panel" role="tabpanel" hidden>
