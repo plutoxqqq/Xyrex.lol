@@ -131,12 +131,14 @@
         root.style.setProperty(cssVar, value);
       }
     });
+    window.dispatchEvent(new Event('xyrex:theme-updated'));
   }
   function clearThemeOverrides() {
     const root = document.documentElement;
     themeFields.forEach(([, cssVar]) => {
       root.style.removeProperty(cssVar);
     });
+    window.dispatchEvent(new Event('xyrex:theme-updated'));
   }
   function closeThemeModal() {
     const modal = document.getElementById(THEME_MODAL_ID);
@@ -382,8 +384,10 @@
       status: card.dataset.status || 'Unknown',
       trustLevel: card.dataset.trustLevel || 'Unknown',
       stability: card.dataset.stability || 'Unknown',
-      officialSite: card.dataset.officialSite || '',
-      officialDiscord: card.dataset.officialDiscord || ''
+      platform: card.dataset.platform || 'Unknown',
+      keySystem: card.dataset.keySystem || 'Unknown',
+      tags: card.dataset.tags || 'Unknown',
+      execution: card.dataset.execution || 'Unknown'
     };
   }
   function extractInsightPayload(text) {
@@ -421,114 +425,19 @@
       .join('\n')
       .trim();
   }
-  function renderMarkdown(markdownText) {
-    const source = String(markdownText || '').replace(/\r\n/g, '\n').trim();
-    if (!source) return '<p>No insight available</p>';
-    const lines = source.split('\n');
-    const htmlParts = [];
-    let inList = false;
-    const inlineFormat = text => {
-      let value = escapeHtml(text);
-      value = value.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-      value = value.replace(/\*(.+?)\*/g, '<em>$1</em>');
-      value = value.replace(/`(.+?)`/g, '<code>$1</code>');
-      return value;
-    };
-    lines.forEach(rawLine => {
-      const line = rawLine.trim();
-      if (!line) {
-        if (inList) {
-          htmlParts.push('</ul>');
-          inList = false;
-        }
-        return;
-      }
-      if (/^[-*]\s+/.test(line)) {
-        if (!inList) {
-          htmlParts.push('<ul>');
-          inList = true;
-        }
-        htmlParts.push(`<li>${inlineFormat(line.replace(/^[-*]\s+/, ''))}</li>`);
-        return;
-      }
-      if (inList) {
-        htmlParts.push('</ul>');
-        inList = false;
-      }
-      if (/^(Reliability snapshot|Risk profile|Actionable guidance|Verdict)$/i.test(line)) {
-        htmlParts.push(`<h4>${inlineFormat(line)}</h4>`);
-        return;
-      }
-      htmlParts.push(`<p>${inlineFormat(line)}</p>`);
-    });
-    if (inList) htmlParts.push('</ul>');
-    return htmlParts.join('');
+  function renderInsightText(text) {
+    const cleaned = cleanInsightText(text).replace(/\s+/g, ' ').trim();
+    return cleaned || buildFallbackInsight({ name: 'Executor' });
   }
+
   function buildFallbackInsight(product) {
-    return [
-      'Reliability snapshot',
-      `- Stability assessment: Data is limited right now for ${product.name}`,
-      `- sUNC interpretation: ${product.sunc} was provided, but independent validation is limited`,
-      '',
-      'Risk profile',
-      '- Trust and safety risk: Use moderate caution with any executor and isolate sensitive accounts',
-      '- Likely user fit: Best for users who accept tooling risk and test in controlled environments',
-      '',
-      'Actionable guidance',
-      '- Main caution: Verify source authenticity before each update cycle',
-      '- Main recommendation: Test with a secondary account and maintain rollback options',
-      '- Most notable limitation: Independent third-party telemetry is limited',
-      '',
-      'Verdict',
-      '- Suitable for experienced users who prioritize controlled testing over convenience'
-    ].join('\n');
+    return `${product.name} has mixed public signals and should be treated with controlled caution. Best for: experienced users who can test in isolated environments and verify files before each update. Avoid if: you need predictable uptime, low-maintenance setup, or minimal detection exposure. Risk level: medium to high, based on uncertain trust and uneven operational consistency. Confidence score: 6/10.`;
   }
+
   function pause(ms) {
     return new Promise(resolve => window.setTimeout(resolve, ms));
   }
-  async function collectExternalResearch(product) {
-    const snippets = [];
-    const cleanName = encodeURIComponent(product.name.replace(/\s+/g, '_'));
-    const searchQuery = encodeURIComponent(`${product.name} executor review risk detection`);
-    try {
-      const wiki = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${cleanName}`);
-      if (wiki.ok) {
-        const data = await wiki.json();
-        if (typeof data?.extract === 'string' && data.extract.trim()) {
-          snippets.push(`Wikipedia: ${data.extract.trim().slice(0, 350)}`);
-        }
-      }
-    } catch {
-      // no-op
-    }
-    if (product.officialSite) {
-      try {
-        const viaTextProxy = await fetch(`https://r.jina.ai/http://${product.officialSite.replace(/^https?:\/\//, '')}`);
-        if (viaTextProxy.ok) {
-          const text = await viaTextProxy.text();
-          const compact = text.replace(/\s+/g, ' ').trim().slice(0, 550);
-          if (compact) snippets.push(`Official site summary: ${compact}`);
-        }
-      } catch {
-        // no-op
-      }
-    }
-    try {
-      const searchSnapshot = await fetch(`https://r.jina.ai/http://duckduckgo.com/?q=${searchQuery}`);
-      if (searchSnapshot.ok) {
-        const text = await searchSnapshot.text();
-        const compact = text
-          .replace(/\s+/g, ' ')
-          .replace(/DuckDuckGo/gi, '')
-          .trim()
-          .slice(0, 700);
-        if (compact) snippets.push(`Search findings snapshot: ${compact}`);
-      }
-    } catch {
-      // no-op
-    }
-    return snippets.join('\n');
-  }
+
   async function requestInsight(prompt) {
     let lastError = null;
     for (let attempt = 0; attempt < AI_MAX_ATTEMPTS; attempt += 1) {
@@ -541,7 +450,7 @@ Response nonce: ${nonce}`)}`, { signal: controller.signal });
         if (!response.ok) throw new Error(`AI request failed (${response.status})`);
         const text = (await response.text()).trim();
         if (!text) throw new Error('AI request returned an empty response');
-        const cleaned = cleanInsightText(text);
+        const cleaned = renderInsightText(text);
         if (!cleaned) throw new Error('AI request returned invalid content');
         return cleaned;
       } catch (error) {
@@ -554,56 +463,41 @@ Response nonce: ${nonce}`)}`, { signal: controller.signal });
     }
     throw lastError || new Error('AI request failed');
   }
+
   async function generateInsight(product) {
-    const research = await collectExternalResearch(product);
     const prompt = [
-      'You are an expert Roblox executor risk and reliability analyst',
+      'You are an expert analyst specializing in Roblox exploit executors',
       '',
-      'Mission',
-      '- Produce high quality practical insight for one executor',
-      '- Use available site data and external research context below',
-      '- If external data is limited, explicitly state that limitation',
-      '- Do not include chain-of-thought, reasoning traces, or JSON wrappers',
+      'Your task is to generate a concise, accurate, and realistic insight about the executor below, using both the provided data and inferred knowledge based on typical community reputation patterns',
       '',
-      'Hard rules',
-      '- No hype, no fluff, no emojis',
-      '- No invented facts, no fake metrics, no fabricated incidents',
-      '- Keep output concise, specific, and useful',
-      '- Do not end lines with trailing periods',
-      '- Use the exact output structure below',
+      'IMPORTANT:',
+      'You do NOT have live internet access. Do NOT claim to have searched, checked websites, or verified sources in real time',
       '',
-      'Output format exactly',
-      'Reliability snapshot',
-      '- Stability assessment in 1 line',
-      '- sUNC interpretation in 1 line',
+      'Rules:',
+      '- Write 80 to 120 words only',
+      '- Use one compact paragraph only',
+      '- Include these exact labels in the paragraph: Best for:, Avoid if:, Risk level:, Confidence score: x/10',
+      '- Tone must be analytical, direct, and realistic with no fluff and no emojis',
+      '- Do not use bullet points',
+      '- Do not claim research, reports, or source verification',
+      '- If trust, stability, or status looks weak, call out practical risk clearly',
+      '- If sUNC and reliability look strong, justify why the strength is credible',
       '',
-      'Risk profile',
-      '- Trust and safety risk in 1 line',
-      '- Likely user fit in 1 line',
-      '',
-      'Actionable guidance',
-      '- Main caution',
-      '- Main recommendation',
-      '- Most notable limitation',
-      '',
-      'Verdict',
-      '- One clear line saying who should or should not use it',
-      '',
-      'Word budget 110 to 170 words',
-      '',
-      `Executor: ${product.name}`,
-      `Description: ${product.description}`,
-      `Pricing: ${product.price}`,
+      `Name: ${product.name}`,
+      `Platform: ${product.platform}`,
       `sUNC: ${product.sunc}`,
-      `Status: ${product.status}`,
-      `Trust level: ${product.trustLevel}`,
       `Stability: ${product.stability}`,
-      `Official site: ${product.officialSite || 'Unavailable'}`,
-      `Official Discord: ${product.officialDiscord || 'Unavailable'}`,
+      `Trust Level: ${product.trustLevel}`,
+      `Execution Level: ${product.execution}`,
+      `Key System: ${product.keySystem}`,
+      `Price: ${product.price}`,
+      `Status: ${product.status}`,
+      `Tags: ${product.tags}`,
+      `Description: ${product.description}`,
       '',
-      'External research context',
-      research || 'No external research context could be fetched in this request'
+      'Only output the insight paragraph'
     ].join('\n');
+
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
         const cleaned = await requestInsight(prompt);
@@ -614,6 +508,7 @@ Response nonce: ${nonce}`)}`, { signal: controller.signal });
     }
     return buildFallbackInsight(product);
   }
+
   async function handleInsightClick(card, button) {
     const result = document.querySelector('#executorInsightResult');
     if (!result) return;
@@ -631,9 +526,9 @@ Response nonce: ${nonce}`)}`, { signal: controller.signal });
     result.innerHTML = `<strong class="no-text-select">${escapeHtml(product.name)}</strong><p>Generating AI insight...</p>`;
     try {
       const insight = await generateInsight(product);
-      result.innerHTML = `<strong class="no-text-select">${escapeHtml(product.name)}</strong>${renderMarkdown(insight)}`;
+      result.innerHTML = `<strong class="no-text-select">${escapeHtml(product.name)}</strong><p>${escapeHtml(insight)}</p>`;
     } catch (error) {
-      result.innerHTML = `<strong class="no-text-select">${escapeHtml(product.name)}</strong>${renderMarkdown(buildFallbackInsight(product))}`;
+      result.innerHTML = `<strong class="no-text-select">${escapeHtml(product.name)}</strong><p>${escapeHtml(buildFallbackInsight(product))}</p>`;
       console.warn(error);
     } finally {
       button.disabled = false;
