@@ -33,6 +33,8 @@ module.exports = class DraftVault {
     this.currentLocation = "";
     this.currentPath = "";
     this.onTextboxKeydown = this.handleTextboxKeydown.bind(this);
+    this.commandSendInFlight = false;
+    this.collapsedSections = { currentMessage: false, savedDrafts: false };
   }
 
   start() {
@@ -550,6 +552,30 @@ module.exports = class DraftVault {
 
       .draftvault-settings-header {
         margin-bottom: 8px;
+      }
+      .draftvault-section-toggle {
+        width: 100%;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.04);
+        color: #e9e6ff;
+        border-radius: 10px;
+        padding: 10px 12px;
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 8px;
+        text-align: left;
+      }
+      .draftvault-section-toggle::after {
+        content: "−";
+        float: right;
+        font-size: 15px;
+        margin-top: -2px;
+      }
+      .draftvault-section-toggle[aria-expanded="false"]::after {
+        content: "+";
       }
 
       .draftvault-settings-title {
@@ -1074,6 +1100,7 @@ module.exports = class DraftVault {
   handleTextboxKeydown(event) {
     if (!event || event.key !== "Enter") return;
     if (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) return;
+    if (this.commandSendInFlight) return;
 
     var textbox = this.getTextbox();
     if (!textbox || event.target !== textbox) return;
@@ -1087,7 +1114,21 @@ module.exports = class DraftVault {
       messageBody += "\n" + match.followUp;
     }
 
+    event.preventDefault();
+    event.stopPropagation();
+    this.commandSendInFlight = true;
     this.setTextboxText(messageBody);
+    var self = this;
+    window.setTimeout(function() {
+      try {
+        textbox.focus();
+        textbox.dispatchEvent(new KeyboardEvent("keydown", {
+          key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true, cancelable: true
+        }));
+      } finally {
+        window.setTimeout(function() { self.commandSendInFlight = false; }, 40);
+      }
+    }, 24);
   }
 
   sortDraftKeys(drafts) {
@@ -1222,34 +1263,43 @@ module.exports = class DraftVault {
     currentSection.className = "draftvault-section";
 
     currentSection.innerHTML =
-      '<div class="draftvault-section-title">Current Typed Message</div>' +
+      '<button type="button" class="draftvault-section-toggle" data-draftvault-section-toggle="currentMessage" aria-expanded="' + (!this.collapsedSections.currentMessage) + '">Current Typed Message</button>' +
+      '<div data-draftvault-section-body="currentMessage" ' + (this.collapsedSections.currentMessage ? "hidden" : "") + '>' +
       '<input class="draftvault-input" id="draftvault-new-name" placeholder="Name this draft..." value="' + this.escapeHTML(this.makeDefaultDraftName()) + '">' +
       '<input class="draftvault-input" id="draftvault-new-command" placeholder="Optional command key (example: !response)" style="margin-top:8px;">' +
       '<input class="draftvault-input" id="draftvault-new-tags" placeholder="Tags (comma-separated)" style="margin-top:8px;">' +
       '<div class="draftvault-live-preview">' + this.escapeHTML(this.currentText || "Nothing typed right now.") + '</div>' +
       '<div class="draftvault-counts" id="draftvault-live-counts"></div>' +
-      '<button class="draftvault-primary" id="draftvault-save-current">Save Current Message</button>';
+      '<button class="draftvault-primary" id="draftvault-save-current">Save Current Message</button>' +
+      '</div>';
 
     content.appendChild(currentSection);
 
     var savedSection = document.createElement("div");
     savedSection.className = "draftvault-section";
 
-    var savedTitle = document.createElement("div");
-    savedTitle.className = "draftvault-section-title";
+    var savedTitle = document.createElement("button");
+    savedTitle.type = "button";
+    savedTitle.className = "draftvault-section-toggle";
+    savedTitle.setAttribute("data-draftvault-section-toggle", "savedDrafts");
+    savedTitle.setAttribute("aria-expanded", String(!this.collapsedSections.savedDrafts));
     savedTitle.textContent = "Saved Drafts";
     savedSection.appendChild(savedTitle);
+    var savedBody = document.createElement("div");
+    savedBody.setAttribute("data-draftvault-section-body", "savedDrafts");
+    if (this.collapsedSections.savedDrafts) savedBody.hidden = true;
 
     if (!keys.length) {
       var empty = document.createElement("div");
       empty.className = "draftvault-empty";
       empty.textContent = "No saved drafts yet.";
-      savedSection.appendChild(empty);
+      savedBody.appendChild(empty);
     }
 
     for (var i = 0; i < keys.length; i++) {
-      savedSection.appendChild(this.makeDraftCard(keys[i], drafts[keys[i]]));
+      savedBody.appendChild(this.makeDraftCard(keys[i], drafts[keys[i]]));
     }
+    savedSection.appendChild(savedBody);
 
     content.appendChild(savedSection);
 
@@ -1373,6 +1423,17 @@ module.exports = class DraftVault {
         }
       };
     }
+    document.querySelectorAll("[data-draftvault-section-toggle]").forEach(function(toggle) {
+      toggle.onclick = function() {
+        var key = toggle.getAttribute("data-draftvault-section-toggle");
+        var body = document.querySelector('[data-draftvault-section-body="' + key + '"]');
+        if (!body) return;
+        var collapse = !body.hidden;
+        body.hidden = collapse;
+        self.collapsedSections[key] = collapse;
+        toggle.setAttribute("aria-expanded", String(!collapse));
+      };
+    });
   }
 
   makeDraftCard(key, draft) {
@@ -1395,6 +1456,7 @@ module.exports = class DraftVault {
         '<span class="draftvault-location">' + this.escapeHTML(draft.location || "Unknown") + '</span>' +
         '<span class="draftvault-time">' + this.escapeHTML(timeText) + '</span>' +
         '<span class="draftvault-tags">' + this.escapeHTML(((draft.tags || []).length ? ("#" + draft.tags.join(" #")) : "No tags")) + '</span>' +
+        '<span class="draftvault-tags">' + this.escapeHTML(draft.command ? ("Command: " + draft.command) : "Command: None") + '</span>' +
       '</div>' +
       '<div class="draftvault-preview">' + this.escapeHTML(preview) + '</div>';
 
