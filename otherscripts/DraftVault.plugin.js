@@ -32,6 +32,7 @@ module.exports = class DraftVault {
     this.currentText = "";
     this.currentLocation = "";
     this.currentPath = "";
+    this.onTextboxKeydown = this.handleTextboxKeydown.bind(this);
   }
 
   start() {
@@ -40,6 +41,7 @@ module.exports = class DraftVault {
 
     this.detectCurrentText();
     this.mountButton();
+    document.addEventListener("keydown", this.onTextboxKeydown, true);
 
     this.detectTimer = setInterval(() => {
       this.detectCurrentText();
@@ -62,6 +64,7 @@ module.exports = class DraftVault {
     this.removeButtons();
     this.showOriginalAppsButtons();
     this.closePanel();
+    document.removeEventListener("keydown", this.onTextboxKeydown, true);
 
     document.querySelectorAll(".draftvault-backdrop,.draftvault-panel").forEach(function(el) {
       el.remove();
@@ -1043,6 +1046,50 @@ module.exports = class DraftVault {
     return { chars: chars, lines: lines };
   }
 
+  normalizeCommand(rawCommand) {
+    var command = String(rawCommand || "").trim().replace(/\s+/g, " ");
+    if (!command) return "";
+    if (!/^[\/!%@]/.test(command)) return "";
+    return command.toLowerCase();
+  }
+
+  getCommandMatch(typedText) {
+    var normalized = String(typedText || "").trim();
+    if (!normalized) return null;
+    var parts = normalized.split(/\s+/);
+    var firstToken = parts[0] || "";
+    if (!/^[\/!%@]/.test(firstToken)) return null;
+
+    var drafts = this.getDrafts();
+    var keys = Object.keys(drafts);
+    var commandKey = this.normalizeCommand(firstToken);
+    for (var i = 0; i < keys.length; i++) {
+      var entry = drafts[keys[i]] || {};
+      if (this.normalizeCommand(entry.command) !== commandKey) continue;
+      return { draft: entry, followUp: parts.slice(1).join(" ").trim() };
+    }
+    return null;
+  }
+
+  handleTextboxKeydown(event) {
+    if (!event || event.key !== "Enter") return;
+    if (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) return;
+
+    var textbox = this.getTextbox();
+    if (!textbox || event.target !== textbox) return;
+
+    var match = this.getCommandMatch(this.getTextboxText());
+    if (!match || !match.draft || !match.draft.text) return;
+
+    var messageBody = String(match.draft.text).trim();
+    if (!messageBody) return;
+    if (match.followUp) {
+      messageBody += "\n" + match.followUp;
+    }
+
+    this.setTextboxText(messageBody);
+  }
+
   sortDraftKeys(drafts) {
     var keys = Object.keys(drafts);
     keys.sort(function(a, b) {
@@ -1056,7 +1103,7 @@ module.exports = class DraftVault {
     return keys;
   }
 
-  saveCurrentAsNewDraft(name, tagsInput) {
+  saveCurrentAsNewDraft(name, tagsInput, commandInput) {
     this.detectCurrentText();
 
     var text = this.currentText || "";
@@ -1067,9 +1114,16 @@ module.exports = class DraftVault {
     }
 
     var cleanName = String(name || "").trim();
+    var rawCommand = String(commandInput || "").trim();
+    var command = this.normalizeCommand(rawCommand);
 
     if (!cleanName) {
       this.toast("Give the draft a name first", "error");
+      return false;
+    }
+
+    if (rawCommand && !command) {
+      this.toast("Command keys must start with /, !, %, or @", "error");
       return false;
     }
 
@@ -1079,6 +1133,7 @@ module.exports = class DraftVault {
     drafts[key] = {
       name: cleanName,
       text: text,
+      command: command,
       location: this.currentLocation,
       path: this.currentPath,
       pinned: false,
@@ -1156,6 +1211,7 @@ module.exports = class DraftVault {
     currentSection.innerHTML =
       '<div class="draftvault-section-title">Current Typed Message</div>' +
       '<input class="draftvault-input" id="draftvault-new-name" placeholder="Name this draft..." value="' + this.escapeHTML(this.makeDefaultDraftName()) + '">' +
+      '<input class="draftvault-input" id="draftvault-new-command" placeholder="Optional command key (example: !response)" style="margin-top:8px;">' +
       '<input class="draftvault-input" id="draftvault-new-tags" placeholder="Tags (comma-separated)" style="margin-top:8px;">' +
       '<div class="draftvault-live-preview">' + this.escapeHTML(this.currentText || "Nothing typed right now.") + '</div>' +
       '<div class="draftvault-counts" id="draftvault-live-counts"></div>' +
@@ -1283,6 +1339,7 @@ module.exports = class DraftVault {
 
     var saveButton = document.querySelector("#draftvault-save-current");
     var nameInput = document.querySelector("#draftvault-new-name");
+    var commandInput = document.querySelector("#draftvault-new-command");
     var tagsInput = document.querySelector("#draftvault-new-tags");
     var liveCounts = document.querySelector("#draftvault-live-counts");
     if (liveCounts) {
@@ -1292,7 +1349,11 @@ module.exports = class DraftVault {
 
     if (saveButton && nameInput) {
       saveButton.onclick = function() {
-        var saved = self.saveCurrentAsNewDraft(nameInput.value, tagsInput ? tagsInput.value : "");
+        var saved = self.saveCurrentAsNewDraft(
+          nameInput.value,
+          tagsInput ? tagsInput.value : "",
+          commandInput ? commandInput.value : ""
+        );
 
         if (saved) {
           self.openPanel();
@@ -1428,6 +1489,7 @@ module.exports = class DraftVault {
     editSection.innerHTML =
       '<div class="draftvault-section-title">Edit Saved Draft</div>' +
       '<input class="draftvault-input" id="draftvault-edit-name" value="' + this.escapeHTML(draft.name || "Untitled Draft") + '">' +
+      '<input class="draftvault-input" id="draftvault-edit-command" value="' + this.escapeHTML(draft.command || "") + '" style="margin-top:8px;" placeholder="Optional command key (example: !response)">' +
       '<input class="draftvault-input" id="draftvault-edit-tags" value="' + this.escapeHTML((draft.tags || []).join(", ")) + '" style="margin-top:8px;" placeholder="Tags (comma-separated)">' +
       '<textarea class="draftvault-textarea" id="draftvault-edit-text">' + this.escapeHTML(draft.text || "") + '</textarea>' +
       '<div class="draftvault-counts" id="draftvault-edit-counts"></div>' +
@@ -1469,6 +1531,7 @@ module.exports = class DraftVault {
     var saveEdit = document.querySelector("#draftvault-save-edit");
     var nameInput = document.querySelector("#draftvault-edit-name");
     var textArea = document.querySelector("#draftvault-edit-text");
+    var commandInput = document.querySelector("#draftvault-edit-command");
     var tagsInput = document.querySelector("#draftvault-edit-tags");
     var editCounts = document.querySelector("#draftvault-edit-counts");
     var originalName = String(draft.name || "");
@@ -1509,8 +1572,15 @@ module.exports = class DraftVault {
           return;
         }
 
-        if (!newText) {
+      if (!newText) {
           self.toast("Draft text cannot be empty", "error");
+          return;
+        }
+
+        var rawCommand = String(commandInput ? commandInput.value : "").trim();
+        var command = self.normalizeCommand(rawCommand);
+        if (rawCommand && !command) {
+          self.toast("Command keys must start with /, !, %, or @", "error");
           return;
         }
 
@@ -1523,6 +1593,7 @@ module.exports = class DraftVault {
 
         allDrafts[key].name = newName;
         allDrafts[key].text = newText;
+        allDrafts[key].command = command;
         allDrafts[key].tags = self.normalizeTags(tagsInput ? tagsInput.value : "");
         if (typeof allDrafts[key].pinned !== "boolean") allDrafts[key].pinned = false;
         allDrafts[key].updatedAt = Date.now();
