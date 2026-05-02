@@ -3313,56 +3313,54 @@
         };
         
 
-        const modeUtilityCheats = [
-            {
-                name: "Copy Current Stats",
-                description: "Copies visible live stats from the current mode to your clipboard",
-                run: async function () {
-                    try {
-                        const stateNode = getStateNode();
-                        const stats = stateNode?.state || {};
-                        const safeStats = {};
-                        for (const key of Object.keys(stats)) {
-                            const value = stats[key];
-                            if (["string", "number", "boolean"].includes(typeof value)) safeStats[key] = value;
-                        }
-                        const output = JSON.stringify(safeStats, null, 2);
-                        await navigator.clipboard.writeText(output);
-                        alert("Copied current mode stats to clipboard.");
-                    } catch (error) {
-                        alert("Unable to copy stats in this mode right now.");
+        const createModeValueBoost = (modeLabel, keys) => ({
+            name: `${modeLabel} Value Boost`,
+            description: `Adds a custom amount to ${modeLabel.toLowerCase()} resources in this mode`,
+            inputs: [
+                {
+                    name: "Amount",
+                    type: "number",
+                    min: 1,
+                    value: 5000,
+                },
+            ],
+            run: function (amount) {
+                const stateNode = getStateNode();
+                const value = Math.max(1, parseInt(amount || 0));
+                let applied = false;
+                for (const key of keys) {
+                    if (typeof stateNode?.state?.[key] === "number") {
+                        stateNode.state[key] += value;
+                        applied = true;
                     }
-                },
+                }
+                if (applied) stateNode?.forceUpdate?.();
+                else alert("No compatible value field was found for this mode right now.");
             },
-            {
-                name: "Reload Mode UI",
-                description: "Soft reloads the current Blooket mode UI without leaving the match",
-                run: function () {
-                    const stateNode = getStateNode();
-                    stateNode?.forceUpdate?.();
-                    alert("Requested a UI refresh for the current mode.");
-                },
-            },
-            {
-                name: "Show Mode Debug",
-                description: "Shows the current route and mode metadata for debugging",
-                run: function () {
-                    const stateNode = getStateNode();
-                    const details = {
-                        pathname: window.location.pathname,
-                        gameId: stateNode?.props?.client?.name || stateNode?.props?.game?.name || "unknown",
-                        stage: stateNode?.state?.stage || "unknown",
-                    };
-                    alert(`Mode Debug\n\n${JSON.stringify(details, null, 2)}`);
-                },
-            },
-        ];
+        });
 
-        for (const [modeName, modeCheats] of Object.entries(Cheats)) {
-            if (modeName === "global" || !Array.isArray(modeCheats)) continue;
-            for (const utilityCheat of modeUtilityCheats) {
-                modeCheats.push({ ...utilityCheat });
-            }
+        const modeSpecificAdditions = {
+            gold: [createModeValueBoost("Gold", ["gold", "golds"])],
+            hack: [createModeValueBoost("Crypto", ["crypto", "cryptos"])],
+            fish: [createModeValueBoost("Weight", ["weight", "fishWeight"])],
+            pirate: [createModeValueBoost("Doubloons", ["doubloons", "gold"])],
+            defense2: [createModeValueBoost("Tokens", ["tokens", "cash"])],
+            brawl: [createModeValueBoost("XP", ["xp", "experience"])],
+            dino: [createModeValueBoost("Fossils", ["fossils", "fossil"])],
+            royale: [createModeValueBoost("Health", ["health", "hp"])],
+            defense: [createModeValueBoost("Cash", ["cash", "tokens"])],
+            cafe: [createModeValueBoost("Cash", ["cash", "money"])],
+            factory: [createModeValueBoost("Cash", ["cash", "coins"])],
+            racing: [createModeValueBoost("Progress", ["progress", "raceProgress"])],
+            rush: [createModeValueBoost("Blooks", ["blooks", "blookCount"])],
+            tower: [createModeValueBoost("Tower Points", ["points", "towerPoints"])],
+            kingdom: [createModeValueBoost("People", ["people", "population"])],
+            toy: [createModeValueBoost("Toys", ["toys", "toyCount"])],
+            flappy: [createModeValueBoost("Score", ["score", "bestScore"])],
+        };
+
+        for (const [modeName, additions] of Object.entries(modeSpecificAdditions)) {
+            if (Array.isArray(Cheats[modeName])) Cheats[modeName].push(...additions);
         }
 
         addMode("Global", "https://media.blooket.com/image/upload/v1661496291/Media/uiTest/Games_Played_2.svg", Cheats.global)();
@@ -3524,7 +3522,5 @@
     img.onerror = img.onabort = () => {
         img.onerror = img.onabort = null;
         cheat();
-        let iframe = document.querySelector("iframe");
-        iframe.contentWindow.alert("It seems the GitHub is either blocked or down.\n\nIf it's NOT blocked, join the Discord server for updates\nhttps://discord.gg/jHjGrrdXP6\n(The cheat will still run after this alert)")
     }
 })();
