@@ -1167,6 +1167,19 @@ module.exports = class DraftVault {
     return kept;
   }
 
+  bindSafeBackdropClose(backdrop, onClose) {
+    if (!backdrop || typeof onClose !== "function") return;
+    var canClose = false;
+    setTimeout(function() {
+      canClose = true;
+    }, 0);
+    backdrop.onclick = function(event) {
+      if (!canClose) return;
+      if (event && event.target !== backdrop) return;
+      onClose();
+    };
+  }
+
   openPanel() {
     this.detectCurrentText();
     this.closePanel();
@@ -1177,9 +1190,9 @@ module.exports = class DraftVault {
 
     this.backdrop = document.createElement("div");
     this.backdrop.className = "draftvault-backdrop";
-    this.backdrop.onclick = function() {
+    this.bindSafeBackdropClose(this.backdrop, function() {
       self.closePanel();
-    };
+    });
 
     this.panel = document.createElement("div");
     this.panel.className = "draftvault-panel";
@@ -1455,9 +1468,9 @@ module.exports = class DraftVault {
 
     this.backdrop = document.createElement("div");
     this.backdrop.className = "draftvault-backdrop";
-    this.backdrop.onclick = function() {
+    this.bindSafeBackdropClose(this.backdrop, function() {
       self.closePanel();
-    };
+    });
 
     this.panel = document.createElement("div");
     this.panel.className = "draftvault-panel";
@@ -1559,7 +1572,7 @@ module.exports = class DraftVault {
     };
 
     close.onclick = function() { guardedClose(function() { self.closePanel(); }); };
-    this.backdrop.onclick = function() { guardedClose(function() { self.closePanel(); }); };
+    this.bindSafeBackdropClose(this.backdrop, function() { guardedClose(function() { self.closePanel(); }); });
     cancel.onclick = function() { guardedClose(function() { self.openPanel(); }); };
 
     if (saveEdit && nameInput && textArea) {
