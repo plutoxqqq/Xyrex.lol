@@ -206,11 +206,18 @@ module.exports = class DraftVault {
         line-height: 1 !important;
         font-size: 0 !important;
         overflow: visible !important;
+        transition: transform 0.16s ease, box-shadow 0.2s ease, background 0.16s ease, color 0.16s ease !important;
       }
 
       .draftvault-apps-button:hover {
         color: var(--interactive-hover, #dbdee1) !important;
         background: var(--background-modifier-hover, rgba(255, 255, 255, 0.08)) !important;
+        transform: translateY(-1px) scale(1.045) !important;
+        box-shadow: 0 8px 24px rgba(139, 92, 246, 0.24) !important;
+      }
+
+      .draftvault-apps-button:active {
+        transform: translateY(0) scale(0.98) !important;
       }
 
       .draftvault-apps-button .draftvault-icon,
@@ -430,7 +437,8 @@ module.exports = class DraftVault {
 
       .draftvault-meta {
         display: flex;
-        justify-content: space-between;
+        justify-content: flex-start;
+        flex-wrap: wrap;
         gap: 8px;
         margin-bottom: 7px;
         color: #c4b5fd;
@@ -449,6 +457,12 @@ module.exports = class DraftVault {
         white-space: nowrap;
       }
 
+      .draftvault-tags {
+        color: #d8b4fe;
+        font-size: 11px;
+        font-weight: 800;
+      }
+
       .draftvault-preview {
         color: #e5e7eb;
         font-size: 13px;
@@ -462,7 +476,7 @@ module.exports = class DraftVault {
 
       .draftvault-actions {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(4, 1fr);
         gap: 7px;
       }
 
@@ -558,6 +572,13 @@ module.exports = class DraftVault {
         padding: 8px 12px;
         cursor: pointer;
         font-weight: 800;
+      }
+
+      .draftvault-counts {
+        margin-top: 8px;
+        color: #d1d5db;
+        font-size: 11px;
+        font-weight: 700;
       }
 
       /* DraftVault scrollbars only */
@@ -933,7 +954,44 @@ module.exports = class DraftVault {
     return "Draft · " + now.toLocaleString();
   }
 
-  saveCurrentAsNewDraft(name) {
+  normalizeTags(rawTags) {
+    var split = String(rawTags || "").split(",");
+    var cleaned = [];
+    var seen = {};
+
+    for (var i = 0; i < split.length; i++) {
+      var tag = split[i].trim().replace(/\s+/g, " ");
+      if (!tag) continue;
+      var low = tag.toLowerCase();
+      if (seen[low]) continue;
+      seen[low] = true;
+      cleaned.push(tag);
+    }
+
+    return cleaned;
+  }
+
+  getTextStats(text) {
+    var normalized = String(text || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    var chars = normalized.length;
+    var lines = normalized ? normalized.split("\n").length : 0;
+    return { chars: chars, lines: lines };
+  }
+
+  sortDraftKeys(drafts) {
+    var keys = Object.keys(drafts);
+    keys.sort(function(a, b) {
+      var aDraft = drafts[a] || {};
+      var bDraft = drafts[b] || {};
+      var aPinned = !!aDraft.pinned;
+      var bPinned = !!bDraft.pinned;
+      if (aPinned !== bPinned) return bPinned - aPinned;
+      return (bDraft.updatedAt || 0) - (aDraft.updatedAt || 0);
+    });
+    return keys;
+  }
+
+  saveCurrentAsNewDraft(name, tagsInput) {
     this.detectCurrentText();
 
     var text = this.currentText || "";
@@ -958,6 +1016,8 @@ module.exports = class DraftVault {
       text: text,
       location: this.currentLocation,
       path: this.currentPath,
+      pinned: false,
+      tags: this.normalizeTags(tagsInput),
       createdAt: Date.now(),
       updatedAt: Date.now()
     };
@@ -993,11 +1053,7 @@ module.exports = class DraftVault {
 
     var self = this;
     var drafts = this.getDrafts();
-    var keys = Object.keys(drafts);
-
-    keys.sort(function(a, b) {
-      return drafts[b].updatedAt - drafts[a].updatedAt;
-    });
+    var keys = this.sortDraftKeys(drafts);
 
     this.backdrop = document.createElement("div");
     this.backdrop.className = "draftvault-backdrop";
@@ -1035,7 +1091,9 @@ module.exports = class DraftVault {
     currentSection.innerHTML =
       '<div class="draftvault-section-title">Current Typed Message</div>' +
       '<input class="draftvault-input" id="draftvault-new-name" placeholder="Name this draft..." value="' + this.escapeHTML(this.makeDefaultDraftName()) + '">' +
+      '<input class="draftvault-input" id="draftvault-new-tags" placeholder="Tags (comma-separated)" style="margin-top:8px;">' +
       '<div class="draftvault-live-preview">' + this.escapeHTML(this.currentText || "Nothing typed right now.") + '</div>' +
+      '<div class="draftvault-counts" id="draftvault-live-counts"></div>' +
       '<button class="draftvault-primary" id="draftvault-save-current">Save Current Message</button>';
 
     content.appendChild(currentSection);
@@ -1081,6 +1139,74 @@ module.exports = class DraftVault {
     };
 
     footer.appendChild(refresh);
+    var exportButton = document.createElement("button");
+    exportButton.textContent = "Export";
+    exportButton.onclick = function() {
+      var payload = {
+        plugin: "DraftVault",
+        exportedAt: new Date().toISOString(),
+        drafts: self.getDrafts()
+      };
+      var blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      var url = URL.createObjectURL(blob);
+      var link = document.createElement("a");
+      link.href = url;
+      link.download = "DraftVault-Export-" + Date.now() + ".json";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(function() { URL.revokeObjectURL(url); }, 200);
+      self.toast("Drafts exported", "success");
+    };
+    footer.appendChild(exportButton);
+
+    var importButton = document.createElement("button");
+    importButton.textContent = "Import";
+    importButton.onclick = function() {
+      var fileInput = document.createElement("input");
+      fileInput.type = "file";
+      fileInput.accept = ".json,application/json";
+      fileInput.onchange = function() {
+        var file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function() {
+          try {
+            var parsed = JSON.parse(String(reader.result || "{}"));
+            var imported = parsed && parsed.drafts ? parsed.drafts : parsed;
+            if (!imported || typeof imported !== "object") throw new Error("Invalid format");
+            var allDrafts = self.getDrafts();
+            var importedKeys = Object.keys(imported);
+            for (var idx = 0; idx < importedKeys.length; idx++) {
+              var oldKey = importedKeys[idx];
+              var item = imported[oldKey];
+              if (!item || typeof item !== "object") continue;
+              var newKey = "draft:" + Date.now() + ":" + Math.random().toString(16).slice(2);
+              allDrafts[newKey] = {
+                name: String(item.name || "Imported Draft"),
+                text: String(item.text || ""),
+                location: String(item.location || "Unknown"),
+                path: String(item.path || ""),
+                pinned: !!item.pinned,
+                tags: self.normalizeTags(item.tags && item.tags.join ? item.tags.join(",") : item.tags),
+                createdAt: Number(item.createdAt) || Date.now(),
+                updatedAt: Number(item.updatedAt) || Date.now()
+              };
+            }
+            allDrafts = self.trimDrafts(allDrafts);
+            self.saveDrafts(allDrafts);
+            self.openPanel();
+            self.toast("Drafts imported", "success");
+          } catch (error) {
+            console.error("[DraftVault] Import failed:", error);
+            self.toast("Import failed: invalid JSON", "error");
+          }
+        };
+        reader.readAsText(file);
+      };
+      fileInput.click();
+    };
+    footer.appendChild(importButton);
     footer.appendChild(clear);
 
     this.panel.appendChild(header);
@@ -1092,10 +1218,16 @@ module.exports = class DraftVault {
 
     var saveButton = document.querySelector("#draftvault-save-current");
     var nameInput = document.querySelector("#draftvault-new-name");
+    var tagsInput = document.querySelector("#draftvault-new-tags");
+    var liveCounts = document.querySelector("#draftvault-live-counts");
+    if (liveCounts) {
+      var stats = this.getTextStats(this.currentText);
+      liveCounts.textContent = "Characters: " + stats.chars + " · Lines: " + stats.lines;
+    }
 
     if (saveButton && nameInput) {
       saveButton.onclick = function() {
-        var saved = self.saveCurrentAsNewDraft(nameInput.value);
+        var saved = self.saveCurrentAsNewDraft(nameInput.value, tagsInput ? tagsInput.value : "");
 
         if (saved) {
           self.openPanel();
@@ -1123,6 +1255,7 @@ module.exports = class DraftVault {
       '<div class="draftvault-meta">' +
         '<span class="draftvault-location">' + this.escapeHTML(draft.location || "Unknown") + '</span>' +
         '<span class="draftvault-time">' + this.escapeHTML(timeText) + '</span>' +
+        '<span class="draftvault-tags">' + this.escapeHTML(((draft.tags || []).length ? ("#" + draft.tags.join(" #")) : "No tags")) + '</span>' +
       '</div>' +
       '<div class="draftvault-preview">' + this.escapeHTML(preview) + '</div>';
 
@@ -1162,6 +1295,18 @@ module.exports = class DraftVault {
     };
 
     actions.appendChild(restore);
+    var pin = document.createElement("button");
+    pin.className = "draftvault-action";
+    pin.textContent = draft.pinned ? "Unpin" : "Pin";
+    pin.onclick = function() {
+      var allDrafts = self.getDrafts();
+      if (!allDrafts[key]) return;
+      allDrafts[key].pinned = !allDrafts[key].pinned;
+      allDrafts[key].updatedAt = Date.now();
+      self.saveDrafts(allDrafts);
+      self.openPanel();
+    };
+    actions.appendChild(pin);
     actions.appendChild(edit);
     actions.appendChild(del);
 
@@ -1218,7 +1363,9 @@ module.exports = class DraftVault {
     editSection.innerHTML =
       '<div class="draftvault-section-title">Edit Saved Draft</div>' +
       '<input class="draftvault-input" id="draftvault-edit-name" value="' + this.escapeHTML(draft.name || "Untitled Draft") + '">' +
+      '<input class="draftvault-input" id="draftvault-edit-tags" value="' + this.escapeHTML((draft.tags || []).join(", ")) + '" style="margin-top:8px;" placeholder="Tags (comma-separated)">' +
       '<textarea class="draftvault-textarea" id="draftvault-edit-text">' + this.escapeHTML(draft.text || "") + '</textarea>' +
+      '<div class="draftvault-counts" id="draftvault-edit-counts"></div>' +
       '<button class="draftvault-primary" id="draftvault-save-edit">Save Changes</button>';
 
     content.appendChild(editSection);
@@ -1257,6 +1404,35 @@ module.exports = class DraftVault {
     var saveEdit = document.querySelector("#draftvault-save-edit");
     var nameInput = document.querySelector("#draftvault-edit-name");
     var textArea = document.querySelector("#draftvault-edit-text");
+    var tagsInput = document.querySelector("#draftvault-edit-tags");
+    var editCounts = document.querySelector("#draftvault-edit-counts");
+    var originalName = String(draft.name || "");
+    var originalText = String(draft.text || "");
+    var originalTags = (draft.tags || []).join(",");
+
+    var updateEditCounts = function() {
+      if (!editCounts || !textArea) return;
+      var stats = self.getTextStats(textArea.value);
+      editCounts.textContent = "Characters: " + stats.chars + " · Lines: " + stats.lines;
+    };
+    updateEditCounts();
+    if (textArea) textArea.addEventListener("input", updateEditCounts);
+
+    var isDirty = function() {
+      var n = String(nameInput ? nameInput.value : "").trim();
+      var t = String(textArea ? textArea.value : "").trim();
+      var g = self.normalizeTags(tagsInput ? tagsInput.value : "").join(",");
+      return n !== originalName || t !== originalText || g !== originalTags;
+    };
+
+    var guardedClose = function(next) {
+      if (isDirty() && !confirm("You have unsaved changes. Discard them?")) return;
+      next();
+    };
+
+    close.onclick = function() { guardedClose(function() { self.closePanel(); }); };
+    this.backdrop.onclick = function() { guardedClose(function() { self.closePanel(); }); };
+    cancel.onclick = function() { guardedClose(function() { self.openPanel(); }); };
 
     if (saveEdit && nameInput && textArea) {
       saveEdit.onclick = function() {
@@ -1282,6 +1458,8 @@ module.exports = class DraftVault {
 
         allDrafts[key].name = newName;
         allDrafts[key].text = newText;
+        allDrafts[key].tags = self.normalizeTags(tagsInput ? tagsInput.value : "");
+        if (typeof allDrafts[key].pinned !== "boolean") allDrafts[key].pinned = false;
         allDrafts[key].updatedAt = Date.now();
 
         self.saveDrafts(allDrafts);
