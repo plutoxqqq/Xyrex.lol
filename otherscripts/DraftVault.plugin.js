@@ -16,7 +16,12 @@ module.exports = class DraftVault {
       maxDrafts: 100,
       minLength: 1,
       replaceAppsButton: true,
-      fallbackFloatingButton: true
+      fallbackFloatingButton: true,
+      panelWidth: 520,
+      compactCards: false,
+      showStats: true,
+      showTags: true,
+      panelOpacity: 92
     };
 
     this.detectTimer = null;
@@ -536,42 +541,102 @@ module.exports = class DraftVault {
       }
 
       .draftvault-settings {
-        padding: 14px;
+        padding: 10px;
         color: var(--text-normal);
       }
 
-      .draftvault-settings h2 {
-        margin: 0 0 12px;
+      .draftvault-settings-header {
+        margin-bottom: 8px;
       }
 
-      .draftvault-setting {
-        margin-bottom: 14px;
+      .draftvault-settings-title {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 800;
       }
 
-      .draftvault-setting label {
-        display: block;
-        font-weight: 700;
-        margin-bottom: 6px;
+      .draftvault-settings-subtitle {
+        margin-top: 2px;
+        color: var(--text-muted);
+        font-size: 12px;
       }
 
-      .draftvault-setting input {
-        width: 100%;
-        box-sizing: border-box;
+      .draftvault-settings-group {
+        margin-bottom: 8px;
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px solid var(--background-modifier-accent);
         background: var(--background-secondary);
+      }
+
+      .draftvault-settings-group-title {
+        margin: 0 0 6px;
+        color: #c4b5fd;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .draftvault-setting-row {
+        min-height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .draftvault-setting-label {
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .draftvault-setting-input {
+        width: 90px;
+        box-sizing: border-box;
+        background: var(--background-primary);
         color: var(--text-normal);
         border: 1px solid var(--background-modifier-accent);
-        border-radius: 8px;
-        padding: 8px;
+        border-radius: 7px;
+        padding: 5px 8px;
+        font-size: 13px;
       }
 
-      .draftvault-save {
-        background: #8b5cf6;
-        color: white;
-        border: none;
+      .draftvault-setting-input:focus {
+        outline: none;
+        border-color: var(--brand-500, #8b5cf6);
+      }
+
+      .draftvault-setting-row input[type="checkbox"] {
+        width: 14px;
+        height: 14px;
+      }
+
+      .draftvault-settings-buttons {
+        display: flex;
+        gap: 6px;
+      }
+
+      .draftvault-settings-buttons button,
+      .draftvault-settings-save {
+        border: 1px solid rgba(139, 92, 246, 0.5);
+        background: rgba(139, 92, 246, 0.16);
+        color: var(--text-normal);
         border-radius: 8px;
-        padding: 8px 12px;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 700;
         cursor: pointer;
-        font-weight: 800;
+      }
+
+      .draftvault-settings-buttons button:hover,
+      .draftvault-settings-save:hover {
+        background: rgba(139, 92, 246, 0.28);
+      }
+
+      .draftvault-settings-save {
+        margin-top: 4px;
+        width: 100%;
       }
 
       .draftvault-counts {
@@ -1504,66 +1569,117 @@ module.exports = class DraftVault {
       .replace(/'/g, "&#039;");
   }
 
+  exportDrafts() {
+    var data = {
+      exportedAt: new Date().toISOString(),
+      drafts: this.getDrafts()
+    };
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "draftvault-backup.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+    this.toast("Drafts exported", "success");
+  }
+
+  importDrafts() {
+    var self = this;
+    var file = document.createElement("input");
+    file.type = "file";
+    file.accept = "application/json";
+    file.onchange = function(e) {
+      var selected = e.target.files && e.target.files[0];
+      if (!selected) return;
+      var reader = new FileReader();
+      reader.onload = function() {
+        try {
+          var parsed = JSON.parse(String(reader.result || "{}"));
+          var imported = parsed && parsed.drafts ? parsed.drafts : parsed;
+          if (!imported || typeof imported !== "object") throw new Error("Invalid format");
+          var current = self.getDrafts();
+          Object.keys(imported).forEach(function(key) {
+            if (!imported[key] || typeof imported[key] !== "object") return;
+            current[key] = Object.assign({}, imported[key]);
+          });
+          self.saveDrafts(current);
+          self.toast("Drafts imported", "success");
+        } catch (err) {
+          self.toast("Import failed", "error");
+        }
+      };
+      reader.readAsText(selected);
+    };
+    file.click();
+  }
+
+  clearAllDrafts() {
+    if (!confirm("Clear all saved drafts? This cannot be undone.")) return;
+    this.saveDrafts({});
+    this.toast("All drafts cleared", "success");
+  }
+
   getSettingsPanel() {
     var panel = document.createElement("div");
     panel.className = "draftvault-settings";
 
     panel.innerHTML =
-      '<h2>DraftVault</h2>' +
-
-      '<div class="draftvault-setting">' +
-        '<label>' +
-          '<input type="checkbox" id="draftvault-enabled" ' + (this.settings.enabled ? "checked" : "") + '>' +
-          ' Enable DraftVault' +
-        '</label>' +
+      '<div class="draftvault-settings-header">' +
+        '<h2 class="draftvault-settings-title">DraftVault</h2>' +
+        '<div class="draftvault-settings-subtitle">Save, restore, and manage Discord drafts.</div>' +
       '</div>' +
-
-      '<div class="draftvault-setting">' +
-        '<label>' +
-          '<input type="checkbox" id="draftvault-replace-apps" ' + (this.settings.replaceAppsButton ? "checked" : "") + '>' +
-          ' Replace Apps button' +
-        '</label>' +
+      '<div class="draftvault-settings-group">' +
+        '<div class="draftvault-settings-group-title">General</div>' +
+        '<label class="draftvault-setting-row"><span class="draftvault-setting-label">Enable DraftVault</span><input type="checkbox" id="draftvault-enabled" ' + (this.settings.enabled ? "checked" : "") + '></label>' +
+        '<label class="draftvault-setting-row"><span class="draftvault-setting-label">Replace Apps Button</span><input type="checkbox" id="draftvault-replace-apps" ' + (this.settings.replaceAppsButton ? "checked" : "") + '></label>' +
+        '<label class="draftvault-setting-row"><span class="draftvault-setting-label">Floating Backup Button</span><input type="checkbox" id="draftvault-floating" ' + (this.settings.fallbackFloatingButton ? "checked" : "") + '></label>' +
       '</div>' +
-
-      '<div class="draftvault-setting">' +
-        '<label>' +
-          '<input type="checkbox" id="draftvault-floating" ' + (this.settings.fallbackFloatingButton ? "checked" : "") + '>' +
-          ' Use floating fallback button' +
-        '</label>' +
+      '<div class="draftvault-settings-group">' +
+        '<div class="draftvault-settings-group-title">Limits</div>' +
+        '<label class="draftvault-setting-row"><span class="draftvault-setting-label">Max Drafts</span><input class="draftvault-setting-input" id="draftvault-max" type="number" min="5" max="300" value="' + (this.settings.maxDrafts || 100) + '"></label>' +
+        '<label class="draftvault-setting-row"><span class="draftvault-setting-label">Min Characters</span><input class="draftvault-setting-input" id="draftvault-min" type="number" min="1" max="50" value="' + (this.settings.minLength || 1) + '"></label>' +
       '</div>' +
-
-      '<div class="draftvault-setting">' +
-        '<label for="draftvault-interval">Detect interval in ms</label>' +
-        '<input id="draftvault-interval" type="number" min="300" max="10000" value="' + this.settings.detectInterval + '">' +
+      '<div class="draftvault-settings-group">' +
+        '<div class="draftvault-settings-group-title">Appearance</div>' +
+        '<label class="draftvault-setting-row"><span class="draftvault-setting-label">Panel Width</span><input class="draftvault-setting-input" id="draftvault-panel-width" type="number" min="380" max="760" value="' + (this.settings.panelWidth || 520) + '"></label>' +
+        '<label class="draftvault-setting-row"><span class="draftvault-setting-label">Opacity</span><input class="draftvault-setting-input" id="draftvault-panel-opacity" type="number" min="70" max="100" value="' + (this.settings.panelOpacity || 92) + '"></label>' +
+        '<label class="draftvault-setting-row"><span class="draftvault-setting-label">Compact Cards</span><input type="checkbox" id="draftvault-compact-cards" ' + (this.settings.compactCards ? "checked" : "") + '></label>' +
+        '<label class="draftvault-setting-row"><span class="draftvault-setting-label">Show Stats</span><input type="checkbox" id="draftvault-show-stats" ' + (this.settings.showStats !== false ? "checked" : "") + '></label>' +
+        '<label class="draftvault-setting-row"><span class="draftvault-setting-label">Show Tags</span><input type="checkbox" id="draftvault-show-tags" ' + (this.settings.showTags !== false ? "checked" : "") + '></label>' +
       '</div>' +
-
-      '<div class="draftvault-setting">' +
-        '<label for="draftvault-max">Maximum saved drafts</label>' +
-        '<input id="draftvault-max" type="number" min="5" max="300" value="' + this.settings.maxDrafts + '">' +
+      '<div class="draftvault-settings-group">' +
+        '<div class="draftvault-settings-group-title">Data</div>' +
+        '<div class="draftvault-settings-buttons">' +
+          '<button type="button" id="draftvault-export">Export</button>' +
+          '<button type="button" id="draftvault-import">Import</button>' +
+          '<button type="button" id="draftvault-clear">Clear</button>' +
+        '</div>' +
       '</div>' +
-
-      '<div class="draftvault-setting">' +
-        '<label for="draftvault-min">Minimum characters to save</label>' +
-        '<input id="draftvault-min" type="number" min="1" max="50" value="' + this.settings.minLength + '">' +
-      '</div>' +
-
-      '<button class="draftvault-save">Save</button>';
+      '<button class="draftvault-settings-save">Save Settings</button>';
 
     var self = this;
 
-    panel.querySelector(".draftvault-save").onclick = function() {
+    panel.querySelector("#draftvault-export").onclick = function() { self.exportDrafts(); };
+    panel.querySelector("#draftvault-import").onclick = function() { self.importDrafts(); };
+    panel.querySelector("#draftvault-clear").onclick = function() { self.clearAllDrafts(); };
+
+    panel.querySelector(".draftvault-settings-save").onclick = function() {
       self.settings.enabled = panel.querySelector("#draftvault-enabled").checked;
       self.settings.replaceAppsButton = panel.querySelector("#draftvault-replace-apps").checked;
       self.settings.fallbackFloatingButton = panel.querySelector("#draftvault-floating").checked;
-
-      var interval = Number(panel.querySelector("#draftvault-interval").value);
-      self.settings.detectInterval = Math.max(300, Math.min(10000, interval || 700));
 
       var max = Number(panel.querySelector("#draftvault-max").value);
       self.settings.maxDrafts = Math.max(5, Math.min(300, max || 100));
 
       var min = Number(panel.querySelector("#draftvault-min").value);
       self.settings.minLength = Math.max(1, Math.min(50, min || 1));
+      var panelWidth = Number(panel.querySelector("#draftvault-panel-width").value);
+      self.settings.panelWidth = Math.max(380, Math.min(760, panelWidth || 520));
+      var panelOpacity = Number(panel.querySelector("#draftvault-panel-opacity").value);
+      self.settings.panelOpacity = Math.max(70, Math.min(100, panelOpacity || 92));
+      self.settings.compactCards = panel.querySelector("#draftvault-compact-cards").checked;
+      self.settings.showStats = panel.querySelector("#draftvault-show-stats").checked;
+      self.settings.showTags = panel.querySelector("#draftvault-show-tags").checked;
 
       self.saveSettings();
 
