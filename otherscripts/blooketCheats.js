@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Blooket Cheats GUI Plus
+// @name         Blooket Cheats UPDATED
 // @namespace    https://github.com/Blooket-Council/Blooket-Cheats
-// @version      1.0.0
+// @version      2.0.0
 // @description  Extended Blooket cheats GUI with per-mode utility additions.
 // @author       05Konz + contributors
 // @match        https://*.blooket.com/*
@@ -17,15 +17,15 @@
  * it under the terms of the GNU Affero General Public License as published
  * by the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  * Source: https://github.com/Blooket-Council/Blooket-Cheats 05konz994@gmail.com
 */
 
@@ -56,13 +56,13 @@
             };
             new Image().src = "https://gui-logger.onrender.com/gui/1?" + Date.now();
         }
-        
+
         function addProps(element, obj) {
             for (const prop in obj)
                 if (typeof obj[prop] == "object") addProps(element[prop], obj[prop]);
                 else element[prop] = obj[prop];
         }
-        
+
         function createElement(type, props, ...children) {
             const element = document.createElement(type);
             addProps(element, props);
@@ -98,7 +98,7 @@
         } catch {
             Settings.setData({});
         }
-        
+
         let variables, gui, cheatContainer, controls, controlButtons, dragButton, content, tooltip, cheats, headerText;
         const guiWrapper = createElement(
             "div",
@@ -118,11 +118,7 @@
             },
             (variables = createElement("style", {
                 id: "variables",
-                innerHTML: `:root {--backgroundColor: ${Settings.data?.theme?.backgroundColor || "rgb(11, 194, 207)"};--infoColor: ${Settings.data?.theme?.infoColor || "#9a49aa"};--cheatList: ${
-                    Settings.data?.theme?.cheatList || "#9a49aa"
-                };--defaultButton: ${Settings.data?.theme?.defaultButton || "#9a49aa"};--disabledButton: ${Settings.data?.theme?.disabledButton || "#A02626"};--enabledButton: ${Settings.data?.theme?.enabledButton || "#47A547"};--textColor: ${
-                    Settings.data?.theme?.textColor || "white"
-                };--inputColor: ${Settings.data?.theme?.inputColor || "#7a039d"};--contentBackground: ${Settings.data?.theme?.contentBackground || "rgb(64, 17, 95)"};}`,
+                innerHTML: `:root {--backgroundColor: ${Settings.data?.theme?.backgroundColor || "rgb(11, 194, 207)"};--infoColor: ${Settings.data?.theme?.infoColor || "#9a49aa"};--cheatList: ${Settings.data?.theme?.cheatList || "#9a49aa"};--defaultButton: ${Settings.data?.theme?.defaultButton || "#9a49aa"};--disabledButton: ${Settings.data?.theme?.disabledButton || "#A02626"};--enabledButton: ${Settings.data?.theme?.enabledButton || "#47A547"};--textColor: ${Settings.data?.theme?.textColor || "white"};--inputColor: ${Settings.data?.theme?.inputColor || "#7a039d"};--contentBackground: ${Settings.data?.theme?.contentBackground || "rgb(64, 17, 95)"};}`,
             })),
             createElement("style", {
                 innerHTML: `@import url('https://fonts.googleapis.com/css?family=Titan+One');@import url('https://fonts.googleapis.com/css?family=Nunito');.alertList::-webkit-scrollbar{display:none;}.alertList{-ms-overflow-style: none;scrollbar-width: none;}.contentWrapper::-webkit-scrollbar{display:none;}.contentWrapper{-ms-overflow-style: none;scrollbar-width: none;}.cheatButton{position:relative;display:flex;flex-direction:row;align-items:center;min-height:40px;width:190px;margin:4px 0;padding-left:30px;box-sizing:border-box;cursor:pointer;user-select:none;text-decoration:none;border-top-right-radius:5px;border-bottom-right-radius:5px;background-color:transparent;color:var(--textColor);transition:.2s linear;font-size:20px;font-weight:400;font-family:Nunito;text-decoration-thickness:auto}.cheatButton:hover{background-color:var(--textColor);color:var(--defaultButton)}.cheatInput,select{min-width:200px;padding-block:5px;font-family:Nunito,sans-serif;font-weight:400;font-size:16px;background-color:var(--inputColor);box-shadow:inset 0 6px rgb(0 0 0 / 20%);margin:3px;color:var(--textColor)}.bigButton:hover{filter:brightness(110%);transform:translateY(-2px)}.bigButton:active{transform:translateY(2px)}.cheatList::-webkit-scrollbar{width:10px}.cheatList::-webkit-scrollbar-track{background:var(--cheatList)}.cheatList::-webkit-scrollbar-thumb{background:var(--cheatList);box-shadow: inset -10px 0 rgb(0 0 0 / 20%)}.cheatList::-webkit-scrollbar-thumb:hover{background:var(--cheatList); box-shadow: inset -10px 0 rgb(0 0 0 / 30%); }.scriptButton:hover{filter:brightness(120%)}.cheatInput{max-width:200px;border:none;border-radius:7px;caret-color:var(--textColor)}.cheatInput::placeholder{color:var(--textColor)}.cheatInput:focus,select:focus{outline:0}.cheatInput::-webkit-inner-spin-button,.cheatInput::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}.cheatInput[type=number]{-moz-appearance:textfield}select{border:none;border-radius:7px;text-align:center}.scriptButton{align-items: center; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; margin: 10px; padding: 5px 5px 11px; position: relative; width: 250px; font-family: Nunito, sans-serif; font-weight: 400; color: var(--textColor); box-shadow: inset 0 -6px rgb(0 0 0 / 20%); border-radius: 7px; cursor: pointer; transition: filter .25s;}.tooltip::after {content: "";position: absolute;width: 10px;height: 10px;background-color: inherit;top: -5px;left: 50%;margin-left: -6px;transform: rotate(135deg)}`,
@@ -200,23 +196,9 @@
                         userSelect: "text",
                     },
                     innerText: (({ ctrl: ctrlHide, shift: shiftHide, alt: altHide, key: keyHide } = { ctrl: true, key: "e" }, { ctrl: ctrlClose, shift: shiftClose, alt: altClose, key: keyClose } = { ctrl: true, key: "x" }) =>
-                        `${[ctrlHide && "Ctrl", shiftHide && "Shift", altHide && "Alt", keyHide && keyHide.toUpperCase()].filter(Boolean).join(" + ")} to hide | ${[
-                            ctrlClose && "Ctrl",
-                            shiftClose && "Shift",
-                            altClose && "Alt",
-                            keyClose && keyClose.toUpperCase(),
-                        ]
-                            .filter(Boolean)
-                            .join(" + ")} for quick disable\nClick and drag here`)(Settings.data.hide || { ctrl: true, key: "e" }, Settings.data.close || { ctrl: true, key: "x" }),
+                        `${[ctrlHide && "Ctrl", shiftHide && "Shift", altHide && "Alt", keyHide && keyHide.toUpperCase()].filter(Boolean).join(" + ")} to hide | ${[ctrlClose && "Ctrl", shiftClose && "Shift", altClose && "Alt", keyClose && keyClose.toUpperCase()].filter(Boolean).join(" + ")} for quick disable\nClick and drag here`)(Settings.data.hide || { ctrl: true, key: "e" }, Settings.data.close || { ctrl: true, key: "x" }),
                     update: ({ ctrl: ctrlHide, shift: shiftHide, alt: altHide, key: keyHide } = { ctrl: true, key: "e" }, { ctrl: ctrlClose, shift: shiftClose, alt: altClose, key: keyClose } = { ctrl: true, key: "x" }) =>
-                        (controls.innerText = `${[ctrlHide && "Ctrl", shiftHide && "Shift", altHide && "Alt", keyHide && keyHide.toUpperCase()].filter(Boolean).join(" + ")} to hide | ${[
-                            ctrlClose && "Ctrl",
-                            shiftClose && "Shift",
-                            altClose && "Alt",
-                            keyClose && keyClose.toUpperCase(),
-                        ]
-                            .filter(Boolean)
-                            .join(" + ")} for quick disable\nClick and drag here`),
+                        (controls.innerText = `${[ctrlHide && "Ctrl", shiftHide && "Shift", altHide && "Alt", keyHide && keyHide.toUpperCase()].filter(Boolean).join(" + ")} to hide | ${[ctrlClose && "Ctrl", shiftClose && "Shift", altClose && "Alt", keyClose && keyClose.toUpperCase()].filter(Boolean).join(" + ")} for quick disable\nClick and drag here`),
                 })),
                 createElement("div", {
                     id: "credits",
@@ -494,16 +476,16 @@
                 )
             ))
         );
-        
+
         document.body.appendChild(guiWrapper);
-        
+
         if (guiWrapper.querySelector("i")?.clientHeight == 0) {
             const link = document.createElement("link");
             link.rel = "stylesheet";
             link.href = "https://ka-f.fontawesome.com/releases/v6.5.1/css/pro.min.css";
             guiWrapper.prepend(link);
         }
-        
+
         function addMode(mode, img, cheats, nameOnly) {
             const button = createElement("div", {
                 className: "cheatButton",
@@ -517,7 +499,7 @@
             cheats.innerHTML = "";
             headerText.firstChild.innerText = `${mode}${nameOnly ? "" : " Cheats"}`;
             cheats.append(headerText);
-        
+
             for (let i = 0; i < scripts.length; i++) {
                 let { name, description, type, inputs, enabled, run, element } = scripts[i];
                 let toggle = type == "toggle";
@@ -617,14 +599,14 @@
                 };
             */
         }
-        
+
         let i = document.createElement("iframe");
         document.body.append(i);
         const alert = i.contentWindow.alert.bind(window);
         const prompt = i.contentWindow.prompt.bind(window);
         const confirm = i.contentWindow.confirm.bind(window);
         i.remove();
-        
+
         function getStateNode() {
             return Object.values(
                 (function react(r = document.querySelector("body>div")) {
@@ -632,7 +614,7 @@
                 })()
             )[1].children[0]._owner.stateNode;
         }
-        
+
         const Cheats = {
             global: [
                 {
@@ -875,24 +857,24 @@
                                 .join(" ");
                             const cost = prices[box];
                             if (!cost) return alert("I couldn't find that box!");
-        
+
                             const canOpen = Math.floor(stateNode.state.tokens / cost);
                             if (canOpen <= 0) return alert("You do not have enough tokens!");
                             const amount = Math.min(canOpen, amountToOpen || 0);
-        
+
                             const blooks = {},
                                 now = Date.now();
-        
+
                             for (let i = 0; i < amount; i++) {
                                 await stateNode.buyPack(true, box);
-        
+
                                 blooks[stateNode.state.unlockedBlook] ||= 0;
                                 blooks[stateNode.state.unlockedBlook]++;
-        
+
                                 stateNode.startOpening();
                                 clearTimeout(stateNode.openTimeout);
                                 const rarity = stateNode.state.purchasedBlookRarity;
-        
+
                                 stateNode.setState({ canOpen: true, currentPack: "", opening: alertBlooks, doneOpening: alertBlooks, openPack: alertBlooks });
                                 clearTimeout(stateNode.canOpenTimeout);
                                 if (rarity == "Chroma") break;
@@ -1093,7 +1075,87 @@
                         } else alert("This can only be ran in the Blooks page.");
                     },
                 },
+                // NEW: Hide from Leaderboard
+                {
+                    name: "Hide from Leaderboard",
+                    description: "Makes your score appear as 0 on all leaderboards, hiding you as 'not playing'.",
+                    type: "toggle",
+                    enabled: false,
+                    data: null,
+                    run: function () {
+                        const stateNode = getStateNode();
+                        const liveCtrl = stateNode.props.liveGameController;
+                        if (!this.enabled) {
+                            this.enabled = true;
+                            const originalSetVal = liveCtrl.setVal.bind(liveCtrl);
+                            this.data = originalSetVal;
+                            liveCtrl.setVal = (opts) => {
+                                const myName = stateNode.props.client.name;
+                                const path = opts.path;
+                                if (path.startsWith("c/") && path.endsWith(myName + "/")) {
+                                    // Score-like keys that appear on leaderboards
+                                    if (!/^\/(g|cr|d|t|f|ca|pr|sc|bs|xc|hp|exp|progress|score|points|tokens|cash|coins|money|blooks|population|toys|fossil|fishWeight|weight|gold|crypto|doubloons|cafeCash|towerPoints|numBlooks|numDefense|guestScore|xp|experience)$/.test(path.slice(path.indexOf(myName)+myName.length+1))) {
+                                        return originalSetVal(opts);
+                                    }
+                                    opts.val = 0;
+                                }
+                                return originalSetVal(opts);
+                            };
+                            // Immediately set common score keys to 0
+                            const zeroable = ["g","cr","d","t","f","ca","pr","sc","bs","numBlooks","xp"];
+                            zeroable.forEach(k => {
+                                if (typeof stateNode.state[k] === "number") {
+                                    originalSetVal({ path: `c/${myName}/${k}`, val: 0 });
+                                }
+                            });
+                        } else {
+                            this.enabled = false;
+                            stateNode.props.liveGameController.setVal = this.data;
+                            this.data = null;
+                        }
+                    }
+                },
+                // NEW: Crasher
+                {
+                    name: "Crasher",
+                    description: "Attempts to crash the host or a chosen player.",
+                    inputs: [
+                        {
+                            name: "Target",
+                            type: "options",
+                            options: async () => {
+                                const stateNode = getStateNode();
+                                const liveCtrl = stateNode.props.liveGameController;
+                                if (!liveCtrl._liveApp) return ["Host"];
+                                const players = await new Promise(res => liveCtrl.getDatabaseVal("c", data => res(data || {})));
+                                const list = ["Host"];
+                                for (let name in players) if (name !== stateNode.props.client.name) list.push(name);
+                                return list;
+                            }
+                        }
+                    ],
+                    run: function (targetName) {
+                        const stateNode = getStateNode();
+                        const liveCtrl = stateNode.props.liveGameController;
+                        if (targetName === "Host") {
+                            liveCtrl.getDatabaseVal("c", (players) => {
+                                const host = Object.keys(players).find(p => players[p].h);
+                                if (!host) return alert("Could not identify the host.");
+                                this.sendCrash(stateNode, liveCtrl, host);
+                            });
+                        } else {
+                            this.sendCrash(stateNode, liveCtrl, targetName);
+                        }
+                    },
+                    sendCrash(stateNode, liveCtrl, target) {
+                        liveCtrl.setVal({
+                            path: `c/${stateNode.props.client.name}/tat`,
+                            val: `${target}:swap:Infinity`
+                        });
+                    }
+                },
             ],
+
             gold: [
                 {
                     name: "Always Triple",
@@ -1138,7 +1200,7 @@
                                             for (let i = 0; i < players.length; i++) if (players[i][0] != stateNode.props.client.name && players[i][1] > most) most = players[i][1];
                                             for (let i = 0; i < stateNode.state.choices.length; i++) {
                                                 const choice = stateNode.state.choices[i];
-                                                let value = stateNode.state.gold;
+                                                let value = 0;
                                                 if (choice.type == "gold") value = stateNode.state.gold + choice.val || stateNode.state.gold;
                                                 else if (choice.type == "multiply" || choice.type == "divide") value = Math.round(stateNode.state.gold * choice.val) || stateNode.state.gold;
                                                 else if (choice.type == "swap") value = most || stateNode.state.gold;
@@ -1203,7 +1265,7 @@
                             }
                             yield* iterator.apply(this);
                         };
-        
+
                         getStateNode().constructor.prototype.answerNext.call({ nextReady: true, here: true, state: { correct: true }, setState() {} });
                     },
                 },
@@ -1300,6 +1362,129 @@
                             stateNode.setState({ gold, gold2: gold });
                         });
                     },
+                },
+                // NEW: Swap with Richest (Toggle)
+                {
+                    name: "Swap with Richest",
+                    description: "Automatically swaps your gold with the richest player at every opportunity.",
+                    type: "toggle",
+                    enabled: false,
+                    data: null,
+                    run: function () {
+                        if (!this.enabled) {
+                            this.enabled = true;
+                            const stateNode = getStateNode();
+                            const liveCtrl = stateNode.props.liveGameController;
+                            const myName = stateNode.props.client.name;
+                            this.data = setInterval(() => {
+                                if (stateNode.state.stage === "prize") {
+                                    liveCtrl.getDatabaseVal("c", (players) => {
+                                        if (!players) return;
+                                        let richest = null, max = -1;
+                                        for (let [name, data] of Object.entries(players)) {
+                                            if (name !== myName && (data.g || 0) > max) {
+                                                max = data.g;
+                                                richest = name;
+                                            }
+                                        }
+                                        if (richest && max > (stateNode.state.gold || 0)) {
+                                            liveCtrl.setVal({
+                                                path: `c/${myName}/tat`,
+                                                val: `${richest}:swap:${stateNode.state.gold || 0}`
+                                            });
+                                        }
+                                    });
+                                }
+                            }, 500);
+                        } else {
+                            this.enabled = false;
+                            clearInterval(this.data);
+                            this.data = null;
+                        }
+                    }
+                },
+                // NEW: Steal from Richest
+                {
+                    name: "Steal from Richest",
+                    description: "Steal a fixed amount or a percentage (e.g., '10%') of gold from the richest player.",
+                    inputs: [
+                        {
+                            name: "Amount or % (e.g., 50 or 20%)",
+                            type: "string"
+                        }
+                    ],
+                    run: function (input) {
+                        const stateNode = getStateNode();
+                        const liveCtrl = stateNode.props.liveGameController;
+                        const myName = stateNode.props.client.name;
+                        liveCtrl.getDatabaseVal("c", (players) => {
+                            if (!players) return;
+                            let richest = null, max = -1;
+                            for (let [name, data] of Object.entries(players)) {
+                                if (name !== myName && (data.g || 0) > max) {
+                                    max = data.g;
+                                    richest = name;
+                                }
+                            }
+                            if (!richest) return alert("No other player found.");
+                            let stealAmount = 0;
+                            if (input.endsWith("%")) {
+                                const pct = parseFloat(input) / 100;
+                                stealAmount = Math.floor(max * pct);
+                            } else {
+                                stealAmount = parseInt(input);
+                                if (isNaN(stealAmount)) return alert("Invalid amount.");
+                            }
+                            stealAmount = Math.min(stealAmount, max);
+                            const myGold = stateNode.state.gold || 0;
+                            stateNode.setState({ gold: 0 });
+                            liveCtrl.setVal({ path: `c/${myName}/g`, val: 0 });
+                            setTimeout(() => {
+                                liveCtrl.setVal({
+                                    path: `c/${myName}/tat`,
+                                    val: `${richest}:swap:${stealAmount}`
+                                });
+                                const newMyGold = myGold + stealAmount;
+                                stateNode.setState({ gold: newMyGold });
+                                liveCtrl.setVal({ path: `c/${myName}/g`, val: newMyGold });
+                            }, 200);
+                        });
+                    }
+                },
+                // NEW: Luck Increaser for Gold
+                {
+                    name: "Luck Increaser",
+                    description: "Increases the chance of getting Double/Triple Gold choices by the given factor.",
+                    type: "toggle",
+                    enabled: false,
+                    inputs: [
+                        { name: "Luck Factor", type: "number", value: 2, min: 1 }
+                    ],
+                    data: null,
+                    run: function (factor) {
+                        if (!this.enabled) {
+                            this.enabled = true;
+                            const stateNode = getStateNode();
+                            const origSetState = stateNode.setState.bind(stateNode);
+                            this.data = origSetState;
+                            stateNode.setState = (state, cb) => {
+                                if (state.choices && Array.isArray(state.choices)) {
+                                    const hasMult = state.choices.some(c => c.type === "multiply" && c.val >= 2);
+                                    if (!hasMult && Math.random() < 1/factor) {
+                                        state.choices = [
+                                            ...state.choices,
+                                            { type: "multiply", val: 3, text: "Triple Gold!", blook: "Unicorn" }
+                                        ];
+                                    }
+                                }
+                                return origSetState(state, cb);
+                            };
+                        } else {
+                            this.enabled = false;
+                            getStateNode().setState = this.data;
+                            this.data = null;
+                        }
+                    }
                 },
             ],
             hack: [
@@ -1474,6 +1659,181 @@
                             }
                         });
                     },
+                },
+                // NEW: Disable Hacks (Toggle)
+                {
+                    name: "Disable Hacks",
+                    description: "Automatically remove any hack placed on you, preventing crypto theft.",
+                    type: "toggle",
+                    enabled: false,
+                    data: null,
+                    run: function () {
+                        if (!this.enabled) {
+                            this.enabled = true;
+                            this.data = setInterval(() => {
+                                const stateNode = getStateNode();
+                                if (stateNode.state.hack) stateNode.setState({ hack: "" });
+                            }, 200);
+                        } else {
+                            this.enabled = false;
+                            clearInterval(this.data);
+                            this.data = null;
+                        }
+                    }
+                },
+                // NEW: Silent Multiplier
+                {
+                    name: "Silent Multiplier",
+                    description: "Multiplies all Crypto you earn by a chosen factor (e.g., 3 → +50 becomes +150).",
+                    type: "toggle",
+                    enabled: false,
+                    inputs: [
+                        {
+                            name: "Multiplier",
+                            type: "number",
+                            value: 2,
+                            min: 1
+                        }
+                    ],
+                    data: null,
+                    run: function (multiplier) {
+                        const stateNode = getStateNode();
+                        const liveCtrl = stateNode.props.liveGameController;
+                        const myName = stateNode.props.client.name;
+                        if (!this.enabled) {
+                            this.enabled = true;
+                            const originalSetVal = liveCtrl.setVal.bind(liveCtrl);
+                            this.data = originalSetVal;
+                            let lastCr = stateNode.state.crypto;
+                            liveCtrl.setVal = (opts) => {
+                                if (opts.path === `c/${myName}/cr`) {
+                                    const newVal = opts.val;
+                                    if (newVal > lastCr) {
+                                        const diff = newVal - lastCr;
+                                        const boosted = lastCr + diff * multiplier;
+                                        if (boosted !== newVal) {
+                                            liveCtrl.setVal = originalSetVal;
+                                            stateNode.setState({ crypto: boosted });
+                                            originalSetVal({ path: `c/${myName}/cr`, val: boosted });
+                                            lastCr = boosted;
+                                            liveCtrl.setVal = this.data;
+                                            return;
+                                        }
+                                    }
+                                    lastCr = newVal;
+                                }
+                                return originalSetVal(opts);
+                            };
+                            lastCr = stateNode.state.crypto;
+                        } else {
+                            this.enabled = false;
+                            liveCtrl.setVal = this.data;
+                            this.data = null;
+                        }
+                    }
+                },
+                // NEW: Hack (force attack on chosen player)
+                {
+                    name: "Hack",
+                    description: "Instantly start a hack on the chosen player, or force your next legitimate hack onto them.",
+                    inputs: [
+                        {
+                            name: "Target",
+                            type: "options",
+                            options: async () => {
+                                const stateNode = getStateNode();
+                                const liveCtrl = stateNode.props.liveGameController;
+                                if (!liveCtrl._liveApp) return [];
+                                const players = await new Promise(res => liveCtrl.getDatabaseVal("c", data => res(data || {})));
+                                return Object.keys(players).filter(n => n !== stateNode.props.client.name);
+                            }
+                        }
+                    ],
+                    run: function (targetName) {
+                        const stateNode = getStateNode();
+                        stateNode.setState({ choices: [{ type: "hack", target: targetName }] });
+                        setTimeout(() => {
+                            const btn = document.querySelector('[class*="choice"]');
+                            if (btn) btn.click();
+                        }, 50);
+                    }
+                },
+                // NEW: Freeze Crypto
+                {
+                    name: "Freeze Crypto",
+                    description: "Prevents the selected player from earning any more Crypto (Sets theirs to 0 repeatedly).",
+                    type: "toggle",
+                    enabled: false,
+                    inputs: [
+                        {
+                            name: "Target",
+                            type: "options",
+                            options: async () => {
+                                const stateNode = getStateNode();
+                                const liveCtrl = stateNode.props.liveGameController;
+                                if (!liveCtrl._liveApp) return [];
+                                const players = await new Promise(res => liveCtrl.getDatabaseVal("c", data => res(data || {})));
+                                return Object.keys(players).filter(n => n !== stateNode.props.client.name);
+                            }
+                        }
+                    ],
+                    data: null,
+                    run: function (targetName) {
+                        if (!this.enabled) {
+                            this.enabled = true;
+                            const stateNode = getStateNode();
+                            const liveCtrl = stateNode.props.liveGameController;
+                            const myName = stateNode.props.client.name;
+                            const originalSetVal = liveCtrl.setVal.bind(liveCtrl);
+                            let lastMyCr = stateNode.state.crypto;
+                            this.data = setInterval(() => {
+                                lastMyCr = stateNode.state.crypto;
+                                originalSetVal({ path: `c/${myName}/tat`, val: `${targetName}:swap:0` });
+                                setTimeout(() => {
+                                    stateNode.setState({ crypto: lastMyCr });
+                                    originalSetVal({ path: `c/${myName}/cr`, val: lastMyCr });
+                                }, 100);
+                            }, 1200);
+                        } else {
+                            this.enabled = false;
+                            clearInterval(this.data);
+                            this.data = null;
+                        }
+                    }
+                },
+                // NEW: Luck Increase for Crypto
+                {
+                    name: "Luck Increase",
+                    description: "Increases the chance of getting Double/Triple Crypto choices by the given factor.",
+                    type: "toggle",
+                    enabled: false,
+                    inputs: [
+                        { name: "Luck Factor", type: "number", value: 2, min: 1 }
+                    ],
+                    data: null,
+                    run: function (factor) {
+                        if (!this.enabled) {
+                            this.enabled = true;
+                            const stateNode = getStateNode();
+                            const origSetState = stateNode.setState.bind(stateNode);
+                            this.data = origSetState;
+                            stateNode.setState = (state, cb) => {
+                                if (state.choices && Array.isArray(state.choices)) {
+                                    if (!state.choices.some(c => c.type === "mult") && Math.random() < 1/factor) {
+                                        state.choices = [
+                                            ...state.choices,
+                                            { type: "mult", val: 3, rate: 0.075, blook: "Brainy Bot", text: "Triple Crypto" }
+                                        ];
+                                    }
+                                }
+                                return origSetState(state, cb);
+                            };
+                        } else {
+                            this.enabled = false;
+                            getStateNode().setState = this.data;
+                            this.data = null;
+                        }
+                    }
                 },
             ],
             fish: [
@@ -1907,6 +2267,87 @@
                         getStateNode().game.current.events._events.respawn.fn();
                     },
                 },
+                // NEW: Gain Ability
+                {
+                    name: "Gain Ability",
+                    description: "Gives you the selected ability/power (levels it up by 1).",
+                    inputs: [
+                        {
+                            name: "Ability",
+                            type: "options",
+                            options: () => {
+                                const stateNode = getStateNode();
+                                return Object.keys(stateNode.state.abilities || {});
+                            }
+                        }
+                    ],
+                    run: function (abilityName) {
+                        const stateNode = getStateNode();
+                        const currentLvl = stateNode.state.abilities[abilityName] || 0;
+                        stateNode.game.current.config.sceneConfig.game.events.emit(
+                            "level up",
+                            abilityName,
+                            currentLvl + 1
+                        );
+                    }
+                },
+                // NEW: Blatant Win
+                {
+                    name: "Blatant Win",
+                    description: "Instant kill enemies, infinite health, and extreme XP drops.",
+                    type: "toggle",
+                    enabled: false,
+                    data: null,
+                    run: function () {
+                        const stateNode = getStateNode();
+                        const scene = stateNode.game.current.config.sceneConfig;
+                        const colliders = scene.physics.world.colliders._active;
+
+                        if (!this.enabled) {
+                            this.enabled = true;
+                            const enemyGroups = colliders
+                                .filter(x => x.callbackContext?.toString?.()?.includes?.("dmgCd"))
+                                .map(x => x.object2);
+                            this.data = { enemyGroups, originalStartCalls: {}, damageColliders: [] };
+
+                            enemyGroups.forEach((group, idx) => {
+                                const origStart = group.classType.prototype.start;
+                                this.data.originalStartCalls[idx] = origStart;
+                                group.classType.prototype.start = function () {
+                                    origStart.apply(this, arguments);
+                                    this.hp = 1;
+                                    this.val *= 100;
+                                };
+                                group.children.entries.forEach(e => {
+                                    e.hp = 1;
+                                    e.val *= 100;
+                                });
+                            });
+
+                            const dmgColliders = colliders.filter(x =>
+                                x.callbackContext?.toString().includes("invulnerableTime") ||
+                                x.callbackContext?.toString().includes("dmgCd")
+                            );
+                            dmgColliders.forEach(c => {
+                                this.data.damageColliders.push({ collider: c, callback: c.collideCallback });
+                                c.collideCallback = () => {};
+                            });
+                        } else {
+                            this.enabled = false;
+                            if (this.data?.enemyGroups) {
+                                this.data.enemyGroups.forEach((group, idx) => {
+                                    group.classType.prototype.start = this.data.originalStartCalls[idx];
+                                });
+                            }
+                            if (this.data?.damageColliders) {
+                                this.data.damageColliders.forEach(({collider, callback}) => {
+                                    collider.collideCallback = callback;
+                                });
+                            }
+                            this.data = null;
+                        }
+                    }
+                },
             ],
             dino: [
                 {
@@ -2007,7 +2448,7 @@
                             }
                             return res;
                         };
-        
+
                         function shortNum(value) {
                             let newValue = value.toString();
                             if (value >= 1000) {
@@ -2040,7 +2481,7 @@
                                 this.data = setInterval(() => {
                                     let stateNode = getStateNode();
                                     const rocks = document.querySelector('[class*="rockButton"]').parentElement.children;
-        
+
                                     if (!Array.prototype.every.call(rocks, (element) => element.querySelector("div")))
                                         stateNode.setState(
                                             {
@@ -2073,9 +2514,7 @@
                                                     choice.style.transform = "translateY(25px)";
                                                     choice.innerText =
                                                         rock.type === "fossil"
-                                                            ? `+${
-                                                                  Math.round(rock.val * stateNode.state.fossilMult) > 99999999 ? shortNum(Math.round(rock.val * stateNode.state.fossilMult)) : Math.round(rock.val * stateNode.state.fossilMult)
-                                                              } Fossils`
+                                                            ? `+${Math.round(rock.val * stateNode.state.fossilMult) > 99999999 ? shortNum(Math.round(rock.val * stateNode.state.fossilMult)) : Math.round(rock.val * stateNode.state.fossilMult)} Fossils`
                                                             : `x${rock.val} Fossils Per Excavation`;
                                                     element.append(choice);
                                                 });
@@ -2600,9 +3039,7 @@
                         });
                     },
                 },
-            ],
-            tower: [
-                {
+            ],                {
                     name: "Fill Deck",
                     description: "Fills your deck with every maxed out card and artifact (Only works on towers page)",
                     run: function () {
@@ -3250,6 +3687,7 @@
                         },
                     ],
                     run: function (color) {
+                        variables.sheet.cssRules[0].style.setProperty("--enabledButton", color);
                         Settings.setItem("theme.enabledButton", color);
                     },
                 },
@@ -3311,7 +3749,7 @@
                 },
             ],
         };
-        
+
 
         const createModeValueBoost = (modeLabel, keys) => ({
             name: `${modeLabel} Value Boost`,
@@ -3382,7 +3820,7 @@
         addMode("Racing", "https://media.blooket.com/image/upload/v1661496295/Media/uiTest/Racing_Progress.svg", Cheats.racing);
         addMode(
             "Blook Rush",
-            "data:image/png;base64,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",
+            "data:image/png;base64,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",
             Cheats.rush
         );
         addMode('<span style="font-size: 17px">Tower of Doom</span>', [`<img style="height: 30px; margin-left: 5px; margin-right: 10px" src="https://media.blooket.com/image/upload/v1657235023/Media/survivor/cards-05.svg">`], Cheats.tower);
@@ -3390,16 +3828,16 @@
         addMode(
             '<span style="font-size: 15px">Santa\'s Workshop</span>',
             [
-                '<img style="height: 28px; margin-left: 3px; margin-right: 6px" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iaXNvLTg4NTktMSI/Pgo8IS0tIEdlbmVyYXRvcjogQWRvYmUgSWxsdXN0cmF0b3IgMTkuMC4wLCBTVkcgRXhwb3J0IFBsdWctSW4gLiBTVkcgVmVyc2lvbjogNi4wMCBCdWlsZCAwKSAgLS0+CjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0iQ2FwYV8xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB4PSIwcHgiIHk9IjBweCIKCSB2aWV3Qm94PSIwIDAgNTEyIDUxMiIgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgNTEyIDUxMjsiIHhtbDpzcGFjZT0icHJlc2VydmUiPgo8cGF0aCBzdHlsZT0iZmlsbDojRkZERTc2OyIgZD0iTTQzMy42NjEsMjM3LjgzN2MtNC40OTctNi4yMTQtNC44OC0xNC40NC0xLjIyNS0yMS4xODRjMTEuMzY1LTIwLjk2NywxNy43NzMtNDUuMDE0LDE3LjY1MS03MC41NjYKCUM0NDkuNzAxLDY0Ljg2OSwzODIuNTY0LTEuMDM3LDMwMS4zNTIsMC4wMTJjLTgwLjE4MywxLjAzNi0xNDQuODY0LDY2LjM1OS0xNDQuODY0LDE0Ni43ODhjMCwzMi41NTMsMTAuNTk1LDYyLjYzLDI4LjUyNiw4Ni45NzIKCWM3Ljc1MywxMC41MjYsNy4yMTMsMjUuMS0xLjU0MywzNC44MDhjLTEzLjI5NywxNC43NDEtNDEuOTM1LDI0LjMwNi0xMDIuNTk1LTE2LjI3N2MtNi42NTItNC40NS0xNC40NjItNi44NjQtMjIuNDY1LTYuODY0bDAsMAoJYy0xOS45NDcsMC0zNi44MzMsMTQuNjI4LTM5Ljc3NiwzNC4zNTdDNy44ODksMzUxLjgxNiw2LjUyLDUxMiwyMDYuOTY2LDUxMmg3MS4wODNDNDY2LjA1LDUxMiw1MTYuMTI3LDM1MS44MDEsNDMzLjY2MSwyMzcuODM3eiIvPgo8Zz4KCTxwYXRoIHN0eWxlPSJmaWxsOiNGRkI2NDE7IiBkPSJNMTgzLjQ3LDI2OC41ODJjLTMuOTMsNC4zNTctOS4yMDIsOC4yNjEtMTYuMjQ0LDEwLjU1MmMyNC40NjksNS44ODIsMzguODItMS4zMTksNDcuMTQ5LTEwLjU1MgoJCWM4Ljc1Ny05LjcwOCw5LjI5Ni0yNC4yODEsMS41NDMtMzQuODA4Yy0xNy45My0yNC4zNDItMjguNTI2LTU0LjQyLTI4LjUyNi04Ni45NzNjMC03NS44MzMsNTcuNTAzLTEzOC4yMjYsMTMxLjI4MS0xNDUuOTgKCQljLTUuNjg5LTAuNjAxLTExLjQ2Ny0wLjg4NC0xNy4zMjMtMC44MDljLTgwLjE4MywxLjAzNi0xNDQuODY0LDY2LjM1OS0xNDQuODY0LDE0Ni43ODhjMCwzMi41NTMsMTAuNTk1LDYyLjYzLDI4LjUyNiw4Ni45NzMKCQlDMTkyLjc2NiwyNDQuMywxOTIuMjI2LDI1OC44NzMsMTgzLjQ3LDI2OC41ODJ6Ii8+Cgk8cGF0aCBzdHlsZT0iZmlsbDojRkZCNjQxOyIgZD0iTTQ5LjUzOSwyNzkuNzk2YzIuMTM3LTE0LjMxNywxMS42MTgtMjUuOTQyLDI0LjI4Mi0zMS4yNDVjLTQuODY2LTIuMDIyLTEwLjA5MS0zLjExLTE1LjQxMi0zLjExCgkJbDAsMGMtMTkuOTQ3LDAtMzYuODMzLDE0LjYyOC0zOS43NzYsMzQuMzU3QzcuODg5LDM1MS44MTYsNi41Miw1MTIsMjA2Ljk2Niw1MTJoMzAuOTA1QzM3LjQyNSw1MTIsMzguNzk0LDM1MS44MTYsNDkuNTM5LDI3OS43OTZ6CgkJIi8+Cgk8cGF0aCBzdHlsZT0iZmlsbDojRkZCNjQxOyIgZD0iTTgwLjUxOCwzNDQuMzM2Yy04Ljc2Niw4LjY1Ni0xMC4yNzcsMjIuMjY4LTMuNTk4LDMyLjYxOQoJCWMxOS41MDQsMzAuMjI3LDY4LjM1MSw4Ni4yODMsMTYyLjM3Miw4Ni4yODNjNTcuMjU2LDAsMTE3Ljc5MS0zNS44MDksMTI5LjA2NC05NS4wOTdjOS4zMS00OC45NjYtMTkuMjQ2LTEwOC44MjEtNzUuMzMtMTA2LjI0NwoJCWMtNDEuMDk3LDEuODg3LTY1LjEzNSwzNy40MTUtOTkuODY1LDUzLjg0MWMtMjQuMzk4LDExLjU0LTUwLjg0NCwxOC42NTEtNzcuNjg3LDIxLjMwNwoJCUMxMDIuNjk4LDMzOC4zMDYsOTAuODA1LDMzNC4xNzgsODAuNTE4LDM0NC4zMzZ6Ii8+CjwvZz4KPHBhdGggc3R5bGU9ImZpbGw6IzM4NDg0QTsiIGQ9Ik0zODguMzk0LDExMC44MzNjLTMuNTAyLDAtNi42NzQtMi4zOTYtNy41MTMtNS45NTFsLTMuNzE1LTE1LjczCgljLTAuOTgxLTQuMTUzLDEuNTkxLTguMzE1LDUuNzQzLTkuMjk1YzQuMTUyLTAuOTc5LDguMzE1LDEuNTkxLDkuMjk1LDUuNzQzbDMuNzE1LDE1LjczYzAuOTgxLDQuMTUzLTEuNTkxLDguMzE1LTUuNzQzLDkuMjk1CglDMzg5LjU4LDExMC43NjUsMzg4Ljk4MiwxMTAuODMzLDM4OC4zOTQsMTEwLjgzM3oiLz4KPHBhdGggc3R5bGU9ImZpbGw6I0ZGQjY0MTsiIGQ9Ik00MjcuNjE4LDY4Ljk5NGMwLDAsMy4xOTgsNDUuODMyLTE4LjAzMyw2Ni41OTFjLTIxLjIzMSwyMC43NTksMTQuMTU0LDUzLjMxNCw1Ni4xNDUsMjIuNjQ2CgljNi4wMzItNC40MDUsMTIuMTQzLTcuMjA0LDE4LjE4NC04Ljc2OGM3Ljc3Ny0yLjAxMiwxMy4yNDMtOC45NjcsMTMuMjQzLTE2Ljk5OWwwLDBjMC03LjcyNC01LjAzMS0xNC41OTctMTIuNDM4LTE2Ljc4NgoJYy00LjkyNS0xLjQ1Ni0xMS4xOC0yLjMyNS0xOC41MTYtMS4zMjVjMCwwLDI1LjM5My0yMi4xMzgsMTkuMTE5LTQ3Ljc1M2MtMi4wMjctOC4yOC0xMS44NTYtMTEuNzI2LTE4LjgzNi02LjgzMgoJQzQ1Ny40NjEsNjYuMDk0LDQ0My40NTQsNzIuNzY0LDQyNy42MTgsNjguOTk0eiIvPgo8Zz4KPC9nPgo8Zz4KPC9nPgo8Zz4KPC9nPgo8Zz4KPC9nPgo8Zz4KPC9nPgo8Zz4KPC9nPgo8Zz4KPC9nPgo8Zz4KPC9nPgo8Zz4KPC9nPgo8Zz4KPC9nPgo8Zz4KPC9nPgo8Zz4KPC9nPgo8Zz4KPC9nPgo8Zz4KPC9nPgo8Zz4KPC9nPgo8L3N2Zz4K">',
+                '<img style="height: 28px; margin-left: 3px; margin-right: 6px" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iaXNvLTg4NTktMSI/Pgo8IS0tIEdlbmVyYXRvcjogQWRvYmUgSWxsdXN0cmF0b3IgMTkuMC4wLCBTVkcgRXhwb3J0IFBsdWctSW4gLiBTVkcgVmVyc2lvbjogNi4wMCBCdWlsZCAwKSAgLS0+CjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0iQ2FwYV8xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB4PSIwcHgiIHk9IjBweCIKCSB2aWV3Qm94PSIwIDAgNTEyIDUxMiIgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgNTEyIDUxMjsiIHhtbDpzcGFjZT0icHJlc2VydmUiPgo8cGF0aCBzdHlsZT0iZmlsbDojRkZERTc2OyIgZD0iTTQzMy42NjEsMjM3LjgzN2MtNC40OTctNi4yMTQtNC44OC0xNC40NC0xLjIyNS0yMS4xODRjMTEuMzY1LTIwLjk2NywxNy43NzMtNDUuMDE0LDE3LjY1MS03MC41NjYKCUM0NDkuNzAxLDY0Ljg2OSwzODIuNTY0LTEuMDM3LDMwMS4zNTIsMC4wMTJjLTgwLjE4MywxLjAzNi0xNDQuODY0LDY2LjM1OS0xNDQuODY0LDE0Ni43ODhjMCwzMi41NTMsMTAuNTk1LDYyLjYzLDI4LjUyNiw4Ni45NzIKCWM3Ljc1MywxMC41MjYsNy4yMTMsMjUuMS0xLjU0MywzNC44MDhjLTEzLjI5NywxNC43NDEtNDEuOTM1LDI0LjMwNi0xMDIuNTk1LTE2LjI3N2MtNi42NTItNC40NS0xNC40NjItNi44NjQtMjIuNDY1LTYuODY0bDAsMAoJYy0xOS45NDcsMC0zNi44MzMsMTQuNjI4LTM5Ljc3NiwzNC4zNTdDNy44ODksMzUxLjgxNiw2LjUyLDUxMiwyMDYuOTY2LDUxMmg3MS4wODNDNDY2LjA1LDUxMiw1MTYuMTI3LDM1MS44MDEsNDMzLjY2MSwyMzcuODM3eiIvPgo8Zz4KCTxwYXRoIHN0eWxlPSJmaWxsOiNGRkI2NDE7IiBkPSJNMTgzLjQ3LDI2OC41ODJjLTMuOTMsNC4zNTctOS4yMDIsOC4yNjEtMTYuMjQ0LDEwLjU1MmMyNC40NjksNS44ODIsMzguODItMS4zMTksNDcuMTQ5LTEwLjU1MgoJCWM4Ljc1Ny05LjcwOCw5LjI5Ni0yNC4yODEsMS41NDMtMzQuODA4Yy0xNy45My0yNC4zNDItMjguNTI2LTU0LjQyLTI4LjUyNi04Ni45NzNjMC03NS44MzMsNTcuNTAzLTEzOC4yMjYsMTMxLjI4MS0xNDUuOTgKCQljLTUuNjg5LTAuNjAxLTExLjQ2Ny0wLjg4NC0xNy4zMjMtMC44MDljLTgwLjE4MywxLjAzNi0xNDQuODY0LDY2LjM1OS0xNDQuODY0LDE0Ni43ODhjMCwzMi41NTMsMTAuNTk1LDYyLjYzLDI4LjUyNiw4Ni45NzMKCQlDMTkyLjc2NiwyNDQuMywxOTIuMjI2LDI1OC44NzMsMTgzLjQ3LDI2OC41ODJ6Ii8+Cgk8cGF0aCBzdHlsZT0iZmlsbDojRkZCNjQxOyIgZD0iTTQ5LjUzOSwyNzkuNzk2YzIuMTM3LTE0LjMxNywxMS42MTgtMjUuOTQyLDI0LjI4Mi0zMS4yNDVjLTQuODY2LTIuMDIyLTEwLjA5MS0zLjExLTE1LjQxMi0zLjExCgkJbDAsMGMtMTkuOTQ3LDAtMzYuODMzLDE0LjYyOC0zOS43NzYsMzQuMzU3QzcuODg5LDM1MS44MTYsNi41Miw1MTIsMjA2Ljk2Niw1MTJoMzAuOTA1QzM3LjQyNSw1MTIsMzguNzk0LDM1MS44MTYsNDkuNTM5LDI3OS43OTZ6CgkJIi8+Cgk8cGF0aCBzdHlsZT0iZmlsbDojRkZCNjQxOyIgZD0iTTgwLjUxOCwzNDQuMzM2Yy04Ljc2Niw4LjY1Ni0xMC4yNzcsMjIuMjY4LTMuNTk4LDMyLjYxOQoJCWMxOS41MDQsMzAuMjI3LDY4LjM1MSw4Ni4yODMsMTYyLjM3Miw4Ni4yODNjNTcuMjU2LDAsMTE3Ljc5MS0zNS44MDksMTI5LjA2NC05NS4wOTdjOS4zMS00OC45NjYtMTkuMjQ2LTEwOC44MjEtNzUuMzMtMTA2LjI0NwoJCWMtNDEuMDk3LDEuODg3LTY1LjEzNSwzNy40MTUtOTkuODY1LDUzLjg0MWMtMjQuMzk4LDExLjU0LTUwLjg0NCwxOC42NTEtNzcuNjg3LDIxLjMwNwoJCUMxMDIuNjk4LDMzOC4zMDYsOTAuODA1LDMzNC4xNzgsODAuNTE4LDM0NC4zMzZ6Ii8+CjwvZz4KPHBhdGggc3R5bGU9ImZpbGw6IzM4NDg0QTsiIGQ9Ik0zODguMzk0LDExMC44MzNjLTMuNTAyLDAtNi42NzQtMi4zOTYtNy41MTMtNS45NTFsLTMuNzE1LTE1LjczCgljLTAuOTgxLTQuMTUzLDEuNTkxLTguMzE1LDUuNzQzLTkuMjk1YzQuMTUyLTAuOTc5LDguMzE1LDEuNTkxLDkuMjk1LDUuNzQzbDMuNzE1LDE1LjczYzAuOTgxLDQuMTUzLTEuNTkxLDguMzE1LTUuNzQzLDkuMjk1CglDMzg5LjU4LDExMC43NjUsMzg4Ljk4MiwxMTAuODMzLDM4OC4zOTQsMTEwLjgzM3oiLz4KPHBhdGggc3R5bGU9ImZpbGw6I0ZGQjY0MTsiIGQ9Ik00MjcuNjE4LDY4Ljk5NGMwLDAsMy4xOTgsNDUuODMyLTE4LjAzMyw2Ni41OTFjLTIxLjIzMSwyMC43NTksMTQuMTU0LDUzLjMxNCw1Ni4xNDUsMjIuNjQ2CgljNi4wMzItNC40MDUsMTIuMTQzLTcuMjA0LDE4LjE4NC04Ljc2OGM3Ljc3Ny0yLjAxMiwxMy4yNDMtOC45NjcsMTMuMjQzLTE2Ljk5OWwwLDBjMC03LjcyNC01LjAzMS0xNC41OTctMTIuNDM4LTE2Ljc4NgoJYy00LjkyNS0xLjQ1Ni0xMS4xOC0yLjMyNS0xOC41MTYtMS4zMjVjMCwwLDI1LjM5My0yMi4xMzgsMTkuMTE5LTQ3Ljc1M2MtMi4wMjctOC4yOC0xMS44NTYtMTEuNzI2LTE4LjgzNi02LjgzMgoJQzQ1Ny40NjEsNjYuMDk0LDQ0My40NTQsNzIuNzY0LDQyNy42MTgsNjguOTk0eiIvPgo8Zz4KPC9nPgo8Zz4KPC9nPgo8Zz4KPC9nPgo8Zz4KPC9nPgo8Zz4KPC9nPgo8Zz4KPC9nPgo8Zz4KPC9nPgo8Zz4KPC9nPgo8Zz4KPC9nPgo8Zz4KPC9nPgo8Zz4KPC9nPgo8Zz4KPC9nPgo8Zz4KPC9nPgo8Zz4KPC9nPgo8L3N2Zz4K">',
             ],
             Cheats.toy
         );
         addMode("Flappy Blook", "https://media.blooket.com/image/upload/v1645222006/Blooks/yellowBird.svg", Cheats.flappy);
         addMode("Settings", null, Cheats.settings, true);
-        
+
         dragElement(controls, guiWrapper);
         dragElement(dragButton, guiWrapper);
-        
+
         function dragElement(element, parent) {
             var pos1 = 0,
                 pos2 = 0,
@@ -3496,7 +3934,7 @@
                 element.addEventListener("keyup", keyup);
             });
         }
-        
+
     });
     let img = new Image;
     img.src = "https://raw.githubusercontent.com/Blooket-Council/Blooket-Cheats/main/autoupdate/timestamps/gui.png?" + Date.now();
