@@ -9,6 +9,12 @@
 // @grant        none
 // ==/UserScript==
 
+// Recent Changes
+// + Improved the AntiBan
+// + Added a bunch of new modules
+//
+
+
 // AntiBan v2
 // Improved fetch hook
 const originalFetch = window.fetch;
