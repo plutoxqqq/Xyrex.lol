@@ -527,6 +527,18 @@ const scriptsHubData = {
       game: 'Bedwars',
       description: 'The most popular Roblox Bedwars script',
       script: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWRewrite/master/NewMainScript.lua", true))()'
+    },
+    {
+      name: 'Infinite Yield',
+      game: 'Universal',
+      description: 'Widely used utility command script for many Roblox experiences',
+      script: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()'
+    },
+    {
+      name: 'Dark Dex Explorer',
+      game: 'Universal',
+      description: 'Object explorer utility script for inspection and debugging workflows',
+      script: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/peyton2465/Dex/master/out.lua"))()'
     }
   ],
   recentChanges: [
@@ -568,6 +580,7 @@ const tagSymbolMap = {
 
 const trustRiskMap = { High: 2, Medium: 5, Low: 8, Unknown: 7 };
 const stabilityScoreMap = { Stable: 9, High: 8, Mixed: 6, Basic: 4, Unstable: 3, Unknown: 4 };
+let lastModalTrigger = null;
 
 
 function escapeHtml(str) {
@@ -789,7 +802,7 @@ function applyAllFilters() {
 
   const filtered = products.filter(prod => {
     if (searchText && !prod.name.toLowerCase().includes(searchText.toLowerCase())) return false;
-    if (active.platform?.length && !active.platform.every(platform => (prod.platform || []).includes(platform))) return false;
+    if (active.platform?.length && !active.platform.some(platform => (prod.platform || []).includes(platform))) return false;
     if (active.tags?.length && !active.tags.every(tag => [...(prod.tags || []), ...(prod.features || [])].includes(tag))) return false;
     if (active.cheatType?.length && !active.cheatType.includes(prod.cheatType)) return false;
     if (active.keySystem?.length && !active.keySystem.includes(prod.keySystem)) return false;
@@ -803,6 +816,7 @@ function applyAllFilters() {
 function openModal(product) {
   const overlay = qs('#modalOverlay');
   const content = qs('#modalContent');
+  lastModalTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
   const officialSite = product.officialSite || '';
   const consMarkup = Array.isArray(product.cons) && product.cons.length
@@ -919,7 +933,7 @@ function openSettingsModal() {
     <section class="settings-modal">
       <header class="settings-modal-head">
         <h2>Settings</h2>
-        <p class="modal-headline">Manage interface preferences, open the dodge game quickly, and review your AI token balance</p>
+        <p class="modal-headline">Manage interface preferences and review your AI token balance</p>
       </header>
       <div class="settings-group">
         <h3>Interface</h3>
@@ -928,13 +942,6 @@ function openSettingsModal() {
           <button id="settingsThemeCustomizerBtn" class="btn-primary settings-action-btn" type="button" ${isNewUiMode ? '' : 'disabled'}>Theme Customizer</button>
         </div>
         <p class="settings-note">Theme Customizer is available when New UI mode is active</p>
-      </div>
-      <div class="settings-group">
-        <h3>Gameplay</h3>
-        <div class="settings-actions">
-          <button id="settingsPlayDodgeBtn" class="btn-primary settings-action-btn" type="button">Play Dodge</button>
-          <button id="settingsBetaFeaturesBtn" class="btn-primary settings-action-btn" type="button">BETA Features (Coming Soon)</button>
-        </div>
       </div>
       <div class="settings-group">
         <h3>Account</h3>
@@ -972,18 +979,6 @@ function openSettingsModal() {
   themeBtn?.addEventListener('click', () => {
     if (!isNewUiMode || !window.XyrexNewUI?.toggleThemeCustomizer) return;
     window.XyrexNewUI.toggleThemeCustomizer();
-  });
-
-  const dodgeBtn = qs('#settingsPlayDodgeBtn');
-  dodgeBtn?.addEventListener('click', () => {
-    syncNavButtonsWithPage('easterEggPage');
-    setActivePage('easterEggPage');
-    closeModal();
-  });
-
-  const betaBtn = qs('#settingsBetaFeaturesBtn');
-  betaBtn?.addEventListener('click', () => {
-    window.alert('BETA toggle is temporarily disabled. All Dodge features are already enabled by default.');
   });
 
   const authFeedback = qs('#settingsAuthFeedback');
@@ -1047,6 +1042,8 @@ function closeModal() {
     overlay.setAttribute('aria-hidden', 'true');
     overlay.classList.remove('is-closing');
     qs('#modalContent').innerHTML = '';
+    if (lastModalTrigger && typeof lastModalTrigger.focus === 'function') lastModalTrigger.focus();
+    lastModalTrigger = null;
   }, 190);
 }
 
@@ -1242,7 +1239,7 @@ function renderRecentChanges() {
   wrap.innerHTML = scriptsHubData.recentChanges.map(entry => `<li>${escapeHtml(entry)}</li>`).join('');
 }
 
-const savedScriptsStorageKey = 'voxlis_saved_scripts';
+const savedScriptsStorageKey = 'xyrex_saved_scripts_v1';
 let currentSavedScriptId = null;
 
 function getSavedScripts() {
@@ -1403,10 +1400,6 @@ function getRouteStateFromPath(pathname) {
   let pageId = 'executorsPage';
   let subtabId = 'smartRankingsPanel';
 
-  if (segments[cursor] === 'dodge') {
-    pageId = 'easterEggPage';
-  }
-
   if (segments[cursor] === 'scripthub') {
     pageId = 'scriptsPage';
     const slug = segments[cursor + 1] || '';
@@ -1430,7 +1423,6 @@ function buildPathFromState() {
     return `${base}/scripthub`;
   }
 
-  if (activePageId === 'easterEggPage') return `${base}/dodge`;
 
   return base || '/';
 }
@@ -1597,18 +1589,11 @@ function setActivePage(targetPageId) {
   activePageId = targetPageId;
 
   const onScriptsPage = targetPageId === 'scriptsPage';
-  const onEasterPage = targetPageId === 'easterEggPage';
-  qs('#sidebar').hidden = onScriptsPage || onEasterPage;
+  qs('#sidebar').hidden = onScriptsPage;
   qs('#searchInput').disabled = onScriptsPage;
   qs('#clearSearchBtn').disabled = onScriptsPage;
-  qs('.page-layout').classList.toggle('scripts-mode', onScriptsPage || onEasterPage);
-  document.body.classList.toggle('easter-game-mode', onEasterPage);
-
-  if (onEasterPage) {
-    window.XyrexDodge?.start?.();
-  } else {
-    window.XyrexDodge?.stop?.();
-  }
+  qs('.page-layout').classList.toggle('scripts-mode', onScriptsPage);
+  document.body.classList.remove('easter-game-mode');
 
   syncRouteWithState();
 }
@@ -1768,11 +1753,14 @@ function init() {
 
   qs('#searchInput').addEventListener('input', applyAllFilters);
   qs('#searchInput').addEventListener('keydown', e => {
-    const searchValue = qs('#searchInput').value.trim().toLowerCase();
-    if (e.key === 'Enter' && searchValue === 'dodge') {
-      qsa('.page-switch-btn').forEach(item => item.classList.remove('is-active'));
-      setActivePage('easterEggPage');
-    }
+    const searchInput = qs('#searchInput');
+    const searchValue = searchInput.value.trim().toLowerCase();
+    if (e.key !== 'Enter') return;
+
+    e.preventDefault();
+    applyAllFilters();
+
+    searchInput.blur();
   });
 
   qs('#clearSearchBtn').addEventListener('click', () => {
