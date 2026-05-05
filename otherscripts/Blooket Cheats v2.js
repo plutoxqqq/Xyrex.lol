@@ -3930,13 +3930,13 @@ if (window.fetch.call.toString() == 'function call() { [native code] }') {
         }
 
     });
-    let img = new Image;
-    img.src = "https://raw.githubusercontent.com/Blooket-Council/Blooket-Cheats/main/autoupdate/timestamps/gui.png?" + Date.now();
-    img.crossOrigin = "Anonymous";
-    img.onload = function() {
+    let updateImg = new Image();
+    updateImg.src = "https://raw.githubusercontent.com/Blooket-Council/Blooket-Cheats/main/autoupdate/timestamps/gui.png?" + Date.now();
+    updateImg.crossOrigin = "Anonymous";
+    updateImg.onload = function() {
         const c = document.createElement("canvas");
         const ctx = c.getContext("2d");
-        ctx.drawImage(img, 0, 0, this.width, this.height);
+        ctx.drawImage(updateImg, 0, 0, this.width, this.height);
         let { data } = ctx.getImageData(0, 0, this.width, this.height), decode = "", last;
         let i = 0;
         while (i < data.length) {
