@@ -3040,7 +3040,9 @@ XMLHttpRequest.prototype.open = function(method, url) {
                         });
                     },
                 },
-            ],                {
+            ],
+            tower: [
+                {
                     name: "Fill Deck",
                     description: "Fills your deck with every maxed out card and artifact (Only works on towers page)",
                     run: function () {
@@ -3962,4 +3964,3 @@ XMLHttpRequest.prototype.open = function(method, url) {
         img.onerror = img.onabort = null;
         cheat();
     }
-})();
