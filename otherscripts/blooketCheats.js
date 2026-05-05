@@ -1,43 +1,37 @@
 // ==UserScript==
 // @name         Blooket Cheats UPDATED
-// @namespace    https://github.com/Blooket-Council/Blooket-Cheats
+// @namespace    https://github.com/plutoxqqq/Xyrex.lol
 // @version      2.0.0
-// @description  Extended Blooket cheats GUI with per-mode utility additions.
-// @author       05Konz + contributors
+// @description  Extended Blooket cheats GUI with per-mode utility additions
+// @author       Pluto
 // @match        https://*.blooket.com/*
 // @run-at       document-end
 // @grant        none
 // ==/UserScript==
 
-/**
- * @license AGPL-3.0
- * Blooket Cheats
- * Copyright (C) 2023-present 05Konz
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published
- * by the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * Source: https://github.com/Blooket-Council/Blooket-Cheats 05konz994@gmail.com
-*/
-
-/* THE UPDATE CHECKER IS ADDED DURING COMMIT PREP, THERE MAY BE REDUNDANT CODE, DO NOT TOUCH */
-
-(() => {
-    let iframe = document.querySelector("iframe");
-    if (!iframe) {
-        iframe = document.createElement("iframe");
-        iframe.style.display = "none";
-        document.body.append(iframe);
+// AntiBan v2
+// Improved fetch hook
+const originalFetch = window.fetch;
+window.fetch = async function(...args) {
+    const url = args[0]?.toString() || '';
+    if (url.includes('blooket.com') && 
+        (url.includes('/rc') || url.includes('/log') || url.includes('/report') || url.includes('/telemetry'))) {
+        console.log('[Anti-Detect] Blocked:', url);
+        return new Response('{}', {status: 200});
     }
+    return originalFetch.apply(this, args);
+};
+
+// Also hook XMLHttpRequest
+const origOpen = XMLHttpRequest.prototype.open;
+XMLHttpRequest.prototype.open = function(method, url) {
+    if (typeof url === 'string' && url.includes('blooket.com') && /rc|log|report/.test(url)) {
+        console.log('[Anti-Detect] Blocked XHR:', url);
+        return;
+    }
+    return origOpen.apply(this, arguments);
+};
+
     /* By CryptoDude3 */
     if (window.fetch.call.toString() == 'function call() { [native code] }') {
         const call = window.fetch.call;
