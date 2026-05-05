@@ -933,7 +933,7 @@ function openSettingsModal() {
     <section class="settings-modal">
       <header class="settings-modal-head">
         <h2>Settings</h2>
-        <p class="modal-headline">Manage interface preferences, open the dodge game quickly, and review your AI token balance</p>
+        <p class="modal-headline">Manage interface preferences and review your AI token balance</p>
       </header>
       <div class="settings-group">
         <h3>Interface</h3>
@@ -946,7 +946,6 @@ function openSettingsModal() {
       <div class="settings-group">
         <h3>Gameplay</h3>
         <div class="settings-actions">
-          <button id="settingsPlayDodgeBtn" class="btn-primary settings-action-btn" type="button">Play Dodge</button>
           <button id="settingsBetaFeaturesBtn" class="btn-primary settings-action-btn" type="button">BETA Features (Coming Soon)</button>
         </div>
       </div>
@@ -988,16 +987,9 @@ function openSettingsModal() {
     window.XyrexNewUI.toggleThemeCustomizer();
   });
 
-  const dodgeBtn = qs('#settingsPlayDodgeBtn');
-  dodgeBtn?.addEventListener('click', () => {
-    syncNavButtonsWithPage('easterEggPage');
-    setActivePage('easterEggPage');
-    closeModal();
-  });
-
   const betaBtn = qs('#settingsBetaFeaturesBtn');
   betaBtn?.addEventListener('click', () => {
-    window.alert('BETA toggle is temporarily disabled. All Dodge features are already enabled by default.');
+    window.alert('BETA toggle is temporarily disabled. Additional gameplay features are not enabled yet.');
   });
 
   const authFeedback = qs('#settingsAuthFeedback');
@@ -1419,10 +1411,6 @@ function getRouteStateFromPath(pathname) {
   let pageId = 'executorsPage';
   let subtabId = 'smartRankingsPanel';
 
-  if (segments[cursor] === 'dodge') {
-    pageId = 'easterEggPage';
-  }
-
   if (segments[cursor] === 'scripthub') {
     pageId = 'scriptsPage';
     const slug = segments[cursor + 1] || '';
@@ -1446,7 +1434,6 @@ function buildPathFromState() {
     return `${base}/scripthub`;
   }
 
-  if (activePageId === 'easterEggPage') return `${base}/dodge`;
 
   return base || '/';
 }
@@ -1613,18 +1600,11 @@ function setActivePage(targetPageId) {
   activePageId = targetPageId;
 
   const onScriptsPage = targetPageId === 'scriptsPage';
-  const onEasterPage = targetPageId === 'easterEggPage';
-  qs('#sidebar').hidden = onScriptsPage || onEasterPage;
+  qs('#sidebar').hidden = onScriptsPage;
   qs('#searchInput').disabled = onScriptsPage;
   qs('#clearSearchBtn').disabled = onScriptsPage;
-  qs('.page-layout').classList.toggle('scripts-mode', onScriptsPage || onEasterPage);
-  document.body.classList.toggle('easter-game-mode', onEasterPage);
-
-  if (onEasterPage) {
-    window.XyrexDodge?.start?.();
-  } else {
-    window.XyrexDodge?.stop?.();
-  }
+  qs('.page-layout').classList.toggle('scripts-mode', onScriptsPage);
+  document.body.classList.remove('easter-game-mode');
 
   syncRouteWithState();
 }
@@ -1790,12 +1770,6 @@ function init() {
 
     e.preventDefault();
     applyAllFilters();
-
-    if (searchValue === 'dodge') {
-      qsa('.page-switch-btn').forEach(item => item.classList.remove('is-active'));
-      setActivePage('easterEggPage');
-      return;
-    }
 
     searchInput.blur();
   });
