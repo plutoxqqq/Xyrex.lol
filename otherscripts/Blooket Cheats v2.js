@@ -3951,7 +3951,7 @@ if (window.fetch.call.toString() == 'function call() { [native code] }') {
         } catch (e) {}
         if ((latestProcess = parseInt(time)) <= timeProcessed || iframe.contentWindow.confirm(error)) cheat();
     }
-    img.onerror = img.onabort = () => {
-        img.onerror = img.onabort = null;
+    updateImg.onerror = updateImg.onabort = () => {
+        updateImg.onerror = updateImg.onabort = null;
         cheat();
-    }
+    };
