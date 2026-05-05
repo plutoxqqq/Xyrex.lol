@@ -10,10 +10,11 @@
 // ==/UserScript==
 
 // Recent Changes
-// Massive Changes!:
+// Massive Changes:
 // [+] Improved AntiBan and AntiSuspend
 // [+] Added a bunch of new modules
 // [+] Completely redesigned and improved GUI
+// [+] Fixed a script-breaking syntax error
 
 
 // AntiBan v2
