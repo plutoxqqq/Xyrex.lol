@@ -527,6 +527,18 @@ const scriptsHubData = {
       game: 'Bedwars',
       description: 'The most popular Roblox Bedwars script',
       script: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWRewrite/master/NewMainScript.lua", true))()'
+    },
+    {
+      name: 'Infinite Yield',
+      game: 'Universal',
+      description: 'Widely used utility command script for many Roblox experiences',
+      script: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()'
+    },
+    {
+      name: 'Dark Dex Explorer',
+      game: 'Universal',
+      description: 'Object explorer utility script for inspection and debugging workflows',
+      script: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/peyton2465/Dex/master/out.lua"))()'
     }
   ],
   recentChanges: [
@@ -568,6 +580,7 @@ const tagSymbolMap = {
 
 const trustRiskMap = { High: 2, Medium: 5, Low: 8, Unknown: 7 };
 const stabilityScoreMap = { Stable: 9, High: 8, Mixed: 6, Basic: 4, Unstable: 3, Unknown: 4 };
+let lastModalTrigger = null;
 
 
 function escapeHtml(str) {
@@ -789,7 +802,7 @@ function applyAllFilters() {
 
   const filtered = products.filter(prod => {
     if (searchText && !prod.name.toLowerCase().includes(searchText.toLowerCase())) return false;
-    if (active.platform?.length && !active.platform.every(platform => (prod.platform || []).includes(platform))) return false;
+    if (active.platform?.length && !active.platform.some(platform => (prod.platform || []).includes(platform))) return false;
     if (active.tags?.length && !active.tags.every(tag => [...(prod.tags || []), ...(prod.features || [])].includes(tag))) return false;
     if (active.cheatType?.length && !active.cheatType.includes(prod.cheatType)) return false;
     if (active.keySystem?.length && !active.keySystem.includes(prod.keySystem)) return false;
@@ -803,6 +816,7 @@ function applyAllFilters() {
 function openModal(product) {
   const overlay = qs('#modalOverlay');
   const content = qs('#modalContent');
+  lastModalTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
   const officialSite = product.officialSite || '';
   const consMarkup = Array.isArray(product.cons) && product.cons.length
@@ -1047,6 +1061,8 @@ function closeModal() {
     overlay.setAttribute('aria-hidden', 'true');
     overlay.classList.remove('is-closing');
     qs('#modalContent').innerHTML = '';
+    if (lastModalTrigger && typeof lastModalTrigger.focus === 'function') lastModalTrigger.focus();
+    lastModalTrigger = null;
   }, 190);
 }
 
@@ -1242,7 +1258,7 @@ function renderRecentChanges() {
   wrap.innerHTML = scriptsHubData.recentChanges.map(entry => `<li>${escapeHtml(entry)}</li>`).join('');
 }
 
-const savedScriptsStorageKey = 'voxlis_saved_scripts';
+const savedScriptsStorageKey = 'xyrex_saved_scripts_v1';
 let currentSavedScriptId = null;
 
 function getSavedScripts() {
@@ -1768,11 +1784,20 @@ function init() {
 
   qs('#searchInput').addEventListener('input', applyAllFilters);
   qs('#searchInput').addEventListener('keydown', e => {
-    const searchValue = qs('#searchInput').value.trim().toLowerCase();
-    if (e.key === 'Enter' && searchValue === 'dodge') {
+    const searchInput = qs('#searchInput');
+    const searchValue = searchInput.value.trim().toLowerCase();
+    if (e.key !== 'Enter') return;
+
+    e.preventDefault();
+    applyAllFilters();
+
+    if (searchValue === 'dodge') {
       qsa('.page-switch-btn').forEach(item => item.classList.remove('is-active'));
       setActivePage('easterEggPage');
+      return;
     }
+
+    searchInput.blur();
   });
 
   qs('#clearSearchBtn').addEventListener('click', () => {
