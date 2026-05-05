@@ -452,6 +452,11 @@ XMLHttpRequest.prototype.open = function(method, url) {
                                         backgroundColor: "#ef7426",
                                         boxShadow: "0 4px rgb(0 0 0 / 20%), inset 0 -4px rgb(0 0 0 / 20%)",
                                         borderRadius: "7px",
+
+                                        // FIX: prevents "Cheats" from dropping to a new line
+                                        whiteSpace: "nowrap",
+                                        width: "max-content",
+                                        maxWidth: "calc(100vw - 280px)",
                                     },
                                 },
                                 createElement("div", {
