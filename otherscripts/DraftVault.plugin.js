@@ -1,7 +1,7 @@
 /**
  * @name DraftVault
  * @author Joseph
- * @description Manually save, name, restore, edit, and delete Discord message drafts.
+ * @description Manually save, name, restore, edit, and delete Discord message drafts
  * @version 2.1.0
  * @invite https://discord.gg/CnVeapcxtV
  */
