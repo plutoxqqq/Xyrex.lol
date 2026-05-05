@@ -944,12 +944,6 @@ function openSettingsModal() {
         <p class="settings-note">Theme Customizer is available when New UI mode is active</p>
       </div>
       <div class="settings-group">
-        <h3>Gameplay</h3>
-        <div class="settings-actions">
-          <button id="settingsBetaFeaturesBtn" class="btn-primary settings-action-btn" type="button">BETA Features (Coming Soon)</button>
-        </div>
-      </div>
-      <div class="settings-group">
         <h3>Account</h3>
         <p class="settings-note">Current account: <strong>${escapeHtml(getCurrentAccountName())}</strong></p>
         <p id="settingsAuthFeedback" class="settings-note" hidden></p>
@@ -985,11 +979,6 @@ function openSettingsModal() {
   themeBtn?.addEventListener('click', () => {
     if (!isNewUiMode || !window.XyrexNewUI?.toggleThemeCustomizer) return;
     window.XyrexNewUI.toggleThemeCustomizer();
-  });
-
-  const betaBtn = qs('#settingsBetaFeaturesBtn');
-  betaBtn?.addEventListener('click', () => {
-    window.alert('BETA toggle is temporarily disabled. Additional gameplay features are not enabled yet.');
   });
 
   const authFeedback = qs('#settingsAuthFeedback');
