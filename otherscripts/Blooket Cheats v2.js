@@ -18,27 +18,12 @@
 
 
 // AntiBan v2
-// Improved fetch hook
-const originalFetch = window.fetch;
-window.fetch = async function(...args) {
-    const url = args[0]?.toString() || '';
-    if (url.includes('blooket.com') && 
-        (url.includes('/rc') || url.includes('/log') || url.includes('/report') || url.includes('/telemetry'))) {
-        console.log('[Anti-Detect] Blocked:', url);
-        return new Response('{}', {status: 200});
+if (window.fetch.call.toString() == 'function call() { [native code] }') {
+    const call = window.fetch.call;
+    window.fetch.call = function () {
+        if (!arguments[1].includes("s.blooket.com/rc")) return call.apply(this, arguments);
     }
-    return originalFetch.apply(this, args);
-};
-
-// Also hook XMLHttpRequest
-const origOpen = XMLHttpRequest.prototype.open;
-XMLHttpRequest.prototype.open = function(method, url) {
-    if (typeof url === 'string' && url.includes('blooket.com') && /rc|log|report/.test(url)) {
-        console.log('[Anti-Detect] Blocked XHR:', url);
-        return;
-    }
-    return origOpen.apply(this, arguments);
-};
+}
 
     /* By CryptoDude3 */
     if (window.fetch.call.toString() == 'function call() { [native code] }') {
