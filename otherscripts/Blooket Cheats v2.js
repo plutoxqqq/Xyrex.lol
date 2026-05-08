@@ -11,6 +11,7 @@
 
 // Recent Changes
 // [+] Fixed Hide from Leaderboard, Crasher, Crypto Hack modules (Silent Multiplier, Freeze Crypto)
+// [+] Completely revamped GUI structure AGAIN
 
 
 // AntiBan v2
