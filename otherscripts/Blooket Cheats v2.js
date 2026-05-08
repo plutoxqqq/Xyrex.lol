@@ -209,8 +209,8 @@ if (window.fetch.call.toString() == 'function call() { [native code] }') {
                         fontWeight: "700",
                         userSelect: "text",
                     },
-                    innerHTML: "GitHub - 05Konzz",
-                    onclick: () => window.open("https://github.com/Blooket-Council/Blooket-Cheats", "_blank").focus(),
+                    innerHTML: "Github - plutoxqqq",
+                    onclick: () => window.open("https://github.com/plutoxqqq/Xyrex.lol", "_blank").focus(),
                 }),
                 (controlButtons = createElement(
                     "div",
