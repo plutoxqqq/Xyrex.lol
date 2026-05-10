@@ -1581,6 +1581,64 @@ const subtabPathSlugMap = {
 const subtabPathToIdMap = Object.fromEntries(
   Object.entries(subtabPathSlugMap).map(([key, value]) => [value, key])
 );
+const SEO_DEFAULT_TITLE = 'Xyrex.lol | Roblox Executor Directory, sUNC Comparisons, and Script Hub';
+const SEO_DEFAULT_DESCRIPTION = 'Xyrex.lol is a Roblox executor and script hub featuring executor comparisons, sUNC scores, platform filters, trusted reviews, popular scripts, and real-time updates.';
+const SEO_DEFAULT_IMAGE = 'https://xyrex.lol/otherscripts/logo.png';
+const SEO_PATH_META = {
+  '/': {
+    title: SEO_DEFAULT_TITLE,
+    description: SEO_DEFAULT_DESCRIPTION
+  },
+  '/scripthub': {
+    title: 'Xyrex Script Hub | Rankings, Comparisons, and Script Discovery',
+    description: 'Explore the Xyrex Script Hub for executor rankings, trusted comparisons, popular scripts, saved scripts, and real-time Roblox script discovery updates.'
+  },
+  '/scripthub/comparison': {
+    title: 'Executor Comparison | Xyrex Script Hub',
+    description: 'Compare Roblox executors side by side with pricing, stability, trust level, and platform support in the Xyrex Script Hub.'
+  },
+  '/scripthub/popularscripts': {
+    title: 'Popular Roblox Scripts | Xyrex Script Hub',
+    description: 'Browse trending and popular Roblox scripts on Xyrex with clean discovery tools and organized script insights.'
+  },
+  '/scripthub/assistant': {
+    title: 'Exploit Assistant | Xyrex Script Hub',
+    description: 'Use the Xyrex Exploit Assistant to quickly find Roblox executor and script details from current hub data.'
+  },
+  '/scripthub/savedscripts': {
+    title: 'Saved Scripts Manager | Xyrex Script Hub',
+    description: 'Store, manage, and revisit your Roblox scripts with the Xyrex saved scripts manager in the Script Hub.'
+  },
+  '/scripthub/recentchanges': {
+    title: 'Recent Updates | Xyrex Script Hub',
+    description: 'Track real-time executor and script hub updates, changes, and improvements on Xyrex.'
+  }
+};
+
+function updateSeoMetadata() {
+  const currentPath = normalisePath(window.location.pathname).replace(/^\/newui/, '') || '/';
+  const pageSeo = SEO_PATH_META[currentPath] || SEO_PATH_META['/'];
+  const canonicalUrl = `https://xyrex.lol${currentPath === '/' ? '/' : currentPath}`;
+  document.title = pageSeo.title;
+
+  const upsertMeta = (selector, attrName, value) => {
+    const element = document.querySelector(selector);
+    if (!element) return;
+    element.setAttribute(attrName, value);
+  };
+
+  upsertMeta('meta[name="description"]', 'content', pageSeo.description);
+  upsertMeta('meta[property="og:title"]', 'content', pageSeo.title);
+  upsertMeta('meta[property="og:description"]', 'content', pageSeo.description);
+  upsertMeta('meta[property="og:url"]', 'content', canonicalUrl);
+  upsertMeta('meta[name="twitter:title"]', 'content', pageSeo.title);
+  upsertMeta('meta[name="twitter:description"]', 'content', pageSeo.description);
+  upsertMeta('meta[name="twitter:image"]', 'content', SEO_DEFAULT_IMAGE);
+  upsertMeta('meta[property="og:image"]', 'content', SEO_DEFAULT_IMAGE);
+
+  const canonical = document.querySelector('link[rel="canonical"]');
+  if (canonical) canonical.setAttribute('href', canonicalUrl);
+}
 
 function normalisePath(pathname) {
   const clean = String(pathname || '/').replace(/\/+$/, '');
@@ -1633,6 +1691,7 @@ function syncRouteWithState(replace = false) {
   if (normalisePath(window.location.pathname) === normalisePath(nextPath)) return;
   const method = replace ? 'replaceState' : 'pushState';
   window.history[method]({}, '', nextPath);
+  updateSeoMetadata();
 }
 
 function syncNavButtonsWithPage(targetPageId) {
@@ -1685,6 +1744,7 @@ async function applyRoute(pathname, replace = false) {
 
   suppressRouteSync = false;
   syncRouteWithState(replace);
+  updateSeoMetadata();
 }
 
 function restartAnimationClass(element, animationClass) {
