@@ -167,6 +167,7 @@
         <div class="subtabs" role="tablist" aria-label="Scripts hub tabs">
           <button class="subtab-btn is-active" role="tab" aria-selected="true" data-subtab-target="smartRankingsPanel">Smart Rankings</button>
           <button class="subtab-btn" role="tab" aria-selected="false" data-subtab-target="comparisonPanel">Executor Comparison</button>
+          <button class="subtab-btn" role="tab" aria-selected="false" data-subtab-target="assistantPanel">Exploit Assistant</button>
           <button class="subtab-btn" role="tab" aria-selected="false" data-subtab-target="popularScriptsPanel">Popular Scripts</button>
           <button class="subtab-btn" role="tab" aria-selected="false" data-subtab-target="savedScriptsPanel">Saved Scripts</button>
           <button class="subtab-btn" role="tab" aria-selected="false" data-subtab-target="recentChangesPanel">Recent Changes</button>
@@ -184,6 +185,16 @@
           <div id="comparisonTableWrap" class="comparison-table-wrap" hidden>
             <table id="comparisonTable" class="comparison-table"></table>
           </div>
+        </section>
+
+        <section id="assistantPanel" class="subtab-panel" role="tabpanel" hidden>
+          <h3>Exploit Assistant</h3>
+          <p class="comparison-note">Ask about active executors, pricing, platforms, and risk. The assistant replies instantly using the latest executor data from this page.</p>
+          <div id="assistantMessages" class="assistant-messages" aria-live="polite"></div>
+          <form id="assistantForm" class="assistant-form">
+            <input id="assistantInput" class="assistant-input" type="text" placeholder="Example: Which executors are safest for beginners?" maxlength="260" />
+            <button id="assistantSendBtn" class="btn-primary" type="submit">Send</button>
+          </form>
         </section>
 
         <section id="popularScriptsPanel" class="subtab-panel" role="tabpanel" hidden>

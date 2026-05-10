@@ -1239,6 +1239,65 @@ function renderRecentChanges() {
   wrap.innerHTML = scriptsHubData.recentChanges.map(entry => `<li>${escapeHtml(entry)}</li>`).join('');
 }
 
+function getAssistantKnowledgeText(product) {
+  const platforms = Array.isArray(product.platform) && product.platform.length ? product.platform.join(', ') : 'Unknown';
+  const price = Array.isArray(product.pricingOptions) && product.pricingOptions.length
+    ? product.pricingOptions.join(', ')
+    : product.freeOrPaid;
+  return `${product.name}: ${product.description} Platforms: ${platforms}. sUNC: ${Number.isFinite(product.sunc) ? `${product.sunc}%` : 'None'}. Stability: ${product.stability}. Risk: ${detectionRiskLabel(product)} (${detectionRiskScore(product)}/10). Price: ${price}.`;
+}
+
+function getAssistantReply(prompt) {
+  const input = prompt.toLowerCase();
+  const mentioned = products.filter(item => input.includes(item.name.toLowerCase()));
+  if (mentioned.length) {
+    return mentioned.map(getAssistantKnowledgeText).join('\n\n');
+  }
+  if (input.includes('safe') || input.includes('safest') || input.includes('risk')) {
+    const safest = [...products].sort((a, b) => detectionRiskScore(a) - detectionRiskScore(b)).slice(0, 3);
+    return `Lowest-risk options right now:\n${safest.map(item => `• ${item.name} (${detectionRiskLabel(item)} risk, ${detectionRiskScore(item)}/10)`).join('\n')}`;
+  }
+  if (input.includes('beginner') || input.includes('start')) {
+    const beginner = [...products].find(item => item.name === 'JJSploit') || products[0];
+    return `Best beginner recommendation: ${beginner.name}. ${getAssistantKnowledgeText(beginner)}`;
+  }
+  if (input.includes('free') || input.includes('paid') || input.includes('price')) {
+    const free = products.filter(item => String(item.freeOrPaid).toLowerCase() === 'free').map(item => item.name);
+    const paid = products.filter(item => String(item.freeOrPaid).toLowerCase() !== 'free').map(item => item.name);
+    return `Free executors: ${free.join(', ') || 'None listed'}.\nPaid or mixed-price executors: ${paid.join(', ') || 'None listed'}.`;
+  }
+  return `I can help with active executor data in this hub, including safety, platforms, pricing, sUNC, and stability.\n\nTry asking:\n• "Compare Potassium and Velocity"\n• "Which executors are safest?"\n• "What free options are available?"`;
+}
+
+function initExploitAssistant() {
+  const form = qs('#assistantForm');
+  const input = qs('#assistantInput');
+  const messages = qs('#assistantMessages');
+  if (!form || !input || !messages) return;
+
+  const appendBubble = (role, text) => {
+    const bubble = document.createElement('article');
+    bubble.className = `assistant-bubble ${role}`;
+    bubble.textContent = text;
+    messages.appendChild(bubble);
+    messages.scrollTop = messages.scrollHeight;
+  };
+
+  if (!messages.children.length) {
+    appendBubble('bot', 'Hello. I am your Exploit Assistant. Ask me about any active executor listed on this page.');
+  }
+
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    const value = input.value.trim();
+    if (!value) return;
+    appendBubble('user', value);
+    appendBubble('bot', getAssistantReply(value));
+    input.value = '';
+    input.focus();
+  });
+}
+
 const savedScriptsStorageKey = 'xyrex_saved_scripts_v1';
 let currentSavedScriptId = null;
 
@@ -1374,6 +1433,7 @@ const subtabPathSlugMap = {
   smartRankingsPanel: 'rankings',
   comparisonPanel: 'comparison',
   popularScriptsPanel: 'popularscripts',
+  assistantPanel: 'assistant',
   savedScriptsPanel: 'savedscripts',
   recentChangesPanel: 'recentchanges'
 };
@@ -1605,7 +1665,7 @@ function setActiveSubtab(targetSubtabId) {
   const previousPanel = qs(`#${activeSubtabId}`);
   if (!nextPanel) return;
 
-  const tabOrder = ['smartRankingsPanel', 'comparisonPanel', 'popularScriptsPanel', 'savedScriptsPanel', 'recentChangesPanel'];
+  const tabOrder = ['smartRankingsPanel', 'comparisonPanel', 'assistantPanel', 'popularScriptsPanel', 'savedScriptsPanel', 'recentChangesPanel'];
   const previousIndex = tabOrder.indexOf(activeSubtabId);
   const nextIndex = tabOrder.indexOf(targetSubtabId);
   const direction = nextIndex > previousIndex ? 'forward' : 'backward';
@@ -1676,6 +1736,7 @@ function initScriptsHub() {
   renderPopularScripts();
   renderRecentChanges();
   renderSavedScriptsList();
+  initExploitAssistant();
 
   qsa('.subtab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
