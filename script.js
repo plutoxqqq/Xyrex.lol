@@ -1945,6 +1945,15 @@ window.addEventListener('xyrex:account-changed', () => {
   }
 });
 
+function hideInitialLoadingOverlay() {
+  const overlay = qs('#appLoadingOverlay');
+  if (!overlay) return;
+  overlay.classList.add('is-hidden');
+  window.setTimeout(() => {
+    overlay.remove();
+  }, 260);
+}
+
 function init() {
   setBetaFeaturesEnabled(getBetaFeaturesEnabled());
   syncNavigationLayoutMetrics();
@@ -2000,7 +2009,9 @@ function init() {
     applyRoute(getInitialRoutePath(), true);
   });
 
-  applyRoute(getInitialRoutePath(), true);
+  applyRoute(getInitialRoutePath(), true).finally(() => {
+    window.setTimeout(hideInitialLoadingOverlay, 1000);
+  });
 }
 
 document.addEventListener('DOMContentLoaded', init);
