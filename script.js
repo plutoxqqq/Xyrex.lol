@@ -1311,11 +1311,12 @@ function renderAssistantMarkdown(markdownText) {
   }
 
   marked.setOptions({
-    breaks: true,
+    breaks: false,
     gfm: true
   });
 
-  const unsafeHtml = marked.parse(rawText);
+  const normalizedText = rawText.replace(/\n{3,}/g, '\n\n');
+  const unsafeHtml = marked.parse(normalizedText);
 
   const safeHtml = DOMPurify.sanitize(unsafeHtml, {
     USE_PROFILES: { html: true }
@@ -1324,6 +1325,14 @@ function renderAssistantMarkdown(markdownText) {
   const wrapper = document.createElement('div');
   wrapper.className = 'assistant-markdown';
   wrapper.innerHTML = safeHtml;
+
+
+  wrapper.querySelectorAll('table').forEach(table => {
+    const scrollWrap = document.createElement('div');
+    scrollWrap.className = 'assistant-table-wrap';
+    table.parentNode?.insertBefore(scrollWrap, table);
+    scrollWrap.appendChild(table);
+  });
 
   wrapper.querySelectorAll('a').forEach(link => {
     link.target = '_blank';

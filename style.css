@@ -366,9 +366,10 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 .assistant-markdown pre{ max-width:100%; overflow-x:auto; padding:12px; border-radius:10px; background:rgba(0,0,0,0.28); }
 .assistant-markdown pre code{ padding:0; background:transparent; }
 .assistant-markdown blockquote{ margin:0.65rem 0; padding-left:0.85rem; border-left:3px solid var(--periwinkle, #8f9cff); color:var(--muted, #aeb5d6); }
-.assistant-markdown table{ display:block; width:100%; max-width:100%; overflow-x:auto; border-collapse:collapse; margin:0.7rem 0; border-radius:10px; }
+.assistant-table-wrap{ width:100%; max-width:100%; overflow-x:auto; margin:0.7rem 0; }
+.assistant-markdown table{ width:max-content; min-width:100%; border-collapse:collapse; border-radius:10px; }
 .assistant-markdown th,
-.assistant-markdown td{ padding:8px 10px; border:1px solid rgba(255,255,255,0.14); text-align:left; vertical-align:top; white-space:nowrap; }
+.assistant-markdown td{ padding:8px 10px; border:1px solid rgba(255,255,255,0.14); text-align:left; vertical-align:top; white-space:normal; }
 .assistant-markdown th{ background:rgba(143,156,255,0.16); color:var(--text, #eef1ff); }
 .assistant-markdown td{ background:rgba(255,255,255,0.035); }
 .assistant-markdown a{ color:var(--periwinkle, #8f9cff); text-decoration:none; }
