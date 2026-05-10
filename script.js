@@ -1300,6 +1300,55 @@ function getLocalAssistantFallback(prompt) {
   return `Research API is currently unavailable, so I am relying only on local Xyrex data.\n\nI can still help with safety, platforms, pricing, sUNC, and stability for the executors listed on this page.`;
 }
 
+
+function renderAssistantMarkdown(markdownText) {
+  const rawText = String(markdownText || '');
+
+  if (!window.marked || !window.DOMPurify) {
+    const fallback = document.createElement('div');
+    fallback.textContent = rawText;
+    return fallback;
+  }
+
+  marked.setOptions({
+    breaks: false,
+    gfm: true
+  });
+
+  const normalizedText = rawText.replace(/\n{3,}/g, '\n\n');
+  const unsafeHtml = marked.parse(normalizedText);
+
+  const safeHtml = DOMPurify.sanitize(unsafeHtml, {
+    USE_PROFILES: { html: true }
+  });
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'assistant-markdown';
+  wrapper.innerHTML = safeHtml;
+
+
+  wrapper.querySelectorAll('table').forEach(table => {
+    const scrollWrap = document.createElement('div');
+    scrollWrap.className = 'assistant-table-wrap';
+    table.parentNode?.insertBefore(scrollWrap, table);
+    scrollWrap.appendChild(table);
+  });
+
+  wrapper.querySelectorAll('a').forEach(link => {
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+  });
+
+  return wrapper;
+}
+
+function setAssistantMessageMarkdown(messageElement, markdownText) {
+  if (!messageElement) return;
+
+  messageElement.textContent = '';
+  messageElement.appendChild(renderAssistantMarkdown(markdownText));
+}
+
 async function askExploitAssistant(message) {
   const response = await fetch(EXPLOIT_ASSISTANT_API, {
     method: 'POST',
@@ -1356,7 +1405,7 @@ function initExploitAssistant() {
       const replyText = typeof data?.reply === 'string' && data.reply.trim()
         ? data.reply.trim()
         : getAssistantReply(userMessage);
-      loadingMessage.textContent = replyText;
+      setAssistantMessageMarkdown(loadingMessage, replyText);
 
       if (Array.isArray(data?.sources) && data.sources.length) {
         const sourcesWrap = document.createElement('div');
@@ -1380,7 +1429,7 @@ function initExploitAssistant() {
         }
       }
     } catch {
-      loadingMessage.textContent = getLocalAssistantFallback(userMessage);
+      setAssistantMessageMarkdown(loadingMessage, getLocalAssistantFallback(userMessage));
     } finally {
       input.disabled = false;
       sendBtn.disabled = false;
