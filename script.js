@@ -1702,75 +1702,8 @@ function shouldReduceMotion() {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
 }
 
-function getSubtabMotionItems(panel) {
-  if (!panel) return [];
-  return Array.from(
-    panel.querySelectorAll(':scope > *:not([hidden]), .rank-item, .script-card, .saved-script-item, .smart-ranking-card, .smart-ranking-hero, .comparison-table-wrap, .comparison-selector')
-  );
-}
-
-function stopAnimations(animations = []) {
-  animations.forEach(animation => {
-    try {
-      animation.cancel();
-    } catch {
-      // no-op
-    }
-  });
-}
-
-function animateSubtabMotion(panel, { direction, phase }) {
-  if (!panel) return [];
-  const animations = [];
-  const offset = direction === 'forward' ? 34 : -34;
-  const isEntering = phase === 'enter';
-  const panelAnimation = panel.animate(
-    isEntering
-      ? [
-          { opacity: 0, transform: `translate3d(${offset}px,0,0)` },
-          { opacity: 1, transform: 'translate3d(0,0,0)' }
-        ]
-      : [
-          { opacity: 1, transform: 'translate3d(0,0,0)' },
-          { opacity: 0, transform: `translate3d(${-offset * 0.74}px,0,0)` }
-        ],
-    {
-      duration: isEntering ? 320 : 250,
-      easing: 'cubic-bezier(.4,0,.2,1)',
-      fill: 'both'
-    }
-  );
-  animations.push(panelAnimation);
-
-  const motionItems = getSubtabMotionItems(panel).slice(0, 20);
-  motionItems.forEach((item, index) => {
-    if (item === panel) return;
-    const itemOffset = offset * (isEntering ? 0.74 : 0.5);
-    const animation = item.animate(
-      isEntering
-        ? [
-            { opacity: 0, transform: `translate3d(${itemOffset}px,0,0)` },
-            { opacity: 1, transform: 'translate3d(0,0,0)' }
-          ]
-        : [
-            { opacity: 1, transform: 'translate3d(0,0,0)' },
-            { opacity: 0, transform: `translate3d(${-itemOffset}px,0,0)` }
-          ],
-      {
-        duration: isEntering ? 300 : 230,
-        delay: Math.min(index * 14, 110),
-        easing: 'cubic-bezier(.4,0,.2,1)',
-        fill: 'both'
-      }
-    );
-    animations.push(animation);
-  });
-
-  return animations;
-}
-
 let activeSubtabTransitionToken = 0;
-let activeSubtabAnimations = [];
+
 
 function setActivePage(targetPageId) {
   if (targetPageId === activePageId) return;
@@ -1798,66 +1731,62 @@ function setActivePage(targetPageId) {
   syncRouteWithState();
 }
 
-function setActiveSubtab(targetSubtabId) {
-  if (targetSubtabId === activeSubtabId) return;
+function focusFirstElementInPanel(panel) {
+  if (!panel) return;
+  const focusable = panel.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+  if (focusable) {
+    focusable.focus();
+    return;
+  }
+  panel.setAttribute('tabindex', '-1');
+  panel.focus();
+}
+
+function setActiveSubtab(targetSubtabId, options = {}) {
+  const { moveFocus = false } = options;
+  if (targetSubtabId === activeSubtabId) {
+    if (moveFocus) focusFirstElementInPanel(qs(`#${targetSubtabId}`));
+    return;
+  }
 
   const nextPanel = qs(`#${targetSubtabId}`);
   const previousPanel = qs(`#${activeSubtabId}`);
   if (!nextPanel) return;
 
-  const tabOrder = ['smartRankingsPanel', 'comparisonPanel', 'assistantPanel', 'popularScriptsPanel', 'savedScriptsPanel', 'recentChangesPanel'];
-  const previousIndex = tabOrder.indexOf(activeSubtabId);
-  const nextIndex = tabOrder.indexOf(targetSubtabId);
-  const direction = nextIndex > previousIndex ? 'forward' : 'backward';
-  stopAnimations(activeSubtabAnimations);
-  activeSubtabAnimations = [];
+  const wrapper = nextPanel.parentElement;
+  const transitionToken = ++activeSubtabTransitionToken;
+  const reduceMotion = shouldReduceMotion();
 
-  if (!previousPanel || typeof nextPanel.animate !== 'function' || typeof previousPanel.animate !== 'function' || shouldReduceMotion()) {
+  if (!previousPanel || reduceMotion) {
     qsa('.subtab-panel').forEach(panel => {
       panel.hidden = panel.id !== targetSubtabId;
+      panel.classList.remove('is-transitioning-out', 'is-transitioning-in', 'is-current');
+      if (panel.id === targetSubtabId) panel.classList.add('is-current');
     });
-    animateSubtabChildren(nextPanel);
+    if (moveFocus) focusFirstElementInPanel(nextPanel);
   } else {
-    const transitionToken = ++activeSubtabTransitionToken;
-    const wrapper = previousPanel.parentElement;
     const wrapperHeight = Math.max(previousPanel.offsetHeight, nextPanel.offsetHeight);
-    wrapper.style.position = 'relative';
-    wrapper.style.overflow = 'clip';
     wrapper.style.minHeight = `${wrapperHeight}px`;
 
     previousPanel.hidden = false;
-    previousPanel.style.position = 'absolute';
-    previousPanel.style.inset = '0';
-    previousPanel.style.width = '100%';
-
     nextPanel.hidden = false;
-    nextPanel.style.position = 'absolute';
-    nextPanel.style.inset = '0';
-    nextPanel.style.width = '100%';
-    nextPanel.style.pointerEvents = 'none';
 
-    const outgoingAnimations = animateSubtabMotion(previousPanel, { direction, phase: 'exit' });
-    const incomingAnimations = animateSubtabMotion(nextPanel, { direction, phase: 'enter' });
-    activeSubtabAnimations = [...outgoingAnimations, ...incomingAnimations];
-    const finishedAnimations = activeSubtabAnimations.map(animation => animation.finished.catch(() => null));
+    previousPanel.classList.remove('is-current', 'is-transitioning-in');
+    previousPanel.classList.add('is-transitioning-out');
 
-    Promise.allSettled(finishedAnimations).then(() => {
+    nextPanel.classList.remove('is-transitioning-out');
+    nextPanel.classList.add('is-transitioning-in', 'is-current');
+
+    window.setTimeout(() => {
       if (transitionToken !== activeSubtabTransitionToken) return;
       previousPanel.hidden = true;
-      [previousPanel, nextPanel].forEach(panel => {
-        panel.style.position = '';
-        panel.style.inset = '';
-        panel.style.width = '';
-        panel.style.opacity = '';
-        panel.style.transform = '';
-        panel.style.filter = '';
-      });
-      nextPanel.style.pointerEvents = '';
+      previousPanel.classList.remove('is-transitioning-out');
+      nextPanel.classList.remove('is-transitioning-in');
       wrapper.style.minHeight = '';
-      wrapper.style.overflow = '';
-      activeSubtabAnimations = [];
-    });
+      if (moveFocus) focusFirstElementInPanel(nextPanel);
+    }, 210);
   }
+
   activeSubtabId = targetSubtabId;
   syncRouteWithState();
 }
@@ -1878,15 +1807,30 @@ function initScriptsHub() {
   renderSavedScriptsList();
   initExploitAssistant();
 
-  qsa('.subtab-btn').forEach(btn => {
+  const subtabButtons = qsa('.subtab-btn');
+  subtabButtons.forEach(btn => {
     btn.addEventListener('click', () => {
       const target = btn.getAttribute('data-subtab-target');
-      qsa('.subtab-btn').forEach(item => {
-        const active = item === btn;
-        item.classList.toggle('is-active', active);
-        item.setAttribute('aria-selected', String(active));
-      });
-      setActiveSubtab(target);
+      syncSubtabButtons(target);
+      setActiveSubtab(target, { moveFocus: true });
+    });
+
+    btn.addEventListener('keydown', event => {
+      const key = event.key;
+      if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(key)) return;
+      event.preventDefault();
+      const currentIndex = subtabButtons.indexOf(btn);
+      let nextIndex = currentIndex;
+      if (key === 'ArrowLeft' || key === 'ArrowUp') nextIndex = (currentIndex - 1 + subtabButtons.length) % subtabButtons.length;
+      if (key === 'ArrowRight' || key === 'ArrowDown') nextIndex = (currentIndex + 1) % subtabButtons.length;
+      if (key === 'Home') nextIndex = 0;
+      if (key === 'End') nextIndex = subtabButtons.length - 1;
+      const nextButton = subtabButtons[nextIndex];
+      if (!nextButton) return;
+      nextButton.focus();
+      const target = nextButton.getAttribute('data-subtab-target');
+      syncSubtabButtons(target);
+      setActiveSubtab(target, { moveFocus: true });
     });
   });
 
