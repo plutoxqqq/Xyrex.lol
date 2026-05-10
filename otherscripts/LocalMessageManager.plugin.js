@@ -542,15 +542,15 @@ module.exports = class LocalMessageManager {
 
             const labels = this.getToolbarLabels(toolbar);
 
-            const isMessageToolbar =
+            const isLikelyMessageToolbar =
                 labels.includes("add reaction") ||
+                labels.includes("add super reaction") ||
                 labels.includes("reply") ||
                 labels.includes("more") ||
+                labels.includes("message actions") ||
                 labels.includes("copy link") ||
                 labels.includes("mark unread") ||
                 labels.includes("pin message");
-
-            if (!isMessageToolbar) continue;
 
             const rect = toolbar.getBoundingClientRect();
 
@@ -562,7 +562,13 @@ module.exports = class LocalMessageManager {
                 rect.bottom >= messageRect.top - 12 &&
                 rect.top <= messageRect.bottom + 12;
 
-            if (!overlapsMessageY) continue;
+            const closeToMessage =
+                Math.abs(rect.right - messageRect.right) <= 160 &&
+                rect.bottom >= messageRect.top - 48 &&
+                rect.top <= messageRect.bottom + 48;
+
+            if (!isLikelyMessageToolbar && !closeToMessage) continue;
+            if (!overlapsMessageY && !closeToMessage) continue;
 
             const yDistance = Math.abs(
                 ((rect.top + rect.bottom) / 2) -
