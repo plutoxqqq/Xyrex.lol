@@ -915,6 +915,7 @@ function setBetaFeaturesEnabled(enabled) {
   document.body.classList.toggle('beta-features-enabled', enabled);
 }
 
+
 function getCurrentAccountName() {
   const account = window.XyrexAuth?.getCurrentAccount?.() || window.XyrexAccountScope?.getAccount?.() || 'guest';
   return String(account || 'guest');
