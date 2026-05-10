@@ -346,6 +346,12 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 .assistant-form{ margin-top:10px; display:grid; grid-template-columns:1fr auto; gap:10px; }
 .assistant-input{ width:100%; min-height:42px; padding:10px 12px; border-radius:10px; border:1px solid rgba(178,188,255,.3); background:rgba(20,26,48,.75); color:var(--text); outline:none; }
 .assistant-input:focus{ border-color:var(--periwinkle-2); box-shadow:0 0 0 3px rgba(143,156,255,.2); }
+.assistant-message{ max-width:min(90%, 720px); padding:10px 12px; border-radius:12px; line-height:1.45; white-space:pre-wrap; }
+.assistant-user{ align-self:flex-end; background:rgba(143,156,255,.2); border:1px solid rgba(178,188,255,.35); }
+.assistant-bot{ align-self:flex-start; background:rgba(17,21,38,.9); border:1px solid rgba(178,188,255,.2); color:var(--muted); }
+.assistant-sources{ margin-top:10px; display:flex; flex-direction:column; gap:6px; padding-top:8px; border-top:1px solid rgba(178,188,255,.2); }
+.assistant-sources a{ color:var(--periwinkle-2); text-decoration:none; font-size:.92rem; }
+.assistant-sources a:hover{ color:var(--text); text-decoration:underline; }
 .saved-error{ margin-top:10px; color:color-mix(in srgb, var(--accent-warning) 66%, #ff7bb5 34%); font-size:.88rem; }
 .dev-list{ margin:12px 0 0; line-height:1.5; }
 #easterEggPage.is-active{ display:flex; flex-direction:column; gap:10px; min-height:100%; }

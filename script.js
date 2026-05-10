@@ -514,6 +514,8 @@ const products = [
   }
 ];
 
+const EXPLOIT_ASSISTANT_API = 'https://xyres-ai-api.vercel.app/api/exploit-assistant';
+
 const scriptsHubData = {
   smartRankingLabels: {
     bestFree: 'Best Free',
@@ -1269,32 +1271,121 @@ function getAssistantReply(prompt) {
   return `I can help with active executor data in this hub, including safety, platforms, pricing, sUNC, and stability.\n\nTry asking:\n• "Compare Potassium and Velocity"\n• "Which executors are safest?"\n• "What free options are available?"`;
 }
 
+function getLocalAssistantFallback(prompt) {
+  const input = String(prompt || '').toLowerCase();
+  const mentioned = products.filter(item => input.includes(item.name.toLowerCase()));
+  if (mentioned.length) {
+    return `Research API is currently unavailable, so I am relying only on local Xyrex data.\n\n${mentioned.map(getAssistantKnowledgeText).join('\n\n')}`;
+  }
+
+  if (input.includes('android')) {
+    const android = products.filter(item => Array.isArray(item.platform) && item.platform.includes('Android'));
+    const ranked = android.sort((a, b) => detectionRiskScore(a) - detectionRiskScore(b) || (Number.isFinite(b.sunc) ? b.sunc : -1) - (Number.isFinite(a.sunc) ? a.sunc : -1));
+    return `Research API is currently unavailable, so I am relying only on local Xyrex data.\n\nTop Android options by visible local metrics:\n${ranked.slice(0, 3).map(item => `• ${item.name} — ${detectionRiskLabel(item)} risk, ${item.stability} stability, sUNC ${Number.isFinite(item.sunc) ? `${item.sunc}%` : 'None'}, status ${item.status}`).join('\n')}`;
+  }
+
+  if (input.includes('free')) {
+    const free = products
+      .filter(item => String(item.freeOrPaid).toLowerCase() === 'free')
+      .sort((a, b) => detectionRiskScore(a) - detectionRiskScore(b) || (Number.isFinite(b.sunc) ? b.sunc : -1) - (Number.isFinite(a.sunc) ? a.sunc : -1));
+    return `Research API is currently unavailable, so I am relying only on local Xyrex data.\n\nFree executors with the lowest visible risk:\n${free.slice(0, 5).map(item => `• ${item.name} — ${detectionRiskLabel(item)} risk (${detectionRiskScore(item)}/10), ${item.stability} stability, sUNC ${Number.isFinite(item.sunc) ? `${item.sunc}%` : 'None'}`).join('\n') || '• None listed'}`;
+  }
+
+  if (input.includes('safe') || input.includes('safest') || input.includes('risk') || input.includes('beginner') || input.includes('trust')) {
+    const safest = [...products]
+      .sort((a, b) => detectionRiskScore(a) - detectionRiskScore(b) || (Number.isFinite(b.sunc) ? b.sunc : -1) - (Number.isFinite(a.sunc) ? a.sunc : -1));
+    return `Research API is currently unavailable, so I am relying only on local Xyrex data.\n\nLower-risk beginner-friendly options from visible trust, stability, status, and sUNC data:\n${safest.slice(0, 4).map(item => `• ${item.name} — ${detectionRiskLabel(item)} risk, trust ${item.trustLevel}, stability ${item.stability}, status ${item.status}, sUNC ${Number.isFinite(item.sunc) ? `${item.sunc}%` : 'None'}`).join('\n')}`;
+  }
+
+  return `Research API is currently unavailable, so I am relying only on local Xyrex data.\n\nI can still help with safety, platforms, pricing, sUNC, and stability for the executors listed on this page.`;
+}
+
+async function askExploitAssistant(message) {
+  const response = await fetch(EXPLOIT_ASSISTANT_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message,
+      executors: products
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => '');
+    throw new Error(`Exploit Assistant API request failed (${response.status} ${response.statusText})${errorText ? `: ${errorText.slice(0, 240)}` : ''}`);
+  }
+
+  return response.json();
+}
+
 function initExploitAssistant() {
   const form = qs('#assistantForm');
   const input = qs('#assistantInput');
+  const sendBtn = qs('#assistantSendBtn');
   const messages = qs('#assistantMessages');
-  if (!form || !input || !messages) return;
+  if (!form || !input || !sendBtn || !messages) return;
+  if (form.dataset.apiIntegrated === 'true') return;
+  form.dataset.apiIntegrated = 'true';
 
-  const appendBubble = (role, text) => {
+  const appendMessage = (role, text) => {
     const bubble = document.createElement('article');
-    bubble.className = `assistant-bubble ${role}`;
+    bubble.className = `assistant-message ${role === 'user' ? 'assistant-user' : 'assistant-bot'}`;
     bubble.textContent = text;
     messages.appendChild(bubble);
     messages.scrollTop = messages.scrollHeight;
+    return bubble;
   };
 
   if (!messages.children.length) {
-    appendBubble('bot', 'Hello. I am your Exploit Assistant. Ask me about any active executor listed on this page.');
+    appendMessage('bot', 'Hello. I am your Exploit Assistant. Ask me about any active executor listed on this page.');
   }
 
-  form.addEventListener('submit', event => {
+  form.addEventListener('submit', async event => {
     event.preventDefault();
-    const value = input.value.trim();
-    if (!value) return;
-    appendBubble('user', value);
-    appendBubble('bot', getAssistantReply(value));
+    const userMessage = input.value.trim();
+    if (!userMessage) return;
+
+    appendMessage('user', userMessage);
     input.value = '';
-    input.focus();
+    input.disabled = true;
+    sendBtn.disabled = true;
+    const loadingMessage = appendMessage('bot', 'Researching...');
+
+    try {
+      const data = await askExploitAssistant(userMessage);
+      const replyText = typeof data?.reply === 'string' && data.reply.trim()
+        ? data.reply.trim()
+        : getAssistantReply(userMessage);
+      loadingMessage.textContent = replyText;
+
+      if (Array.isArray(data?.sources) && data.sources.length) {
+        const sourcesWrap = document.createElement('div');
+        sourcesWrap.className = 'assistant-sources';
+        const label = document.createElement('strong');
+        label.textContent = 'Sources:';
+        sourcesWrap.appendChild(label);
+        data.sources.slice(0, 3).forEach(source => {
+          if (!source || typeof source.url !== 'string' || !source.url.trim()) return;
+          const link = document.createElement('a');
+          link.href = source.url;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          const titleText = typeof source.title === 'string' && source.title.trim() ? source.title.trim() : source.url;
+          const trustText = typeof source.trust === 'string' && source.trust.trim() ? ` (${source.trust.trim()})` : '';
+          link.textContent = `${titleText}${trustText}`;
+          sourcesWrap.appendChild(link);
+        });
+        if (sourcesWrap.childElementCount > 1) {
+          loadingMessage.appendChild(sourcesWrap);
+        }
+      }
+    } catch {
+      loadingMessage.textContent = getLocalAssistantFallback(userMessage);
+    } finally {
+      input.disabled = false;
+      sendBtn.disabled = false;
+      input.focus();
+    }
   });
 }
 
