@@ -915,6 +915,12 @@ function setBetaFeaturesEnabled(enabled) {
   document.body.classList.toggle('beta-features-enabled', enabled);
 }
 
+function syncBetaAssistantUiState() {
+  if (getBetaFeaturesEnabled() && typeof window.initBetaAssistantUI === "function") {
+    window.initBetaAssistantUI();
+  }
+}
+
 function getCurrentAccountName() {
   const account = window.XyrexAuth?.getCurrentAccount?.() || window.XyrexAccountScope?.getAccount?.() || 'guest';
   return String(account || 'guest');
@@ -1806,6 +1812,7 @@ function initScriptsHub() {
   renderRecentChanges();
   renderSavedScriptsList();
   initExploitAssistant();
+  if (getBetaFeaturesEnabled() && typeof window.initBetaAssistantUI === "function") window.initBetaAssistantUI();
 
   const subtabButtons = qsa('.subtab-btn');
   subtabButtons.forEach(btn => {
@@ -1900,6 +1907,7 @@ function hideInitialLoadingOverlay() {
 
 function init() {
   setBetaFeaturesEnabled(getBetaFeaturesEnabled());
+  syncBetaAssistantUiState();
   syncNavigationLayoutMetrics();
   renderProducts(products);
   initScriptsHub();
