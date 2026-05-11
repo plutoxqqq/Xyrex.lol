@@ -13,9 +13,9 @@ const products = [
     cons: ['Higher upfront cost'],
     pricingOptions: ['$22.99 lifetime'],
     freeOrPaid: 'paid',
-    stability: 'Unstable',
-    trustLevel: 'Low',
-    status: 'Detected risk',
+    stability: 'Stable',
+    trustLevel: 'Medium',
+    status: 'Undetected',
     officialSite: 'https://www.potassium.pro/'
   },
   {
@@ -333,7 +333,7 @@ const products = [
     sunc: 98,
     description: 'Balanced paid Windows executor with stable overall performance',
     pros: ['Balanced performance'],
-    cons: ['Not top-tier'],
+    cons: ['Not top-tier', "Some say it's a scam"],
     pricingOptions: ['$5.99 to $19.99'],
     freeOrPaid: 'paid',
     stability: 'Stable',
