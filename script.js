@@ -272,10 +272,10 @@ const products = [
     cheatType: 'Internal',
     keySystem: 'Keyless',
     tags: ['Verified', 'Internal', 'Kernel'],
-    features: ['Decompiler', 'Kernel', 'Multi-instance', 'Raknet', 'Hyperion emulation', 'Invite-only'],
+    features: ['Decompiler', 'Kernel', 'Multi-instance', 'RakNet', 'Hyperion emulation', 'Invite-only'],
     sunc: 100,
-    description: 'Invite-only Windows executor with Hyperion emulation, Raknet support, and strong stability',
-    pros: ['Hyperion emulation', 'Raknet support', 'Very stable', 'Polished execution', 'Long-running product'],
+    description: 'Invite-only Windows executor with Hyperion emulation, RakNet support, and strong stability',
+    pros: ['Hyperion emulation', 'RakNet support', 'Very stable', 'Polished execution', 'Long-running product'],
     cons: ['Invite-only access', 'Limited public availability'],
     pricingOptions: ['Free / invite-only'],
     freeOrPaid: 'free',
@@ -578,8 +578,8 @@ const products = [
     tags: ['Internal'],
     features: ['Decompiler', 'Multi-instance', 'RakNet', 'Freemium'],
     sunc: null,
-    description: 'Freemium Windows executor with decompiler, multi-instance, and Raknet support',
-    pros: ['Freemium access', 'Decompiler support', 'Multi-instance support', 'Raknet support'],
+    description: 'Freemium Windows executor with decompiler, multi-instance, and RakNet support',
+    pros: ['Freemium access', 'Decompiler support', 'Multi-instance support', 'RakNet support'],
     cons: ['Key system required', 'Not verified'],
     pricingOptions: ['Free / freemium'],
     freeOrPaid: 'free',
@@ -712,6 +712,13 @@ function getPriceLabel(product) {
   return product.freeOrPaid === 'free' ? 'Free' : 'Paid';
 }
 
+function buildExpandedExecutorDescription(product) {
+  const platformText = Array.isArray(product.platform) && product.platform.length ? product.platform.join(', ') : 'Unknown platforms';
+  const featureText = Array.isArray(product.features) && product.features.length ? product.features.join(', ') : 'No standout features listed';
+  const priceText = Array.isArray(product.pricingOptions) && product.pricingOptions.length ? product.pricingOptions.join(', ') : getPriceLabel(product);
+  return `${stripTrailingPeriod(product.description)}. It targets ${platformText}, includes ${featureText.toLowerCase()}, and is offered through ${priceText}.`;
+}
+
 function createProductCard(product, index) {
   const card = document.createElement('article');
   card.className = 'card';
@@ -748,6 +755,8 @@ function createProductCard(product, index) {
   const sunc = document.createElement('div');
   sunc.className = 'sunc no-text-select';
   sunc.textContent = Number.isFinite(product.sunc) ? `sUNC ${product.sunc}%` : 'sUNC None';
+  sunc.title = 'Click to simulate an sUNC test';
+  sunc.addEventListener('click', () => openSuncSimulationModal(product));
 
   right.appendChild(sunc);
   right.appendChild(createTagSymbols(product));
@@ -757,7 +766,7 @@ function createProductCard(product, index) {
 
   const summary = document.createElement('p');
   summary.className = 'summary';
-  summary.textContent = stripTrailingPeriod(product.description);
+  summary.textContent = buildExpandedExecutorDescription(product);
 
   const price = document.createElement('div');
   price.className = 'price no-text-select';
@@ -968,6 +977,45 @@ function openModal(product) {
   overlay.classList.remove('is-closing');
   overlay.setAttribute('aria-hidden', 'false');
   qs('#modalCloseBtn').focus();
+}
+
+function openSuncSimulationModal(product) {
+  const overlay = qs('#modalOverlay');
+  const content = qs('#modalContent');
+  const targetScore = Number.isFinite(product.sunc) ? product.sunc : 0;
+  content.innerHTML = `
+    <section class="sunc-sim-modal">
+      <h2>sUNC Validation Simulation</h2>
+      <p class="modal-headline">Running a simulated benchmark for <strong>${escapeHtml(product.name)}</strong> based on listed executor data.</p>
+      <div class="sunc-sim-progress-wrap" aria-live="polite">
+        <div id="suncSimBar" class="sunc-sim-progress-bar"><span id="suncSimFill" class="sunc-sim-progress-fill"></span></div>
+        <div id="suncSimValue" class="sunc-sim-value">0%</div>
+      </div>
+      <p class="settings-note">This is a UI simulation only and not a live remote test.</p>
+    </section>`;
+
+  overlay.classList.remove('is-closing');
+  overlay.setAttribute('aria-hidden', 'false');
+  qs('#modalCloseBtn').focus();
+
+  const fill = qs('#suncSimFill');
+  const value = qs('#suncSimValue');
+  const durationMs = 1050;
+  const startAt = performance.now();
+
+  const step = now => {
+    if (overlay.getAttribute('aria-hidden') === 'true') return;
+    const progress = Math.min((now - startAt) / durationMs, 1);
+    const current = Math.round(targetScore * progress);
+    fill.style.width = `${current}%`;
+    value.textContent = `${current}%`;
+    if (progress < 1) {
+      requestAnimationFrame(step);
+      return;
+    }
+    value.textContent = Number.isFinite(product.sunc) ? `${product.sunc}% confirmed` : 'No score available';
+  };
+  requestAnimationFrame(step);
 }
 
 function getAiTokenSummary() {
@@ -1319,10 +1367,12 @@ function renderRecentChanges() {
 
 function getAssistantKnowledgeText(product) {
   const platforms = Array.isArray(product.platform) && product.platform.length ? product.platform.join(', ') : 'Unknown';
+  const features = Array.isArray(product.features) && product.features.length ? product.features.join(', ') : 'None listed';
   const price = Array.isArray(product.pricingOptions) && product.pricingOptions.length
     ? product.pricingOptions.join(', ')
     : product.freeOrPaid;
-  return `${product.name}: ${product.description} Platforms: ${platforms}. sUNC: ${Number.isFinite(product.sunc) ? `${product.sunc}%` : 'None'}. Stability: ${product.stability}. Risk: ${detectionRiskLabel(product)} (${detectionRiskScore(product)}/10). Price: ${price}.`;
+  const site = product.officialSite ? ` Official site: ${product.officialSite}.` : ' Official site: Not listed.';
+  return `${product.name}: ${product.description} Platforms: ${platforms}. Features: ${features}. sUNC: ${Number.isFinite(product.sunc) ? `${product.sunc}%` : 'None'}. Stability: ${product.stability}. Risk: ${detectionRiskLabel(product)} (${detectionRiskScore(product)}/10). Price: ${price}.${site}`;
 }
 
 function getAssistantReply(prompt) {
