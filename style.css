@@ -424,6 +424,11 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 .assistant-sources{ margin-top:10px; display:flex; flex-direction:column; gap:6px; padding-top:8px; border-top:1px solid rgba(178,188,255,.2); }
 .assistant-sources a{ color:var(--periwinkle-2); text-decoration:none; font-size:.92rem; }
 .assistant-sources a:hover{ color:var(--text); text-decoration:underline; }
+.sunc-sim-modal{ display:flex; flex-direction:column; gap:12px; }
+.sunc-sim-progress-wrap{ display:flex; flex-direction:column; gap:8px; }
+.sunc-sim-progress-bar{ width:100%; height:14px; background:rgba(255,255,255,0.1); border:1px solid rgba(178,188,255,.28); border-radius:999px; overflow:hidden; }
+.sunc-sim-progress-fill{ display:block; height:100%; width:0; background:linear-gradient(90deg, #6ce5ff, #8f9cff); box-shadow:0 0 14px rgba(143,156,255,.5); transition:width .08s linear; }
+.sunc-sim-value{ font-weight:700; color:var(--periwinkle-2); letter-spacing:.02em; }
 .saved-error{ margin-top:10px; color:color-mix(in srgb, var(--accent-warning) 66%, #ff7bb5 34%); font-size:.88rem; }
 .dev-list{ margin:12px 0 0; line-height:1.5; }
 #easterEggPage.is-active{ display:flex; flex-direction:column; gap:10px; min-height:100%; }
