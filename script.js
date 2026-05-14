@@ -755,7 +755,7 @@ function createProductCard(product, index) {
   const sunc = document.createElement('div');
   sunc.className = 'sunc no-text-select';
   sunc.textContent = Number.isFinite(product.sunc) ? `sUNC ${product.sunc}%` : 'sUNC None';
-  sunc.title = 'Click to simulate an sUNC test';
+  sunc.title = 'Click to check an sUNC';
   sunc.addEventListener('click', () => openSuncSimulationModal(product));
 
   right.appendChild(sunc);
@@ -985,13 +985,13 @@ function openSuncSimulationModal(product) {
   const targetScore = Number.isFinite(product.sunc) ? product.sunc : 0;
   content.innerHTML = `
     <section class="sunc-sim-modal">
-      <h2>sUNC Validation Simulation</h2>
-      <p class="modal-headline">Running a simulated benchmark for <strong>${escapeHtml(product.name)}</strong> based on listed executor data.</p>
+      <h2>sUNC Score</h2>
+      <p class="modal-headline">Running a sUNC test for <strong>${escapeHtml(product.name)}</strong> based on listed executor data.</p>
       <div class="sunc-sim-progress-wrap" aria-live="polite">
         <div id="suncSimBar" class="sunc-sim-progress-bar"><span id="suncSimFill" class="sunc-sim-progress-fill"></span></div>
         <div id="suncSimValue" class="sunc-sim-value">0%</div>
       </div>
-      <p class="settings-note">This is a UI simulation only and not a live remote test.</p>
+      <p class="settings-note">This test will not show UNC or functions passed/failed.</p>
     </section>`;
 
   overlay.classList.remove('is-closing');
