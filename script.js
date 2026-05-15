@@ -1423,8 +1423,7 @@ function renderPopularScripts() {
     wrap.innerHTML = '<div class="script-empty-state"><p>No scripts found.</p><p>Try a different search or category.</p></div>';
     return;
   }
-  const bedwarsCategory = categories.find(name => name.toLowerCase() === 'bedwars');
-  const defaultOpenCategory = bedwarsCategory || categories[0];
+  const defaultOpenCategory = categories[0];
   wrap.classList.add('popular-script-categories');
   wrap.innerHTML = categories.map((categoryName, index) => {
     const items = groupedScripts[categoryName] || [];
@@ -1696,6 +1695,41 @@ function setAssistantMessageMarkdown(messageElement, markdownText) {
   messageElement.appendChild(renderAssistantMarkdown(markdownText));
 }
 
+
+function buildLocalRecommendationReply(intentData) {
+  const ranked = getRankedExecutors(intentData || {}).map(item => item.product);
+  const best = ranked[0];
+  if (!best) return getLocalAssistantFallback('');
+  return `### Recommended pick: ${best.name}
+
+Why:
+- Strong overall score from local trust, stability, status, and sUNC fields
+- Better aligned with your request filters and intent
+
+Based on Xyrex data:
+- Executor: ${best.name}
+- Platform: ${(best.platform || []).join(', ') || 'Unknown'}
+- Price: ${best.freeOrPaid}
+- Key System: ${best.keySystem}
+- sUNC: ${Number.isFinite(best.sunc) ? `${best.sunc}%` : 'None'}
+- Trust: ${best.trustLevel}
+- Stability: ${best.stability}
+- Status: ${best.status}
+
+Confidence: ${getAssistantConfidence(best)} — Based on current local Xyrex data and may change over time.`;
+}
+
+function isLikelyCannedAssistantReply(replyText) {
+  const normalized = String(replyText || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  if (!normalized) return true;
+  const cannedIndicators = [
+    'recommended pick: milkers',
+    'based on current xyrex-local metrics',
+    'confidence: high — based on the current xyrex data'
+  ];
+  return cannedIndicators.filter(token => normalized.includes(token)).length >= 2;
+}
+
 async function askExploitAssistant(message) {
   const response = await fetch(EXPLOIT_ASSISTANT_API, {
     method: 'POST',
@@ -1769,7 +1803,7 @@ function initExploitAssistant() {
         const apiPayload = await askExploitAssistant(userMessage);
         const apiReply = String(apiPayload?.reply || apiPayload?.message || '').trim();
         if (!apiReply) throw new Error('Exploit Assistant API returned an empty reply.');
-        replyText = apiReply;
+        replyText = isLikelyCannedAssistantReply(apiReply) ? buildLocalRecommendationReply(intentData) : apiReply;
       }
       setAssistantMessageMarkdown(loadingMessage, replyText);
       if (intentData.wantsFilterAction) {
