@@ -1305,26 +1305,67 @@ function getAssistantKnowledgeText(product) {
   return `${product.name}: ${product.description} Platforms: ${platforms}. Features: ${features}. sUNC: ${Number.isFinite(product.sunc) ? `${product.sunc}%` : 'None'}. Stability: ${product.stability}. Risk: ${detectionRiskLabel(product)} (${detectionRiskScore(product)}/10). Price: ${price}.${site}`;
 }
 
-function getAssistantReply(prompt) {
-  const input = prompt.toLowerCase();
-  const mentioned = products.filter(item => input.includes(item.name.toLowerCase()));
-  if (mentioned.length) {
-    return mentioned.map(getAssistantKnowledgeText).join('\n\n');
-  }
-  if (input.includes('safe') || input.includes('safest') || input.includes('risk')) {
-    const safest = [...products].sort((a, b) => detectionRiskScore(a) - detectionRiskScore(b)).slice(0, 3);
-    return `Lowest-risk options right now:\n${safest.map(item => `• ${item.name} (${detectionRiskLabel(item)} risk, ${detectionRiskScore(item)}/10)`).join('\n')}`;
-  }
-  if (input.includes('beginner') || input.includes('start')) {
-    const beginner = [...products].find(item => item.name === 'JJSploit') || products[0];
-    return `Best beginner recommendation: ${beginner.name}. ${getAssistantKnowledgeText(beginner)}`;
-  }
-  if (input.includes('free') || input.includes('paid') || input.includes('price')) {
-    const free = products.filter(item => String(item.freeOrPaid).toLowerCase() === 'free').map(item => item.name);
-    const paid = products.filter(item => String(item.freeOrPaid).toLowerCase() !== 'free').map(item => item.name);
-    return `Free executors: ${free.join(', ') || 'None listed'}.\nPaid or mixed-price executors: ${paid.join(', ') || 'None listed'}.`;
-  }
-  return `I can help with active executor data in this hub, including safety, platforms, pricing, sUNC, and stability.\n\nTry asking:\n• "Compare Potassium and Velocity"\n• "Which executors are safest?"\n• "What free options are available?"`;
+const assistantIntents = { COMPARE:'compare', RECOMMEND:'recommend', SAFETY:'safety', PRICE:'price', PLATFORM:'platform', SUNC:'sunc', BEGINNER:'beginner', DETAILS:'details', FILTER_SHOW:'filter_show', UNKNOWN:'unknown' };
+const assistantLoadingSteps = ['Reading Xyrex executor data...','Checking platform, price, and key system...','Comparing sUNC, trust, and stability...','Building a clear recommendation...'];
+let assistantContext = { lastIntent:null, lastExecutors:[], lastFilters:{}, lastQuestion:'', lastRecommendation:null };
+
+function detectAssistantIntent(message) {
+  const raw = String(message || '').trim();
+  const input = raw.toLowerCase();
+  const entities = products.filter(item => input.includes(item.name.toLowerCase())).map(item => item.name);
+  const wantsFilterAction = /(show|filter|display|only show|hide everything except|show me|list only)/i.test(input);
+  const filters = { platform: [], price: null, keySystem: null, cheatType: null, safety: null, suncMinimum: null };
+  if (/(windows|pc)/i.test(input)) filters.platform.push('Windows');
+  if (/(mac|macos)/i.test(input)) filters.platform.push('macOS');
+  if (/(android|mobile)/i.test(input)) filters.platform.push('Android');
+  if (/(ios|iphone|ipad|mobile)/i.test(input)) filters.platform.push('iOS');
+  if (/\bfree\b/i.test(input)) filters.price = 'free'; else if (/\bpaid|cost\b/i.test(input)) filters.price = 'paid';
+  if (/keyless/i.test(input)) filters.keySystem = 'keyless'; else if (/keyed|key system/i.test(input)) filters.keySystem = 'keyed';
+  if (/internal/i.test(input)) filters.cheatType = 'internal'; else if (/external/i.test(input)) filters.cheatType = 'external';
+  if (/(safe|safest|trusted|risk|detected|undetected)/i.test(input)) filters.safety = 'safe';
+  if (/(high sunc|highest sunc|highest unc|top sunc)/i.test(input)) filters.suncMinimum = 70;
+  const beginner = /(beginner|new|easy|simple|first executor)/i.test(input);
+  let intent = assistantIntents.UNKNOWN;
+  if (wantsFilterAction) intent = assistantIntents.FILTER_SHOW;
+  else if (/(compare|\bvs\b|versus|better than|which is better)/i.test(input)) intent = assistantIntents.COMPARE;
+  else if (/(best|recommend|what should i use|which one should i use)/i.test(input)) intent = assistantIntents.RECOMMEND;
+  else if (/(safe|safest|trusted|risk|detected|undetected)/i.test(input)) intent = assistantIntents.SAFETY;
+  else if (/(free|paid|cost|keyless|keyed)/i.test(input)) intent = assistantIntents.PRICE;
+  else if (/(windows|mac|android|ios|mobile|pc)/i.test(input)) intent = assistantIntents.PLATFORM;
+  else if (/(sunc|score|percentage|highest unc|highest sunc)/i.test(input)) intent = assistantIntents.SUNC;
+  else if (beginner) intent = assistantIntents.BEGINNER;
+  else if (entities.length) intent = assistantIntents.DETAILS;
+  return { intent, entities, filters, beginner, wantsFilterAction };
+}
+
+function recommendationScore(product, userIntent = {}) {
+  let score = Number.isFinite(product.sunc) ? product.sunc * 0.55 : 0;
+  const trust = String(product.trustLevel || '').toLowerCase();
+  score += trust.includes('high') ? 24 : trust.includes('medium') ? 12 : trust.includes('low') ? 2 : 5;
+  const stable = String(product.stability || '').toLowerCase();
+  if (stable.includes('stable')) score += 12;
+  if (/(unstable|unknown)/i.test(stable)) score -= 8;
+  const status = String(product.status || '').toLowerCase();
+  if (/(down|broken|patched|discontinued|risky|issue|detected)/i.test(status)) score -= 35;
+  if (/active|working|online|updated/i.test(status)) score += 9;
+  if (userIntent.filters?.price === 'free') score += product.freeOrPaid === 'free' ? 12 : -8;
+  if (userIntent.filters?.price === 'paid') score += product.freeOrPaid === 'paid' ? 6 : -4;
+  if (userIntent.beginner) score += (product.keySystem === 'keyless' ? 8 : -2) + (product.freeOrPaid === 'free' ? 6 : 0) + (stable.includes('stable') ? 5 : -4);
+  if (userIntent.intent === assistantIntents.SAFETY) score += (trust.includes('high') ? 12 : 0) + (/(detected|risky|down)/i.test(status) ? -20 : 4);
+  if (userIntent.filters?.platform?.length) score += userIntent.filters.platform.some(p => (product.platform || []).includes(p)) ? 15 : -30;
+  if (userIntent.filters?.keySystem) score += product.keySystem === userIntent.filters.keySystem ? 6 : -6;
+  return score;
+}
+function getRankedExecutors(intentData) { return products.map(p => ({ product: p, score: recommendationScore(p, intentData) })).sort((a, b) => b.score - a.score); }
+function getAssistantConfidence(items) { const list = Array.isArray(items) ? items : [items]; const v = list.filter(Boolean).map(p => [p.officialSite, Number.isFinite(p.sunc), p.trustLevel !== 'Unknown', p.stability !== 'Unknown', p.status !== 'Unknown', (p.pros || []).length + (p.cons || []).length >= 2].filter(Boolean).length); const avg = v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0; return avg >= 5 ? 'High' : avg >= 3 ? 'Medium' : 'Low'; }
+function applyAssistantFilters(filters) {
+  qsa('.filter-checkbox, .price-checkbox').forEach(cb => { cb.checked = false; });
+  (filters.platform || []).forEach(platform => { const el = qsa('.filter-checkbox').find(i => i.getAttribute('data-filter-group') === 'platform' && i.value === platform); if (el) el.checked = true; });
+  if (filters.keySystem) { const el = qsa('.filter-checkbox').find(i => i.getAttribute('data-filter-group') === 'keySystem' && i.value === filters.keySystem); if (el) el.checked = true; }
+  if (filters.cheatType) { const el = qsa('.filter-checkbox').find(i => i.getAttribute('data-filter-group') === 'cheatType' && i.value === filters.cheatType); if (el) el.checked = true; }
+  if (filters.price === 'free') qs('#priceFree').checked = true; else if (filters.price === 'paid') qs('#pricePaid').checked = true; else if (filters.price === 'both') qs('#priceBoth').checked = true;
+  applyAllFilters();
+  const grid = qs('#productGrid'); if (grid) { grid.classList.add('assistant-filter-pulse'); setTimeout(() => grid.classList.remove('assistant-filter-pulse'), 800); }
 }
 
 function getLocalAssistantFallback(prompt) {
@@ -1432,18 +1473,30 @@ function initExploitAssistant() {
   if (form.dataset.apiIntegrated === 'true') return;
   form.dataset.apiIntegrated = 'true';
 
-  const appendMessage = (role, text) => {
+  let loadingInterval = null;
+  const appendMessage = (role, text, badges = []) => {
     const bubble = document.createElement('article');
     bubble.className = `assistant-message ${role === 'user' ? 'assistant-user' : 'assistant-bot'}`;
-    bubble.textContent = text;
+    if (badges.length && role === 'bot') {
+      const badgeWrap = document.createElement('div'); badgeWrap.className = 'assistant-badges';
+      badges.forEach(b => { const el = document.createElement('span'); el.className = 'assistant-badge'; el.textContent = b; badgeWrap.appendChild(el); });
+      bubble.appendChild(badgeWrap);
+    }
+    const content = document.createElement('div'); content.textContent = text; bubble.appendChild(content);
     messages.appendChild(bubble);
     messages.scrollTop = messages.scrollHeight;
     return bubble;
   };
 
-  if (!messages.children.length) {
-    appendMessage('bot', 'Hello. I am your Exploit Assistant. Ask me about any active executor listed on this page.');
-  }
+  const addPromptChips = () => {
+    const prompts = ['Best free executor for Windows','Compare Velocity and Xeno','Which executor has the highest sUNC?','What is safest for beginners?','Show me Android executors','Show only keyless executors'];
+    const quick = [{t:'Safest',p:'Which executor is safest right now?'},{t:'Best Free',p:'What is the best free executor?'},{t:'Best Paid',p:'What is the best paid executor?'},{t:'Beginner Pick',p:'What executor should a beginner use?'},{t:'Highest sUNC',p:'Which executor has the highest sUNC?'},{t:'Mobile',p:'What is the best mobile executor?'},{t:'Compare',p:'Compare the top executors.'}];
+    const promptWrap = qs('#assistantSuggestedPrompts'); const quickWrap = qs('#assistantQuickModes'); if (!promptWrap || !quickWrap) return;
+    const makeChip = (label, prompt) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'assistant-chip'; b.textContent = label; b.addEventListener('click', () => { input.value = prompt; form.requestSubmit(); }); return b; };
+    promptWrap.innerHTML = ''; quickWrap.innerHTML = ''; prompts.forEach(p => promptWrap.appendChild(makeChip(p, p))); quick.forEach(i => quickWrap.appendChild(makeChip(i.t, i.p)));
+  };
+  addPromptChips();
+  if (!messages.children.length) appendMessage('bot', 'Hello. I am your Exploit Assistant. Ask me about any active executor listed on this page.', ['Local Data']);
 
   form.addEventListener('submit', async event => {
     event.preventDefault();
@@ -1454,39 +1507,38 @@ function initExploitAssistant() {
     input.value = '';
     input.disabled = true;
     sendBtn.disabled = true;
-    const loadingMessage = appendMessage('bot', 'Researching...');
+    const intentData = detectAssistantIntent(userMessage);
+    const loadingMessage = appendMessage('bot', intentData.wantsFilterAction ? 'Reading your filter request...' : assistantLoadingSteps[0], [intentData.wantsFilterAction ? 'Filter Mode' : 'Local Data']);
+    let loadIndex = 0;
+    if (loadingInterval) clearInterval(loadingInterval);
+    loadingInterval = setInterval(() => { loadIndex = (loadIndex + 1) % assistantLoadingSteps.length; loadingMessage.lastChild.textContent = intentData.wantsFilterAction ? ['Reading your filter request...','Updating executor filters...','Refreshing visible executors...'][loadIndex % 3] : assistantLoadingSteps[loadIndex]; }, 750);
 
     try {
-      const data = await askExploitAssistant(userMessage);
-      const replyText = typeof data?.reply === 'string' && data.reply.trim()
-        ? data.reply.trim()
-        : getAssistantReply(userMessage);
-      setAssistantMessageMarkdown(loadingMessage, replyText);
-
-      if (Array.isArray(data?.sources) && data.sources.length) {
-        const sourcesWrap = document.createElement('div');
-        sourcesWrap.className = 'assistant-sources';
-        const label = document.createElement('strong');
-        label.textContent = 'Sources:';
-        sourcesWrap.appendChild(label);
-        data.sources.slice(0, 3).forEach(source => {
-          if (!source || typeof source.url !== 'string' || !source.url.trim()) return;
-          const link = document.createElement('a');
-          link.href = source.url;
-          link.target = '_blank';
-          link.rel = 'noopener noreferrer';
-          const titleText = typeof source.title === 'string' && source.title.trim() ? source.title.trim() : source.url;
-          const trustText = typeof source.trust === 'string' && source.trust.trim() ? ` (${source.trust.trim()})` : '';
-          link.textContent = `${titleText}${trustText}`;
-          sourcesWrap.appendChild(link);
-        });
-        if (sourcesWrap.childElementCount > 1) {
-          loadingMessage.appendChild(sourcesWrap);
-        }
+      let replyText = '';
+      if (intentData.wantsFilterAction) {
+        applyAssistantFilters(intentData.filters);
+        const matchCount = qs('#productGrid')?.children?.length || 0;
+        const filterLabel = [intentData.filters.price, ...(intentData.filters.platform || []), intentData.filters.keySystem].filter(Boolean).join(' + ') || 'requested filters';
+        replyText = `### Filter Mode\nI filtered the page to show: ${filterLabel}\n\nMatching executors: ${matchCount}\n\n${matchCount ? 'Done — I filtered the page based on your request.' : 'I applied the filter, but no matching executors were found in the current Xyrex data.'}`;
+      } else if (intentData.intent === assistantIntents.COMPARE && intentData.entities.length >= 2) {
+        const pair = intentData.entities.slice(0, 2).map(n => products.find(p => p.name === n)).filter(Boolean);
+        replyText = `### ${pair[0].name} vs ${pair[1].name}\n\nCategory comparison:\n- Price: ${pair[0].freeOrPaid} vs ${pair[1].freeOrPaid}\n- Platform: ${(pair[0].platform || []).join(', ')} vs ${(pair[1].platform || []).join(', ')}\n- Key System: ${pair[0].keySystem} vs ${pair[1].keySystem}\n- sUNC: ${pair[0].sunc ?? 'None'} vs ${pair[1].sunc ?? 'None'}\n- Trust: ${pair[0].trustLevel} vs ${pair[1].trustLevel}\n- Stability: ${pair[0].stability} vs ${pair[1].stability}\n- Status: ${pair[0].status} vs ${pair[1].status}\n\nVerdict:\nBased on Xyrex data, ${recommendationScore(pair[0], intentData) >= recommendationScore(pair[1], intentData) ? pair[0].name : pair[1].name} currently looks stronger overall.\n\nConfidence:\n${getAssistantConfidence(pair)} — This comparison is based on local Xyrex fields and may change over time.`;
+      } else {
+        const ranked = getRankedExecutors(intentData);
+        const top = ranked[0]?.product || products[0];
+        replyText = `Recommended pick:\n${top.name}\n\nWhy:\n- Strong overall score from sUNC, trust, stability, and status.\n- Fits your intent${intentData.filters.price ? ` (${intentData.filters.price})` : ''}${intentData.filters.platform.length ? ` and platform (${intentData.filters.platform.join(', ')})` : ''}.\n- Based on current Xyrex-local metrics, this appears to be one of the safer practical options.\n\nBased on Xyrex data:\n- Executor: ${top.name}\n- Platform: ${(top.platform || []).join(', ') || 'Unknown'}\n- Price: ${top.freeOrPaid}\n- Key System: ${top.keySystem}\n- sUNC: ${Number.isFinite(top.sunc) ? `${top.sunc}%` : 'None'}\n- Trust: ${top.trustLevel}\n- Stability: ${top.stability}\n- Status: ${top.status}\n\nConfidence:\n${getAssistantConfidence(top)} — Based on the current Xyrex data, and this may change over time.`;
       }
+      setAssistantMessageMarkdown(loadingMessage, replyText);
+      if (intentData.wantsFilterAction) {
+        const clearBtn = document.createElement('button'); clearBtn.type = 'button'; clearBtn.className = 'assistant-clear-filters'; clearBtn.textContent = 'Clear filters';
+        clearBtn.addEventListener('click', () => { qsa('.filter-checkbox, .price-checkbox').forEach(cb => { cb.checked = false; }); applyAllFilters(); });
+        loadingMessage.appendChild(clearBtn);
+      }
+      assistantContext = { lastIntent: intentData.intent, lastExecutors: intentData.entities, lastFilters: intentData.filters, lastQuestion: userMessage, lastRecommendation: intentData.entities[0] || null };
     } catch {
-      setAssistantMessageMarkdown(loadingMessage, getLocalAssistantFallback(userMessage));
+      setAssistantMessageMarkdown(loadingMessage, 'Local Data mode is active because live research is currently unavailable. I’ll answer using Xyrex’s stored executor data.\n\n' + getLocalAssistantFallback(userMessage));
     } finally {
+      if (loadingInterval) { clearInterval(loadingInterval); loadingInterval = null; }
       input.disabled = false;
       sendBtn.disabled = false;
       input.focus();
