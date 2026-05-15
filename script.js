@@ -593,7 +593,6 @@ const products = [
   }
 ];
 
-const EXPLOIT_ASSISTANT_API = 'https://xyres-ai-api.vercel.app/api/exploit-assistant';
 const POPULAR_SCRIPT_CATEGORIES = [
   'Bedwars',
   'Universal',
@@ -1696,22 +1695,61 @@ function setAssistantMessageMarkdown(messageElement, markdownText) {
   messageElement.appendChild(renderAssistantMarkdown(markdownText));
 }
 
-async function askExploitAssistant(message) {
-  const response = await fetch(EXPLOIT_ASSISTANT_API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      message,
-      executors: products
-    })
-  });
+function askExploitAssistant(message) {
+  const intentData = detectAssistantIntent(message);
 
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => '');
-    throw new Error(`Exploit Assistant API request failed (${response.status} ${response.statusText})${errorText ? `: ${errorText.slice(0, 240)}` : ''}`);
+  if (intentData.intent === assistantIntents.COMPARE && intentData.entities.length >= 2) {
+    const pair = intentData.entities.slice(0, 2).map(n => products.find(p => p.name === n)).filter(Boolean);
+    return `### ${pair[0].name} vs ${pair[1].name}
+
+Category comparison:
+- Price: ${pair[0].freeOrPaid} vs ${pair[1].freeOrPaid}
+- Platform: ${(pair[0].platform || []).join(', ')} vs ${(pair[1].platform || []).join(', ')}
+- Key System: ${pair[0].keySystem} vs ${pair[1].keySystem}
+- sUNC: ${pair[0].sunc ?? 'None'} vs ${pair[1].sunc ?? 'None'}
+- Trust: ${pair[0].trustLevel} vs ${pair[1].trustLevel}
+- Stability: ${pair[0].stability} vs ${pair[1].stability}
+- Status: ${pair[0].status} vs ${pair[1].status}
+
+Verdict:
+Based on Xyrex data, ${recommendationScore(pair[0], intentData) >= recommendationScore(pair[1], intentData) ? pair[0].name : pair[1].name} currently appears stronger overall.
+
+Confidence:
+${getAssistantConfidence(pair)} — This comparison is based on local Xyrex fields and may change over time.`;
   }
 
-  return response.json();
+  if (intentData.entities.length && intentData.intent === assistantIntents.DETAILS) {
+    const selected = products.filter(item => intentData.entities.includes(item.name));
+    return selected.map(getAssistantKnowledgeText).join('\n\n');
+  }
+
+  const ranked = getRankedExecutors(intentData).map(item => item.product).filter(Boolean);
+  const top = ranked[0];
+  if (!top) return 'No executors are currently available in local Xyrex data.';
+
+  const reasons = [
+    `Strong overall score from sUNC, trust, stability, and status.`,
+    intentData.beginner ? 'Suitable for beginners based on setup, reliability, and clarity.' : 'Suitable for your current request.',
+    'Based on current Xyrex-local metrics, this appears to be one of the safer practical options.'
+  ];
+
+  const platform = (top.platform || []).join(', ') || 'Unknown';
+  const confidence = getAssistantConfidence(top);
+  return `### Recommended pick: ${top.name}
+
+Why:
+${reasons.map(line => `- ${line}`).join('\n')}
+
+Based on Xyrex data:
+- Executor: ${top.name}
+- Platform: ${platform}
+- Price: ${top.freeOrPaid}
+- Key System: ${top.keySystem}
+- sUNC: ${Number.isFinite(top.sunc) ? `${top.sunc}%` : 'None'}
+- Trust: ${top.trustLevel}
+- Stability: ${top.stability}
+- Status: ${top.status}
+- Confidence: ${confidence} — Based on current Xyrex-local data and subject to change over time.`;
 }
 
 function initExploitAssistant() {
@@ -1766,10 +1804,7 @@ function initExploitAssistant() {
         const pair = intentData.entities.slice(0, 2).map(n => products.find(p => p.name === n)).filter(Boolean);
         replyText = `### ${pair[0].name} vs ${pair[1].name}\n\nCategory comparison:\n- Price: ${pair[0].freeOrPaid} vs ${pair[1].freeOrPaid}\n- Platform: ${(pair[0].platform || []).join(', ')} vs ${(pair[1].platform || []).join(', ')}\n- Key System: ${pair[0].keySystem} vs ${pair[1].keySystem}\n- sUNC: ${pair[0].sunc ?? 'None'} vs ${pair[1].sunc ?? 'None'}\n- Trust: ${pair[0].trustLevel} vs ${pair[1].trustLevel}\n- Stability: ${pair[0].stability} vs ${pair[1].stability}\n- Status: ${pair[0].status} vs ${pair[1].status}\n\nVerdict:\nBased on Xyrex data, ${recommendationScore(pair[0], intentData) >= recommendationScore(pair[1], intentData) ? pair[0].name : pair[1].name} currently looks stronger overall.\n\nConfidence:\n${getAssistantConfidence(pair)} — This comparison is based on local Xyrex fields and may change over time.`;
       } else {
-        const apiPayload = await askExploitAssistant(userMessage);
-        const apiReply = String(apiPayload?.reply || apiPayload?.message || '').trim();
-        if (!apiReply) throw new Error('Exploit Assistant API returned an empty reply.');
-        replyText = apiReply;
+        replyText = askExploitAssistant(userMessage);
       }
       setAssistantMessageMarkdown(loadingMessage, replyText);
       if (intentData.wantsFilterAction) {
