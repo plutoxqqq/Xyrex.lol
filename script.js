@@ -631,7 +631,8 @@ const scriptsHubData = {
         stability: 'Stable',
         buggy: false,
         status: 'Working',
-        platform: ['PC', 'Mobile']
+        platform: ['PC', 'Mobile'],
+        discord: '...'
       }
     },
     {
@@ -647,7 +648,8 @@ const scriptsHubData = {
         stability: 'Stable',
         buggy: false,
         status: 'Working',
-        platform: ['PC', 'Mobile']
+        platform: ['PC', 'Mobile'],
+        discord: '...'
       }
     },
     {
@@ -663,7 +665,8 @@ const scriptsHubData = {
         stability: 'Stable',
         buggy: false,
         status: 'Working',
-        platform: ['PC', 'Mobile']
+        platform: ['PC', 'Mobile'],
+        discord: '...'
       }
     },
     {
@@ -679,7 +682,8 @@ const scriptsHubData = {
         stability: 'Stable',
         buggy: false,
         status: 'Working',
-        platform: ['PC', 'Mobile']
+        platform: ['PC', 'Mobile'],
+        discord: '...'
       }
     },
     {
@@ -695,7 +699,8 @@ const scriptsHubData = {
         stability: 'Stable',
         buggy: false,
         status: 'Working',
-        platform: ['PC', 'Mobile']
+        platform: ['PC', 'Mobile'],
+        discord: '...'
       }
     },
       {
@@ -711,7 +716,8 @@ const scriptsHubData = {
         stability: 'Stable',
         buggy: false,
         status: 'Working',
-        platform: ['PC', 'Mobile']
+        platform: ['PC', 'Mobile'],
+        discord: '...'
       }
     },
 
@@ -728,7 +734,8 @@ const scriptsHubData = {
         stability: 'Stable',
         buggy: false,
         status: 'Working',
-        platform: ['PC', 'Mobile']
+        platform: ['PC', 'Mobile'],
+        discord: '...'
       }
     },
 
@@ -749,9 +756,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -769,9 +776,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -789,9 +796,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -809,9 +816,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -829,9 +836,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     // Universal placeholders
@@ -851,9 +858,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -871,9 +878,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -891,9 +898,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -911,9 +918,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -931,9 +938,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     // Rivals placeholders
@@ -953,9 +960,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -973,9 +980,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -993,9 +1000,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1013,9 +1020,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1033,9 +1040,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     // Grace placeholders
@@ -1055,9 +1062,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1075,9 +1082,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1095,9 +1102,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1115,9 +1122,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1135,9 +1142,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     // Pressure placeholders
@@ -1157,9 +1164,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1177,9 +1184,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1197,9 +1204,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1217,9 +1224,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1237,9 +1244,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     // Doors placeholders
@@ -1259,9 +1266,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1279,9 +1286,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1299,9 +1306,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1319,9 +1326,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1339,9 +1346,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     // Steal a Brainrot placeholders
@@ -1361,9 +1368,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1381,9 +1388,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1401,9 +1408,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1421,9 +1428,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1441,9 +1448,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     // Adopt Me placeholders
@@ -1463,9 +1470,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1483,9 +1490,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1503,9 +1510,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1523,9 +1530,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1543,9 +1550,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     // Brookhaven RP placeholders
@@ -1565,9 +1572,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1585,9 +1592,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1605,9 +1612,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1625,9 +1632,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1645,9 +1652,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     // Blox Fruits placeholders
@@ -1667,9 +1674,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1687,9 +1694,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1707,9 +1714,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1727,9 +1734,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1747,9 +1754,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     // Slime RNG placeholders
@@ -1769,9 +1776,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1789,9 +1796,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1809,9 +1816,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1829,9 +1836,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1849,9 +1856,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     // Kick a Lucky Block placeholders
@@ -1871,9 +1878,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1891,9 +1898,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1911,9 +1918,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1931,9 +1938,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1951,9 +1958,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     // 99 Nights in the Forest placeholders
@@ -1973,9 +1980,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -1993,9 +2000,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -2013,9 +2020,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -2033,9 +2040,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
     /*
@@ -2053,9 +2060,9 @@ const scriptsHubData = {
         buggy: ...,
         status: '...',
         platform: [...],
-        Discord: '...'
+        discord: '...'
       }
-    }, // comma if another one after it
+    },
     */
 
   ],
