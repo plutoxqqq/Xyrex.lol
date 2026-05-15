@@ -605,21 +605,39 @@ const scriptsHubData = {
   popularScripts: [
     {
       name: 'Voidware Bedwars',
-      game: 'Bedwars',
+      category: 'Bedwars',
       description: 'The most popular Roblox Bedwars script',
-      script: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWRewrite/master/NewMainScript.lua", true))()'
+      script: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWRewrite/master/NewMainScript.lua", true))()',
+      stats: {
+        price: 'Unknown',
+        keySystem: 'Unknown',
+        suncRequired: 'Unknown',
+        bestExecutor: 'Any compatible executor',
+        status: 'Unknown'
+      }
     },
     {
       name: 'Infinite Yield',
-      game: 'Universal',
+      category: 'Universal',
       description: 'Widely used utility command script for many Roblox experiences',
-      script: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()'
+      script: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()',
+      stats: {
+        price: 'Unknown',
+        keySystem: 'Unknown',
+        bestExecutor: 'Any compatible executor',
+        platform: ['PC', 'Mobile']
+      }
     },
     {
       name: 'Dark Dex Explorer',
-      game: 'Universal',
+      category: 'Universal',
       description: 'Object explorer utility script for inspection and debugging workflows',
-      script: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/peyton2465/Dex/master/out.lua"))()'
+      script: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/peyton2465/Dex/master/out.lua"))()',
+      stats: {
+        price: 'Unknown',
+        keySystem: 'Unknown',
+        status: 'Unknown'
+      }
     }
   ],
   recentChanges: [
@@ -1257,36 +1275,116 @@ function renderComparisonSystem() {
 function renderPopularScripts() {
   const wrap = qs('#popularScriptsList');
   if (!wrap) return;
-  wrap.innerHTML = scriptsHubData.popularScripts.map(item => `
-    <article class="script-card">
-      <div class="script-card-head">
-        <h4 class="script-card-title">${escapeHtml(item.name)}</h4>
-        <div class="script-card-meta">
-          <span>${escapeHtml(stripTrailingPeriod(item.game))}</span>
-          <button class="script-copy-btn" type="button" data-script-copy="${escapeHtml(item.script)}" title="Copy script" aria-label="Copy script">
-            <span class="script-file-icon">${popularScriptFileSvg}</span>
-          </button>
-        </div>
-      </div>
-      <p>${escapeHtml(stripTrailingPeriod(item.description))}</p>
-      <div class="script-code-wrap">
-        <pre>${escapeHtml(item.script)}</pre>
-      </div>
-    </article>`).join('');
+  const scripts = Array.isArray(scriptsHubData.popularScripts) ? scriptsHubData.popularScripts : [];
+  const groupedScripts = groupScriptsByCategory(scripts);
+  const categories = Object.keys(groupedScripts);
+  if (!categories.length) {
+    wrap.innerHTML = '<div class="script-empty-state"><p>No scripts found.</p><p>Try a different search or category.</p></div>';
+    return;
+  }
+  const bedwarsCategory = categories.find(name => name.toLowerCase() === 'bedwars');
+  const defaultOpenCategory = bedwarsCategory || categories[0];
+  wrap.classList.add('popular-script-categories');
+  wrap.innerHTML = categories.map((categoryName, index) => {
+    const items = groupedScripts[categoryName];
+    const isOpen = categoryName === defaultOpenCategory;
+    return renderScriptCategory(categoryName, items, isOpen, index);
+  }).join('');
 
-  wrap.querySelectorAll('.script-copy-btn').forEach(button => {
-    button.addEventListener('click', async () => {
-      const scriptValue = button.getAttribute('data-script-copy') || '';
+  if (!wrap.dataset.popularScriptsBound) {
+    wrap.addEventListener('click', async event => {
+      const headerButton = event.target.closest('.script-category-header');
+      if (headerButton && wrap.contains(headerButton)) {
+        toggleScriptCategory(headerButton.closest('.script-category'));
+        return;
+      }
+      const copyButton = event.target.closest('.script-copy-btn');
+      if (!copyButton || !wrap.contains(copyButton)) return;
+      event.stopPropagation();
+      const scriptValue = copyButton.getAttribute('data-script-copy') || '';
       if (!scriptValue) return;
       try {
         await navigator.clipboard.writeText(scriptValue);
-        button.classList.add('is-copied');
-        window.setTimeout(() => button.classList.remove('is-copied'), 900);
+        copyButton.classList.add('is-copied');
+        window.setTimeout(() => copyButton.classList.remove('is-copied'), 900);
       } catch {
         // no-op
       }
     });
-  });
+    wrap.dataset.popularScriptsBound = 'true';
+  }
+}
+
+function groupScriptsByCategory(scripts) {
+  return scripts.reduce((acc, script) => {
+    const name = stripTrailingPeriod(script.category || script.game || 'Other') || 'Other';
+    if (!acc[name]) acc[name] = [];
+    acc[name].push(script);
+    return acc;
+  }, {});
+}
+
+function getScriptBadges(script) {
+  const stats = script.stats || {};
+  const badges = [];
+  const addBadge = (label, type) => {
+    if (!label) return;
+    badges.push({ label, type });
+  };
+  addBadge(stats.price, /free|keyless|stable|working/i.test(stats.price || '') ? 'positive' : 'info');
+  addBadge(stats.keySystem, /keyless/i.test(stats.keySystem || '') ? 'positive' : /keyed/i.test(stats.keySystem || '') ? 'warning' : 'info');
+  addBadge(stats.suncRequired ? `sUNC ${stats.suncRequired}` : '', 'info');
+  addBadge(stats.bestExecutor ? `Best: ${stats.bestExecutor}` : '', 'info');
+  addBadge(stats.stability, /stable/i.test(stats.stability || '') ? 'positive' : /unstable|buggy/i.test(stats.stability || '') ? 'warning' : 'info');
+  if (typeof stats.buggy === 'boolean') addBadge(stats.buggy ? 'Buggy' : 'Not Buggy', stats.buggy ? 'warning' : 'positive');
+  addBadge(stats.status, /working/i.test(stats.status || '') ? 'positive' : /patched|down/i.test(stats.status || '') ? 'warning' : 'info');
+  if (Array.isArray(stats.platform)) stats.platform.forEach(platform => addBadge(platform, 'info'));
+  return badges.filter(badge => badge.label && !/unknown/i.test(badge.label));
+}
+
+function renderScriptCard(script) {
+  const badges = getScriptBadges(script);
+  return `
+    <article class="script-card">
+      <div class="script-card-head">
+        <h4 class="script-card-title">${escapeHtml(script.name)}</h4>
+        <div class="script-card-meta">
+          <button class="script-copy-btn" type="button" data-script-copy="${escapeHtml(script.script)}" title="Copy script" aria-label="Copy script">
+            <span class="script-file-icon">${popularScriptFileSvg}</span>
+          </button>
+        </div>
+      </div>
+      <p>${escapeHtml(stripTrailingPeriod(script.description))}</p>
+      ${badges.length ? `<div class="script-stat-badges">${badges.map(badge => `<span class="script-stat-badge ${badge.type}">${escapeHtml(badge.label)}</span>`).join('')}</div>` : ''}
+      <div class="script-code-wrap">
+        <pre>${escapeHtml(script.script)}</pre>
+      </div>
+    </article>`;
+}
+
+function renderScriptCategory(categoryName, scripts, isOpen, index) {
+  return `
+    <section class="script-category" data-category-name="${escapeHtml(categoryName)}">
+      <button class="script-category-header" type="button" aria-expanded="${isOpen ? 'true' : 'false'}" aria-controls="script-category-body-${index}">
+        <span class="script-category-title">${escapeHtml(categoryName)}</span>
+        <span class="script-category-meta">
+          <span class="script-category-count">${scripts.length}</span>
+          <span class="script-category-arrow" aria-hidden="true">▼</span>
+        </span>
+      </button>
+      <div id="script-category-body-${index}" class="script-category-body ${isOpen ? 'open' : ''}">
+        ${scripts.map(renderScriptCard).join('')}
+      </div>
+    </section>`;
+}
+
+function toggleScriptCategory(categoryElement) {
+  if (!categoryElement) return;
+  const header = categoryElement.querySelector('.script-category-header');
+  const body = categoryElement.querySelector('.script-category-body');
+  if (!header || !body) return;
+  const isOpen = body.classList.toggle('open');
+  header.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
 }
 
 function renderRecentChanges() {
