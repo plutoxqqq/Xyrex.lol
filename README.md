@@ -15,7 +15,7 @@ The platform organises executor data in a searchable and filterable format, prov
 - Basic details (stability, trust, etc.)
 - Feature summaries
 - Filtering tools for easier discovery
-- Fun games!
+- Exploit Assistant!
 
 Xyrex helps users compare tools without jumping between multiple sites.
 
@@ -31,7 +31,6 @@ Xyrex helps users compare tools without jumping between multiple sites.
 | Comparison Tools | Filters and browse | Limited comparison support |
 | Organisation | Structured listings | Varies in quality |
 | Transparency | Centralised info | Fragmented sources |
-| Minigames | Custom-made game | No games / source of fun |
 
 ---
 
