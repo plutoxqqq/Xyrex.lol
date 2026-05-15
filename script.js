@@ -609,11 +609,12 @@ const scriptsHubData = {
       description: 'The most popular Roblox Bedwars script',
       script: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWRewrite/master/NewMainScript.lua", true))()',
       stats: {
-        price: 'Unknown',
-        keySystem: 'Unknown',
-        suncRequired: 'Unknown',
+        price: 'Free and Paid',
+        keySystem: 'Keyless',
+        suncRequired: '80+',
         bestExecutor: 'Any compatible executor',
         status: 'Unknown'
+        platform: ['PC', 'Mobile']
       }
     },
     {
@@ -622,8 +623,8 @@ const scriptsHubData = {
       description: 'Widely used utility command script for many Roblox experiences',
       script: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()',
       stats: {
-        price: 'Unknown',
-        keySystem: 'Unknown',
+        price: 'Free',
+        keySystem: 'Keyless',
         bestExecutor: 'Any compatible executor',
         platform: ['PC', 'Mobile']
       }
@@ -634,23 +635,26 @@ const scriptsHubData = {
       description: 'Object explorer utility script for inspection and debugging workflows',
       script: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/peyton2465/Dex/master/out.lua"))()',
       stats: {
-        price: 'Unknown',
-        keySystem: 'Unknown',
-        status: 'Unknown'
+        price: 'Free',
+        keySystem: 'Keyless',
+        bestExecutor: 'Any compatible executor',
+        platform: ['PC', 'Mobile']
       }
     },
-    {
     name: 'KiciaHook',
       category: 'Universal',
       description: 'Roblox script loader for KiciaHook',
       script: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/kiciahook/kiciahook/refs/heads/main/loader.luau"))()',
       stats: {
-        price: 'Freemium',
-        keySystem: 'Luarmor',
-        status: 'Working'
+        price: 'Free',
+        keySystem: 'Keyed',
+        suncRequired: '90+',
+        bestExecutor: 'Any compatible executor',
+        platform: ['PC', 'Mobile']
       }
     }
   ],
+  
   recentChanges: [
     'Rebuilt AI Insight output to use concise expert analysis with best-fit guidance, clear avoidance criteria, explicit risk level, and confidence scoring',
     'Replaced static free and paid tier tabs with dynamic Smart Rankings that rotate categories for Best Free, Safest, Beginner Friendly, and Most Powerful picks',
