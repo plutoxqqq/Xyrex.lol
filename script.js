@@ -638,6 +638,16 @@ const scriptsHubData = {
         keySystem: 'Unknown',
         status: 'Unknown'
       }
+    },
+    name: 'KiciaHook',
+      category: 'Universal',
+      description: 'Roblox script loader for KiciaHook',
+      script: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/kiciahook/kiciahook/refs/heads/main/loader.luau"))()',
+      stats: {
+        price: 'Freemium',
+        keySystem: 'Luarmor',
+        status: 'Working'
+      }
     }
   ],
   recentChanges: [
