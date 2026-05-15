@@ -696,7 +696,7 @@ const scriptsHubData = {
         bestExecutor: 'Any compatible executor',
         stability: 'Stable',
         buggy: false,
-        status: 'Woking',
+        status: 'Working',
         platform: ['PC', 'Mobile']
       }
     },
@@ -716,8 +716,9 @@ const scriptsHubData = {
         status: 'Working',
         platform: ['PC', 'Mobile']
       }
-    } // Add comma after the } if you are adding more scripts
-/*
+    }
+
+    /*
     {
       name: 'Placeholder Rivals Script 1',
       category: 'Rivals',
@@ -766,8 +767,9 @@ const scriptsHubData = {
         platform: ['PC']
       }
     }
+    */
+
   ],
-*/
 
   recentChanges: [
     'For the latest changes, updates, and bug fixes, join the official Xyrex Discord server'
