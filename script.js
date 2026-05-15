@@ -1738,14 +1738,6 @@ function initExploitAssistant() {
     return bubble;
   };
 
-  const addPromptChips = () => {
-    const prompts = ['Best free executor for Windows','Compare Velocity and Xeno','Which executor has the highest sUNC?','What is safest for beginners?','Show me Android executors','Show only keyless executors'];
-    const quick = [{t:'Safest',p:'Which executor is safest right now?'},{t:'Best Free',p:'What is the best free executor?'},{t:'Best Paid',p:'What is the best paid executor?'},{t:'Beginner Pick',p:'What executor should a beginner use?'},{t:'Highest sUNC',p:'Which executor has the highest sUNC?'},{t:'Mobile',p:'What is the best mobile executor?'},{t:'Compare',p:'Compare the top executors.'}];
-    const promptWrap = qs('#assistantSuggestedPrompts'); const quickWrap = qs('#assistantQuickModes'); if (!promptWrap || !quickWrap) return;
-    const makeChip = (label, prompt) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'assistant-chip'; b.textContent = label; b.addEventListener('click', () => { input.value = prompt; form.requestSubmit(); }); return b; };
-    promptWrap.innerHTML = ''; quickWrap.innerHTML = ''; prompts.forEach(p => promptWrap.appendChild(makeChip(p, p))); quick.forEach(i => quickWrap.appendChild(makeChip(i.t, i.p)));
-  };
-  addPromptChips();
   if (!messages.children.length) appendMessage('bot', 'Hello. I am your Exploit Assistant. Ask me about any active executor listed on this page.', ['Local Data']);
 
   form.addEventListener('submit', async event => {
