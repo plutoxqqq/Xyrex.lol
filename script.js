@@ -17,6 +17,7 @@ const products = [
     trustLevel: 'Unknown',
     status: 'Unknown',
     officialSite: 'https://aimmy.dev/',
+    officialDiscord: 'discord.gg/aimmy',
   },
   {
     name: 'Arceus X',
@@ -36,6 +37,7 @@ const products = [
     trustLevel: 'Unknown',
     status: 'Unknown',
     officialSite: 'https://spdmteam.com/',
+    officialDiscord: 'https://discord.com/invite/wQKjUYf99A',
   },
   {
     name: 'Bunni',
@@ -52,7 +54,7 @@ const products = [
     pricingOptions: ['Free', '}.99 daily', '$9.99 monthly', '$34.99 lifetime'],
     freeOrPaid: 'both',
     stability: 'Mixed',
-    trustLevel: 'Medium',
+    trustLevel: 'Low',
     status: 'Undetected',
     officialSite: 'https://bunni.fun/',
   },
@@ -302,6 +304,7 @@ const products = [
     trustLevel: 'Medium',
     status: 'Undetected',
     officialSite: 'https://www.potassium.pro/',
+    officialDiscord: 'discord.gg/potassium',
   },
   {
     name: 'Ronin',
@@ -320,7 +323,7 @@ const products = [
     stability: 'Unknown',
     trustLevel: 'Unknown',
     status: 'Unknown',
-    officialSite: '',
+    officialSite: 'https://getronin.xyz/',
   },
   {
     name: 'Seliware',
