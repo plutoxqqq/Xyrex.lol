@@ -594,7 +594,20 @@ const products = [
 ];
 
 const EXPLOIT_ASSISTANT_API = 'https://xyres-ai-api.vercel.app/api/exploit-assistant';
-const POPULAR_SCRIPT_CATEGORIES = ['Bedwars', 'Universal', 'FPS'];
+const POPULAR_SCRIPT_CATEGORIES = [
+  'Bedwars',
+  'Universal',
+  'Grace',
+  'Pressure',
+  'Doors',
+  'Steal a Brainrot',
+  'Adopt Me',
+  'Brookhaven RP',
+  'Blox Fruits',
+  'Slime RNG',
+  'Kick a Lucky Block',
+  '99 Nights in the Forest'
+];
 
 const scriptsHubData = {
   smartRankingLabels: {
