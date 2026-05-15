@@ -605,14 +605,14 @@ const scriptsHubData = {
 
   popularScripts: [
     {
-      name: 'Voidware Bedwars',
+      name: 'Voidware Rewrite',
       category: 'Bedwars',
       description: 'The most popular Roblox Bedwars script',
       script: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWRewrite/master/NewMainScript.lua", true))()',
       stats: {
         price: 'Free and Paid',
         keySystem: 'Keyless',
-        suncRequired: '80+',
+        suncRequired: '80%+',
         bestExecutor: 'Any compatible executor',
         stability: 'Stable',
         buggy: false,
@@ -628,7 +628,7 @@ const scriptsHubData = {
       stats: {
         price: 'Free',
         keySystem: 'Keyless',
-        suncRequired: 'Low',
+        suncRequired: 'Any %',
         bestExecutor: 'Any compatible executor',
         stability: 'Stable',
         buggy: false,
@@ -644,7 +644,7 @@ const scriptsHubData = {
       stats: {
         price: 'Free',
         keySystem: 'Keyless',
-        suncRequired: 'Medium',
+        suncRequired: 'Any %',
         bestExecutor: 'Any compatible executor',
         stability: 'Stable',
         buggy: false,
@@ -654,52 +654,123 @@ const scriptsHubData = {
     },
     {
       name: 'KiciaHook',
-      category: 'Universal',
+      category: 'Rivals',
       description: 'Roblox script loader for KiciaHook',
       script: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/kiciahook/kiciahook/refs/heads/main/loader.luau"))()',
       stats: {
         price: 'Free',
         keySystem: 'Keyed',
-        suncRequired: '90+',
+        suncRequired: '90%+',
         bestExecutor: 'Any compatible executor',
-        stability: 'Unknown',
+        stability: 'Stable',
         buggy: false,
         status: 'Working',
         platform: ['PC', 'Mobile']
       }
     },
     {
-      name: 'New Rivals Script',
+      name: 'Unnamed Enhancements',
       category: 'Rivals',
-      description: 'A useful script for Roblox Rivals',
-      script: 'loadstring(game:HttpGet("PASTE_RAW_SCRIPT_URL_HERE"))()',
+      description: 'Paid script for rivals, da-hood, and wild-west. Script is paid-only so you must pay to get the script',
+      script: 'PURCHASE FROM DISCORD',
+      stats: {
+        price: 'Paid ($14.99)',
+        keySystem: 'Keyed',
+        suncRequired: '99%+',
+        bestExecutor: 'Volt / Potassium',
+        stability: 'Stable',
+        buggy: false,
+        status: 'Working',
+        platform: ['PC', 'Mobile']
+      }
+    },
+      {
+      name: 'CatVape',
+      category: 'Bedwars',
+      description: 'A popular Roblox Bedwars script',
+      script: "loadstring(game:HttpGet('https://raw.githubusercontent.com/MaxlaserTech/CatV6/main/init.lua'), 'init.lua')({})",
       stats: {
         price: 'Free',
         keySystem: 'Keyless',
         suncRequired: '80%+',
-        bestExecutor: 'Velocity / Potassium',
+        bestExecutor: 'Any compatible executor',
+        stability: 'Stable',
+        buggy: false,
+        status: 'Woking',
+        platform: ['PC', 'Mobile']
+      }
+    },
+
+    {
+      name: 'Aero V4',
+      category: 'Bedwars',
+      description: 'Aero V4. A private, invite-only Bedwars script',
+      script: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/poopparty/poopparty/main/NewMainScript.lua", true))()',
+      stats: {
+        price: 'Free',
+        keySystem: 'Keyless',
+        suncRequired: '90%+',
+        bestExecutor: 'Any compatible executor',
         stability: 'Stable',
         buggy: false,
         status: 'Working',
+        platform: ['PC', 'Mobile']
+      }
+    } // Add comma after the } if you are adding more scripts
+/*
+    {
+      name: 'Placeholder Rivals Script 1',
+      category: 'Rivals',
+      description: 'Placeholder script entry for Roblox Rivals',
+      script: 'loadstring(game:HttpGet("PASTE_RAW_SCRIPT_URL_HERE"))()',
+      stats: {
+        price: 'Unknown',
+        keySystem: 'Unknown',
+        suncRequired: 'Unknown',
+        bestExecutor: 'Any compatible executor',
+        stability: 'Unknown',
+        buggy: false,
+        status: 'Placeholder',
+        platform: ['PC']
+      }
+    },
+    {
+      name: 'Placeholder Universal Script 1',
+      category: 'Universal',
+      description: 'Placeholder universal utility script entry',
+      script: 'loadstring(game:HttpGet("PASTE_RAW_SCRIPT_URL_HERE"))()',
+      stats: {
+        price: 'Unknown',
+        keySystem: 'Unknown',
+        suncRequired: 'Unknown',
+        bestExecutor: 'Any compatible executor',
+        stability: 'Unknown',
+        buggy: false,
+        status: 'Placeholder',
+        platform: ['PC', 'Mobile']
+      }
+    },
+    {
+      name: 'Placeholder Utility Script 1',
+      category: 'Utility',
+      description: 'Placeholder utility script entry for general Roblox use',
+      script: 'loadstring(game:HttpGet("PASTE_RAW_SCRIPT_URL_HERE"))()',
+      stats: {
+        price: 'Unknown',
+        keySystem: 'Unknown',
+        suncRequired: 'Unknown',
+        bestExecutor: 'Any compatible executor',
+        stability: 'Unknown',
+        buggy: false,
+        status: 'Placeholder',
         platform: ['PC']
       }
     }
   ],
+*/
 
   recentChanges: [
-    'Added dropdown categories to Popular Scripts',
-    'Added Bedwars, Universal, and Rivals script categories',
-    'Added script stats such as price, key system, sUNC required, best executor, stability, status, and platform',
-    'Improved Popular Scripts layout so scripts are grouped cleanly by category'
-  ]
-};
-  
-  recentChanges: [
-    'Rebuilt AI Insight output to use concise expert analysis with best-fit guidance, clear avoidance criteria, explicit risk level, and confidence scoring',
-    'Replaced static free and paid tier tabs with dynamic Smart Rankings that rotate categories for Best Free, Safest, Beginner Friendly, and Most Powerful picks',
-    'Added a full executor comparison system in Scripts Hub with 2 to 3 selection controls, value highlighting, and side-by-side reliability metrics',
-    'Expanded Dodge progression with daily claim streak tracking, streak-based bonus rewards, and unlockable visual themes that can be purchased and equipped',
-    'Improved mobile usability with larger touch targets, responsive comparison layouts, and overflow-safe panels to keep one-thumb navigation clean and stable'
+    'For the latest changes, updates, and bug fixes, join the official Xyrex Discord server'
   ]
 };
 
