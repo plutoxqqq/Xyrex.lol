@@ -730,57 +730,1332 @@ const scriptsHubData = {
         status: 'Working',
         platform: ['PC', 'Mobile']
       }
-    }
+    },
+
+    // Bedwars placeholders
 
     /*
     {
-      name: 'Placeholder Rivals Script 1',
-      category: 'Rivals',
-      description: 'Placeholder script entry for Roblox Rivals',
-      script: 'loadstring(game:HttpGet("PASTE_RAW_SCRIPT_URL_HERE"))()',
+      name: '...',
+      category: 'Bedwars',
+      description: '...',
+      script: {
       stats: {
-        price: 'Unknown',
-        keySystem: 'Unknown',
-        suncRequired: 'Unknown',
-        bestExecutor: 'Any compatible executor',
-        stability: 'Unknown',
-        buggy: false,
-        status: 'Placeholder',
-        platform: ['PC']
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
       }
-    },
+    }, // comma if another one after it
+    */
+
+    /*
     {
-      name: 'Placeholder Universal Script 1',
+      name: '...',
+      category: 'Bedwars',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Bedwars',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Bedwars',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Bedwars',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    // Universal placeholders
+
+    /*
+    {
+      name: '...',
       category: 'Universal',
-      description: 'Placeholder universal utility script entry',
-      script: 'loadstring(game:HttpGet("PASTE_RAW_SCRIPT_URL_HERE"))()',
+      description: '...',
+      script: {
       stats: {
-        price: 'Unknown',
-        keySystem: 'Unknown',
-        suncRequired: 'Unknown',
-        bestExecutor: 'Any compatible executor',
-        stability: 'Unknown',
-        buggy: false,
-        status: 'Placeholder',
-        platform: ['PC', 'Mobile']
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
       }
-    },
+    }, // comma if another one after it
+    */
+
+    /*
     {
-      name: 'Placeholder Utility Script 1',
-      category: 'Utility',
-      description: 'Placeholder utility script entry for general Roblox use',
-      script: 'loadstring(game:HttpGet("PASTE_RAW_SCRIPT_URL_HERE"))()',
+      name: '...',
+      category: 'Universal',
+      description: '...',
+      script: {
       stats: {
-        price: 'Unknown',
-        keySystem: 'Unknown',
-        suncRequired: 'Unknown',
-        bestExecutor: 'Any compatible executor',
-        stability: 'Unknown',
-        buggy: false,
-        status: 'Placeholder',
-        platform: ['PC']
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
       }
-    }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Universal',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Universal',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Universal',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    // Rivals placeholders
+
+    /*
+    {
+      name: '...',
+      category: 'Rivals',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Rivals',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Rivals',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Rivals',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Rivals',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    // Grace placeholders
+
+    /*
+    {
+      name: '...',
+      category: 'Grace',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Grace',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Grace',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Grace',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Grace',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    // Pressure placeholders
+
+    /*
+    {
+      name: '...',
+      category: 'Pressure',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Pressure',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Pressure',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Pressure',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Pressure',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    // Doors placeholders
+
+    /*
+    {
+      name: '...',
+      category: 'Doors',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Doors',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Doors',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Doors',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Doors',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    // Steal a Brainrot placeholders
+
+    /*
+    {
+      name: '...',
+      category: 'Steal a Brainrot',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Steal a Brainrot',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Steal a Brainrot',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Steal a Brainrot',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Steal a Brainrot',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    // Adopt Me placeholders
+
+    /*
+    {
+      name: '...',
+      category: 'Adopt Me',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Adopt Me',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Adopt Me',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Adopt Me',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Adopt Me',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    // Brookhaven RP placeholders
+
+    /*
+    {
+      name: '...',
+      category: 'Brookhaven RP',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Brookhaven RP',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Brookhaven RP',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Brookhaven RP',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Brookhaven RP',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    // Blox Fruits placeholders
+
+    /*
+    {
+      name: '...',
+      category: 'Blox Fruits',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Blox Fruits',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Blox Fruits',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Blox Fruits',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Blox Fruits',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    // Slime RNG placeholders
+
+    /*
+    {
+      name: '...',
+      category: 'Slime RNG',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Slime RNG',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Slime RNG',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Slime RNG',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Slime RNG',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    // Kick a Lucky Block placeholders
+
+    /*
+    {
+      name: '...',
+      category: 'Kick a Lucky Block',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Kick a Lucky Block',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Kick a Lucky Block',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Kick a Lucky Block',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: 'Kick a Lucky Block',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    // 99 Nights in the Forest placeholders
+
+    /*
+    {
+      name: '...',
+      category: '99 Nights in the Forest',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: '99 Nights in the Forest',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: '99 Nights in the Forest',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: '99 Nights in the Forest',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
+    */
+
+    /*
+    {
+      name: '...',
+      category: '99 Nights in the Forest',
+      description: '...',
+      script: {
+      stats: {
+        price: '...',
+        keySystem: '...',
+        suncRequired: '...',
+        bestExecutor: '...r',
+        stability: '...',
+        buggy: ...,
+        status: '...',
+        platform: [...],
+        Discord: '...'
+      }
+    }, // comma if another one after it
     */
 
   ],
