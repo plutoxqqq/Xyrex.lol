@@ -639,6 +639,7 @@ const scriptsHubData = {
         status: 'Unknown'
       }
     },
+    {
     name: 'KiciaHook',
       category: 'Universal',
       description: 'Roblox script loader for KiciaHook',
