@@ -1774,9 +1774,10 @@ function initExploitAssistant() {
         const pair = intentData.entities.slice(0, 2).map(n => products.find(p => p.name === n)).filter(Boolean);
         replyText = `### ${pair[0].name} vs ${pair[1].name}\n\nCategory comparison:\n- Price: ${pair[0].freeOrPaid} vs ${pair[1].freeOrPaid}\n- Platform: ${(pair[0].platform || []).join(', ')} vs ${(pair[1].platform || []).join(', ')}\n- Key System: ${pair[0].keySystem} vs ${pair[1].keySystem}\n- sUNC: ${pair[0].sunc ?? 'None'} vs ${pair[1].sunc ?? 'None'}\n- Trust: ${pair[0].trustLevel} vs ${pair[1].trustLevel}\n- Stability: ${pair[0].stability} vs ${pair[1].stability}\n- Status: ${pair[0].status} vs ${pair[1].status}\n\nVerdict:\nBased on Xyrex data, ${recommendationScore(pair[0], intentData) >= recommendationScore(pair[1], intentData) ? pair[0].name : pair[1].name} currently looks stronger overall.\n\nConfidence:\n${getAssistantConfidence(pair)} — This comparison is based on local Xyrex fields and may change over time.`;
       } else {
-        const ranked = getRankedExecutors(intentData);
-        const top = ranked[0]?.product || products[0];
-        replyText = `Recommended pick:\n${top.name}\n\nWhy:\n- Strong overall score from sUNC, trust, stability, and status.\n- Fits your intent${intentData.filters.price ? ` (${intentData.filters.price})` : ''}${intentData.filters.platform.length ? ` and platform (${intentData.filters.platform.join(', ')})` : ''}.\n- Based on current Xyrex-local metrics, this appears to be one of the safer practical options.\n\nBased on Xyrex data:\n- Executor: ${top.name}\n- Platform: ${(top.platform || []).join(', ') || 'Unknown'}\n- Price: ${top.freeOrPaid}\n- Key System: ${top.keySystem}\n- sUNC: ${Number.isFinite(top.sunc) ? `${top.sunc}%` : 'None'}\n- Trust: ${top.trustLevel}\n- Stability: ${top.stability}\n- Status: ${top.status}\n\nConfidence:\n${getAssistantConfidence(top)} — Based on the current Xyrex data, and this may change over time.`;
+        const apiPayload = await askExploitAssistant(userMessage);
+        const apiReply = String(apiPayload?.reply || apiPayload?.message || '').trim();
+        if (!apiReply) throw new Error('Exploit Assistant API returned an empty reply.');
+        replyText = apiReply;
       }
       setAssistantMessageMarkdown(loadingMessage, replyText);
       if (intentData.wantsFilterAction) {
