@@ -371,7 +371,7 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 .script-category-count{ min-width:24px; padding:2px 8px; border-radius:999px; background:rgba(130,115,255,.16); border:1px solid rgba(170,156,255,.3); font-size:.82rem; text-align:center; }
 .script-category-arrow{ transition:transform 260ms ease-in-out; }
 .script-category-header[aria-expanded="true"] .script-category-arrow{ transform:rotate(180deg); }
-.script-category-body{ display:grid; gap:10px; padding:0 12px; max-height:0; overflow:hidden; transition:max-height 320ms ease-in-out, padding 220ms ease-in-out; }
+.script-category-body{ display:grid; gap:10px; padding:0 12px; max-height:0; overflow:hidden; transition:max-height 220ms ease-in-out, padding 160ms ease-in-out; will-change:max-height; }
 .script-category-body.open{ max-height:2500px; padding:0 12px 12px; }
 .script-stat-badges{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
 .script-stat-badge{ display:inline-flex; align-items:center; padding:3px 9px; border-radius:999px; font-size:.74rem; border:1px solid rgba(178,188,255,.26); background:rgba(22,25,44,.68); color:#d8ddff; }

@@ -1423,7 +1423,7 @@ function renderPopularScripts() {
     wrap.innerHTML = '<div class="script-empty-state"><p>No scripts found.</p><p>Try a different search or category.</p></div>';
     return;
   }
-  const defaultOpenCategory = categories[0];
+  const defaultOpenCategory = null;
   wrap.classList.add('popular-script-categories');
   wrap.innerHTML = categories.map((categoryName, index) => {
     const items = groupedScripts[categoryName] || [];
@@ -1533,9 +1533,36 @@ function toggleScriptCategory(categoryElement) {
   if (!categoryElement) return;
   const header = categoryElement.querySelector('.script-category-header');
   const body = categoryElement.querySelector('.script-category-body');
-  if (!header || !body) return;
-  const isOpen = body.classList.toggle('open');
-  header.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  if (!header || !body || body.dataset.animating === 'true') return;
+
+  const shouldOpen = !body.classList.contains('open');
+  body.dataset.animating = 'true';
+
+  if (shouldOpen) {
+    body.classList.add('open');
+    const targetHeight = body.scrollHeight;
+    body.style.maxHeight = '0px';
+    requestAnimationFrame(() => {
+      body.style.maxHeight = `${targetHeight}px`;
+    });
+  } else {
+    const currentHeight = body.scrollHeight;
+    body.style.maxHeight = `${currentHeight}px`;
+    requestAnimationFrame(() => {
+      body.classList.remove('open');
+      body.style.maxHeight = '0px';
+    });
+  }
+
+  header.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+
+  const onTransitionEnd = event => {
+    if (event.propertyName !== 'max-height') return;
+    body.removeEventListener('transitionend', onTransitionEnd);
+    if (shouldOpen) body.style.maxHeight = 'none';
+    body.dataset.animating = 'false';
+  };
+  body.addEventListener('transitionend', onTransitionEnd);
 }
 
 function renderRecentChanges() {
