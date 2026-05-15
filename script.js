@@ -594,6 +594,20 @@ const products = [
 ];
 
 const EXPLOIT_ASSISTANT_API = 'https://xyres-ai-api.vercel.app/api/exploit-assistant';
+const POPULAR_SCRIPT_CATEGORIES = [
+  'Bedwars',
+  'Universal',
+  'Grace',
+  'Pressure',
+  'Doors',
+  'Steal a Brainrot',
+  'Adopt Me',
+  'Brookhaven RP',
+  'Blox Fruits',
+  'Slime RNG',
+  'Kick a Lucky Block',
+  '99 Nights in the Forest'
+];
 
 const scriptsHubData = {
   smartRankingLabels: {
@@ -1404,7 +1418,7 @@ function renderPopularScripts() {
   if (!wrap) return;
   const scripts = Array.isArray(scriptsHubData.popularScripts) ? scriptsHubData.popularScripts : [];
   const groupedScripts = groupScriptsByCategory(scripts);
-  const categories = Object.keys(groupedScripts);
+  const categories = getPopularScriptCategories(groupedScripts);
   if (!categories.length) {
     wrap.innerHTML = '<div class="script-empty-state"><p>No scripts found.</p><p>Try a different search or category.</p></div>';
     return;
@@ -1413,7 +1427,7 @@ function renderPopularScripts() {
   const defaultOpenCategory = bedwarsCategory || categories[0];
   wrap.classList.add('popular-script-categories');
   wrap.innerHTML = categories.map((categoryName, index) => {
-    const items = groupedScripts[categoryName];
+    const items = groupedScripts[categoryName] || [];
     const isOpen = categoryName === defaultOpenCategory;
     return renderScriptCategory(categoryName, items, isOpen, index);
   }).join('');
@@ -1449,6 +1463,17 @@ function groupScriptsByCategory(scripts) {
     acc[name].push(script);
     return acc;
   }, {});
+}
+
+function getPopularScriptCategories(groupedScripts) {
+  const configuredCategories = POPULAR_SCRIPT_CATEGORIES.map(category => {
+    const existingCategory = Object.keys(groupedScripts).find(name => name.toLowerCase() === category.toLowerCase());
+    return existingCategory || category;
+  });
+  const extraCategories = Object.keys(groupedScripts).filter(category => (
+    !configuredCategories.some(configuredCategory => configuredCategory.toLowerCase() === category.toLowerCase())
+  ));
+  return [...configuredCategories, ...extraCategories];
 }
 
 function getScriptBadges(script) {
@@ -1500,7 +1525,7 @@ function renderScriptCategory(categoryName, scripts, isOpen, index) {
         </span>
       </button>
       <div id="script-category-body-${index}" class="script-category-body ${isOpen ? 'open' : ''}">
-        ${scripts.map(renderScriptCard).join('')}
+        ${scripts.length ? scripts.map(renderScriptCard).join('') : '<div class="script-empty-state"><p>No scripts added yet.</p><p>Add entries with this category to show them here.</p></div>'}
       </div>
     </section>`;
 }
