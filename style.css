@@ -443,9 +443,6 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 .assistant-sources a:hover{ color:var(--text); text-decoration:underline; }
 .assistant-starter{ margin:10px 0; padding:10px; border:1px solid rgba(178,188,255,.22); border-radius:12px; background:rgba(10,14,28,.35); }
 .assistant-starter-title{ margin:0 0 8px; color:var(--muted); font-size:.92rem; }
-.assistant-chip-row{ display:flex; flex-wrap:wrap; gap:8px; }
-.assistant-chip{ border:1px solid rgba(159,145,255,.35); background:rgba(17,21,38,.88); color:var(--text); border-radius:999px; padding:6px 10px; font-size:.82rem; cursor:pointer; transition:.2s; }
-.assistant-chip:hover{ border-color:var(--periwinkle-2); box-shadow:0 0 0 2px rgba(143,156,255,.18); }
 .assistant-quick-row{ margin-top:8px; }
 .assistant-badges{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
 .assistant-badge{ font-size:.72rem; padding:3px 8px; border-radius:999px; border:1px solid rgba(159,145,255,.45); background:rgba(23,20,42,.9); color:#d8ceff; box-shadow:0 0 10px rgba(114,70,255,.15); }
