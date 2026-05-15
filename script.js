@@ -632,7 +632,7 @@ const scriptsHubData = {
         buggy: false,
         status: 'Working',
         platform: ['PC', 'Mobile'],
-        discord: '...',
+        discord: 'https://discord.gg/voidware',
         discordIcon: true
       }
     },
