@@ -2498,7 +2498,7 @@ function openSettingsModal() {
         <h3>AI Usage</h3>
         <p class="settings-token-count">Available AI tokens: <strong>${tokenSummary.available}</strong></p>
       </div>
-      <footer class="settings-credit">Made by Joseph (plutoxqq)</footer>
+      <footer class="settings-credit">Made by plutoxqq and slick012</footer>
     </section>`;
 
   overlay.classList.remove('is-closing');
