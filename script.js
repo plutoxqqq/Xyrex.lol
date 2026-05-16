@@ -655,7 +655,7 @@ const scriptsHubData = {
         status: 'Working',
         platform: ['PC', 'Mobile'],
         discord: '...',
-        discordIcon: true
+        discordIcon: false
       }
     },
     {
@@ -673,7 +673,7 @@ const scriptsHubData = {
         status: 'Working',
         platform: ['PC', 'Mobile'],
         discord: '...',
-        discordIcon: true
+        discordIcon: false
       }
     },
     {
@@ -691,7 +691,7 @@ const scriptsHubData = {
         status: 'Working',
         platform: ['PC', 'Mobile'],
         discord: '...',
-        discordIcon: true
+        discordIcon: false
       }
     },
     {
@@ -709,7 +709,7 @@ const scriptsHubData = {
         status: 'Working',
         platform: ['PC', 'Mobile'],
         discord: '...',
-        discordIcon: true
+        discordIcon: false
       }
     },
       {
@@ -727,7 +727,7 @@ const scriptsHubData = {
         status: 'Working',
         platform: ['PC', 'Mobile'],
         discord: '...',
-        discordIcon: true
+        discordIcon: false
       }
     },
 
@@ -746,7 +746,7 @@ const scriptsHubData = {
         status: 'Working',
         platform: ['PC', 'Mobile'],
         discord: '...',
-        discordIcon: true
+        discordIcon: false
       }
     },
 
