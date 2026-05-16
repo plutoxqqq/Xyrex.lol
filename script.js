@@ -4144,6 +4144,27 @@ function syncNavigationLayoutMetrics() {
 }
 
 
+
+function initCollapsibleFilters() {
+  const layout = qs('.page-layout');
+  const toggleBtn = qs('#filtersToggleBtn');
+  const filtersContent = qs('#filtersContent');
+  if (!layout || !toggleBtn || !filtersContent) return;
+
+  const setFiltersCollapsed = collapsed => {
+    layout.classList.toggle('filters-collapsed', collapsed);
+    toggleBtn.setAttribute('aria-expanded', String(!collapsed));
+    toggleBtn.textContent = collapsed ? 'Show' : 'Hide';
+    toggleBtn.setAttribute('title', collapsed ? 'Expand filters' : 'Collapse filters');
+  };
+
+  setFiltersCollapsed(false);
+  toggleBtn.addEventListener('click', () => {
+    const collapsed = !layout.classList.contains('filters-collapsed');
+    setFiltersCollapsed(collapsed);
+  });
+}
+
 function hideInitialLoadingOverlay() {
   const overlay = qs('#appLoadingOverlay');
   if (!overlay) return;
@@ -4156,6 +4177,7 @@ function hideInitialLoadingOverlay() {
 function init() {
   setBetaFeaturesEnabled(getBetaFeaturesEnabled());
   syncNavigationLayoutMetrics();
+  initCollapsibleFilters();
   renderProducts(products);
   initScriptsHub();
   injectLegendIcons();
