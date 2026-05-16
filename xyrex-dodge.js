@@ -1524,30 +1524,164 @@
 
   let gameInstance = null;
 
+  const TOKEN_SAVE_KEY = STORAGE_KEY;
+  const TOKEN_LEGACY_KEY = LEGACY_STORAGE_KEY;
+  const _setItem = Object.getOwnPropertyDescriptor(Storage.prototype, 'setItem').value;
+  const _getItem = Object.getOwnPropertyDescriptor(Storage.prototype, 'getItem').value;
+  const _removeItem = Object.getOwnPropertyDescriptor(Storage.prototype, 'removeItem').value;
+  const _clear = Object.getOwnPropertyDescriptor(Storage.prototype, 'clear').value;
+  const _JSON_parse = JSON.parse.bind(JSON);
+  const _JSON_stringify = JSON.stringify.bind(JSON);
+  const PROTECTED_KEYS = new Set([TOKEN_SAVE_KEY, TOKEN_LEGACY_KEY]);
+  const MAX_PURCHASED_TOKENS = 200;
+  const MAX_USED_TODAY = 5;
+  const MAX_COOLDOWN_MS = 8 * 24 * 60 * 60 * 1000;
+  const HASH_KEY = '__xyrex_ih__';
+
+  function clampInt(value, min, max) {
+    const n = Number(value);
+    return Number.isFinite(n) ? Math.min(max, Math.max(min, Math.floor(n))) : min;
+  }
+
+  function rawRead() {
+    try {
+      const raw = _getItem.call(localStorage, TOKEN_SAVE_KEY);
+      return raw ? _JSON_parse(raw) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function rawWrite(data) {
+    _setItem.call(localStorage, TOKEN_SAVE_KEY, _JSON_stringify(data));
+  }
+
+  function sanitizeData(data) {
+    if (!data || typeof data !== 'object') return {};
+    const now = Date.now();
+    return {
+      ...data,
+      aiPurchasedTokens: clampInt(data.aiPurchasedTokens, 0, MAX_PURCHASED_TOKENS),
+      aiTokensUsedToday: clampInt(data.aiTokensUsedToday, 0, MAX_USED_TODAY),
+      freeTokenCooldownUntil: clampInt(data.freeTokenCooldownUntil, 0, now + MAX_COOLDOWN_MS),
+      freeTokenLastClaimAmount: clampInt(data.freeTokenLastClaimAmount, 0, 30),
+    };
+  }
+
+  function simpleHash(str) {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < str.length; i += 1) {
+      h ^= str.charCodeAt(i);
+      h = (h * 0x01000193) >>> 0;
+    }
+    return h.toString(36);
+  }
+
+  function writeWithHash(data) {
+    const clean = sanitizeData(data);
+    const payload = _JSON_stringify(clean);
+    rawWrite({ ...clean, __h: simpleHash(payload + HASH_KEY) });
+  }
+
+  function readWithHash() {
+    const data = rawRead();
+    const { __h, ...rest } = data;
+    const clean = sanitizeData(rest);
+    const expected = simpleHash(_JSON_stringify(clean) + HASH_KEY);
+    if (__h !== expected) {
+      writeWithHash({});
+      return sanitizeData({});
+    }
+    return clean;
+  }
+
+  function installStorageGuard() {
+    const setProxy = new Proxy(_setItem, {
+      apply(target, thisArg, args) {
+        if (PROTECTED_KEYS.has(args[0])) return undefined;
+        return target.apply(thisArg, args);
+      },
+    });
+    const removeProxy = new Proxy(_removeItem, {
+      apply(target, thisArg, args) {
+        if (PROTECTED_KEYS.has(args[0])) return undefined;
+        return target.apply(thisArg, args);
+      },
+    });
+    const clearProxy = new Proxy(_clear, {
+      apply(target, thisArg, args) {
+        const saved = readWithHash();
+        const result = target.apply(thisArg, args);
+        writeWithHash(saved);
+        return result;
+      },
+    });
+
+    try {
+      Object.defineProperty(Storage.prototype, 'setItem', { value: setProxy, writable: false, configurable: false });
+      Object.defineProperty(Storage.prototype, 'removeItem', { value: removeProxy, writable: false, configurable: false });
+      Object.defineProperty(Storage.prototype, 'clear', { value: clearProxy, writable: false, configurable: false });
+    } catch {
+      Storage.prototype.setItem = setProxy;
+      Storage.prototype.removeItem = removeProxy;
+      Storage.prototype.clear = clearProxy;
+    }
+  }
+
+  function startIntegrityPolling() {
+    setInterval(() => {
+      const data = rawRead();
+      const { __h, ...rest } = data;
+      const clean = sanitizeData(rest);
+      const expected = simpleHash(_JSON_stringify(clean) + HASH_KEY);
+      if (__h !== expected) {
+        writeWithHash({});
+        return;
+      }
+      if (Number(rest.aiPurchasedTokens) > MAX_PURCHASED_TOKENS || Number(rest.aiTokensUsedToday) > MAX_USED_TODAY) {
+        writeWithHash(clean);
+      }
+    }, 3000);
+  }
+
+  function startStorageEventGuard() {
+    window.addEventListener('storage', event => {
+      if (!PROTECTED_KEYS.has(event.key)) return;
+      writeWithHash({});
+    });
+  }
+
   function readTokenSummary() {
-    const parsed = readStorage();
+    const parsed = readWithHash();
     const today = localDayKey();
-    const usedToday = parsed.aiTokenDate === today ? Math.max(0, Number(parsed.aiTokensUsedToday) || 0) : 0;
-    const purchased = Math.max(0, Number(parsed.aiPurchasedTokens) || 0);
-    const freeRemaining = Math.max(0, FREE_DAILY_AI_TOKENS - usedToday);
+    const usedToday = parsed.aiTokenDate === today ? clampInt(parsed.aiTokensUsedToday, 0, MAX_USED_TODAY) : 0;
+    const purchased = clampInt(parsed.aiPurchasedTokens, 0, MAX_PURCHASED_TOKENS);
+    const freeRemaining = Math.max(0, MAX_USED_TODAY - usedToday);
     return { available: freeRemaining + purchased, freeRemaining, purchased };
   }
 
   function consumeAiToken() {
-    const data = readStorage();
+    const data = readWithHash();
     const today = localDayKey();
     if (data.aiTokenDate !== today) {
       data.aiTokenDate = today;
       data.aiTokensUsedToday = 0;
     }
-    const purchased = Math.max(0, Number(data.aiPurchasedTokens) || 0);
-    const usedToday = Math.max(0, Number(data.aiTokensUsedToday) || 0);
-    const freeRemaining = Math.max(0, FREE_DAILY_AI_TOKENS - usedToday);
+    const purchased = clampInt(data.aiPurchasedTokens, 0, MAX_PURCHASED_TOKENS);
+    const usedToday = clampInt(data.aiTokensUsedToday, 0, MAX_USED_TODAY);
+    const freeRemaining = Math.max(0, MAX_USED_TODAY - usedToday);
     if (freeRemaining + purchased <= 0) return false;
     if (freeRemaining > 0) data.aiTokensUsedToday = usedToday + 1;
     else data.aiPurchasedTokens = purchased - 1;
-    saveStorage(data);
+    writeWithHash(data);
     return true;
+  }
+
+  function addPurchasedTokens(amount) {
+    const data = readWithHash();
+    data.aiPurchasedTokens = clampInt(clampInt(data.aiPurchasedTokens, 0, MAX_PURCHASED_TOKENS) + clampInt(amount, 0, 30), 0, MAX_PURCHASED_TOKENS);
+    writeWithHash(data);
+    return data.aiPurchasedTokens;
   }
 
   function ensureGame() {
@@ -1556,6 +1690,11 @@
     if (!gameInstance) gameInstance = new XyrexDodgeGame(mount);
     return gameInstance;
   }
+
+  installStorageGuard();
+  startStorageEventGuard();
+  startIntegrityPolling();
+  writeWithHash(readWithHash());
 
   window.XyrexDodge = {
     start() {
@@ -1573,6 +1712,9 @@
     },
     consumeAiToken() {
       return consumeAiToken();
+    },
+    addPurchasedTokens(amount) {
+      return addPurchasedTokens(amount);
     },
   };
 })();
