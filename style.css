@@ -265,10 +265,12 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 .settings-group{ border:1px solid rgba(178,188,255,.2); border-radius:12px; background:rgba(15,19,35,.68); padding:12px; }
 .settings-group h3{ margin:0 0 8px; color:var(--periwinkle-2); font-size:1rem; }
 .settings-actions{ display:flex; flex-wrap:wrap; gap:10px; }
+.settings-actions-centered{ justify-content:center; }
 .settings-actions .btn-primary{ min-width:180px; }
 .settings-actions .btn-primary:disabled{ opacity:.55; cursor:not-allowed; }
 .settings-note{ margin:8px 0 0; color:var(--muted); font-size:.86rem; }
 .settings-token-count{ margin:0; color:var(--text); }
+.xy-amount-input{ width:100%; border:1px solid rgba(178,188,255,.35); border-radius:10px; background:rgba(15,19,35,.9); color:var(--text); padding:10px 12px; font:inherit; }
 .settings-credit{ text-align:center; margin-top:2px; color:var(--muted); font-size:.88rem; }
 .info-badges{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 12px; }
 .info-chip{ display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; border:1px solid rgba(178,188,255,.26); background:rgba(20,26,48,.7); color:var(--periwinkle-2); font-size:.82rem; }

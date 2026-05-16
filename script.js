@@ -601,9 +601,9 @@ const NO_ASSISTANT_TOKENS_MESSAGE = 'You have no AI tokens remaining. Daily toke
 const FREE_TOKEN_SHOP = Object.freeze({
   minClaim: 1,
   maxClaim: 30,
-  baseCooldownMinutes: 2,
-  perTokenCooldownMinutes: 2
+  maxCooldownMs: 7 * 24 * 60 * 60 * 1000
 });
+let settingsCooldownTimerId = null;
 
 function clampTokenClaimAmount(value) {
   if (!Number.isFinite(value)) return FREE_TOKEN_SHOP.minClaim;
@@ -612,8 +612,7 @@ function clampTokenClaimAmount(value) {
 
 function getFreeTokenCooldownMs(amount) {
   const safeAmount = clampTokenClaimAmount(amount);
-  const totalMinutes = FREE_TOKEN_SHOP.baseCooldownMinutes + (safeAmount * FREE_TOKEN_SHOP.perTokenCooldownMinutes);
-  return totalMinutes * 60 * 1000;
+  return Math.round((safeAmount / FREE_TOKEN_SHOP.maxClaim) * FREE_TOKEN_SHOP.maxCooldownMs);
 }
 
 function formatDuration(ms) {
@@ -2675,18 +2674,40 @@ function claimFreeTokens(amountInput) {
 function openEarnTokensModal() {
   const status = getFreeTokenShopStatus();
   if (!status.isReady) {
-    window.alert(`Free tokens are on cooldown. Time remaining: ${formatDuration(status.remainingMs)}.`);
+    openNoAiTokensModal(`Free token claims are on cooldown. Time remaining: ${formatDuration(status.remainingMs)}.`);
     return;
   }
-  const input = window.prompt(`Enter how many free tokens you want (${FREE_TOKEN_SHOP.minClaim}-${FREE_TOKEN_SHOP.maxClaim}). More tokens means a longer cooldown.`);
-  if (input === null) return;
-  const claim = claimFreeTokens(input);
-  if (!claim.ok) {
-    window.alert(claim.reason);
-    return;
-  }
-  window.alert(`You earned ${claim.amount} token${claim.amount === 1 ? '' : 's'}. Next free claim available in ${formatDuration(claim.cooldownMs)}.`);
-  openSettingsModal();
+  const overlay = qs('#modalOverlay');
+  const content = qs('#modalContent');
+  if (!overlay || !content) return;
+  setCompactModal(true);
+  lastModalTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  content.innerHTML = `
+    <section class="discord-unavailable-modal" aria-live="polite">
+      <div class="discord-unavailable-icon ai-token-unavailable-icon" aria-hidden="true"><span>+</span></div>
+      <h2>Earn Free Tokens</h2>
+      <p class="modal-headline">Choose a whole number from ${FREE_TOKEN_SHOP.minClaim} to ${FREE_TOKEN_SHOP.maxClaim}. Higher amounts apply a longer cooldown. Claiming ${FREE_TOKEN_SHOP.maxClaim} tokens sets a 1 week cooldown.</p>
+      <label class="settings-note" for="earnTokensAmountInput">Token amount</label>
+      <input id="earnTokensAmountInput" type="number" min="${FREE_TOKEN_SHOP.minClaim}" max="${FREE_TOKEN_SHOP.maxClaim}" step="1" value="${FREE_TOKEN_SHOP.minClaim}" class="xy-amount-input">
+      <div class="settings-actions settings-actions-centered">
+        <button id="confirmEarnTokensBtn" class="btn-primary settings-action-btn" type="button">Claim Tokens</button>
+      </div>
+      <p id="earnTokensFeedback" class="settings-note" aria-live="polite"></p>
+    </section>`;
+  overlay.classList.remove('is-closing');
+  overlay.setAttribute('aria-hidden', 'false');
+  const amountInput = qs('#earnTokensAmountInput');
+  const feedback = qs('#earnTokensFeedback');
+  qs('#confirmEarnTokensBtn')?.addEventListener('click', () => {
+    const claim = claimFreeTokens(amountInput?.value ?? '');
+    if (!claim.ok) {
+      if (feedback) feedback.textContent = claim.reason;
+      return;
+    }
+    if (feedback) feedback.textContent = `Success. You earned ${claim.amount} token${claim.amount === 1 ? '' : 's'}. Cooldown: ${formatDuration(claim.cooldownMs)}.`;
+    window.setTimeout(() => openSettingsModal(), 550);
+  });
+  amountInput?.focus();
 }
 
 function consumeAiTokenForAssistant() {
@@ -2737,7 +2758,7 @@ function openSettingsModal() {
       <div class="settings-group">
         <h3>AI Usage</h3>
         <p class="settings-token-count">Available AI tokens: <strong>${tokenSummary.available}</strong></p>
-        <div class="settings-actions">
+        <div class="settings-actions settings-actions-centered">
           <button id="settingsEarnTokensBtn" class="btn-primary settings-action-btn" type="button">Earn Tokens</button>
         </div>
         <p class="settings-note">Claim 1-30 free tokens. Higher amounts apply a longer cooldown.</p>
@@ -2760,10 +2781,14 @@ function openSettingsModal() {
 
   const earnTokensBtn = qs('#settingsEarnTokensBtn');
   const cooldownNote = qs('#settingsCooldownNote');
-  if (cooldownNote) {
+  if (settingsCooldownTimerId) window.clearInterval(settingsCooldownTimerId);
+  const updateCooldownNote = () => {
+    if (!cooldownNote) return;
     const status = getFreeTokenShopStatus();
     cooldownNote.textContent = status.isReady ? 'Free token claim is ready now.' : `Next free claim in ${formatDuration(status.remainingMs)}.`;
-  }
+  };
+  updateCooldownNote();
+  settingsCooldownTimerId = window.setInterval(updateCooldownNote, 1000);
   earnTokensBtn?.addEventListener('click', openEarnTokensModal);
 
   const themeBtn = qs('#settingsThemeCustomizerBtn');
@@ -2799,7 +2824,7 @@ function openNoOfficialDiscordModal(scriptName = '') {
 }
 
 
-function openNoAiTokensModal() {
+function openNoAiTokensModal(message = NO_ASSISTANT_TOKENS_MESSAGE) {
   const overlay = qs('#modalOverlay');
   const content = qs('#modalContent');
   if (!overlay || !content) return;
@@ -2812,7 +2837,7 @@ function openNoAiTokensModal() {
         <span>!</span>
       </div>
       <h2>AI Tokens Unavailable</h2>
-      <p class="modal-headline">${escapeHtml(NO_ASSISTANT_TOKENS_MESSAGE)}</p>
+      <p class="modal-headline">${escapeHtml(message)}</p>
     </section>`;
 
   overlay.classList.remove('is-closing');
@@ -2829,6 +2854,10 @@ function closeModal() {
     if (!overlay.classList.contains('is-closing')) return;
     overlay.setAttribute('aria-hidden', 'true');
     overlay.classList.remove('is-closing');
+    if (settingsCooldownTimerId) {
+      window.clearInterval(settingsCooldownTimerId);
+      settingsCooldownTimerId = null;
+    }
     qs('#modalContent').innerHTML = '';
     setCompactModal(false);
     if (lastModalTrigger && typeof lastModalTrigger.focus === 'function') lastModalTrigger.focus();
