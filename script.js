@@ -594,6 +594,10 @@ const products = [
 ];
 
 const EXPLOIT_ASSISTANT_API = 'https://xyres-ai-api.vercel.app/api/exploit-assistant';
+const DODGE_STORAGE_KEYS = ['xyrex_dodge_save_v2', 'xyrex_dodge_save_v1'];
+const FREE_DAILY_AI_TOKENS = 5;
+const NO_ASSISTANT_TOKENS_MESSAGE = 'You have no AI tokens remaining. Daily tokens reset at midnight, or you can buy more in the Token Shop.';
+const NO_OFFICIAL_DISCORD_MESSAGE = 'This script does not have an official discord server';
 const POPULAR_SCRIPT_CATEGORIES = [
   'Bedwars',
   'Universal',
@@ -2538,14 +2542,74 @@ function openSuncSimulationModal(product) {
 function getAiTokenSummary() {
   const fallback = { available: 0, freeRemaining: 0, purchased: 0 };
   const summary = window.XyrexDodge?.getTokenSummary?.();
-  if (!summary || typeof summary !== 'object') return fallback;
-  return {
-    available: Number.isFinite(summary.available) ? summary.available : 0,
-    freeRemaining: Number.isFinite(summary.freeRemaining) ? summary.freeRemaining : 0,
-    purchased: Number.isFinite(summary.purchased) ? summary.purchased : 0
-  };
+  if (summary && typeof summary === 'object') {
+    return {
+      available: Number.isFinite(summary.available) ? summary.available : 0,
+      freeRemaining: Number.isFinite(summary.freeRemaining) ? summary.freeRemaining : 0,
+      purchased: Number.isFinite(summary.purchased) ? summary.purchased : 0
+    };
+  }
+  return getFallbackAiTokenSummary() || fallback;
 }
 
+function getLocalDayKey() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function readFallbackAiTokenData() {
+  for (const key of DODGE_STORAGE_KEYS) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') return { key, data: parsed };
+    } catch {
+      // Ignore invalid saved token data and keep looking.
+    }
+  }
+  return { key: DODGE_STORAGE_KEYS[0], data: {} };
+}
+
+function normalizeFallbackAiTokenData(data) {
+  const next = { ...(data || {}) };
+  const today = getLocalDayKey();
+  if (next.aiTokenDate !== today) {
+    next.aiTokenDate = today;
+    next.aiTokensUsedToday = 0;
+  }
+  next.aiTokensUsedToday = Math.max(0, Number(next.aiTokensUsedToday) || 0);
+  next.aiPurchasedTokens = Math.max(0, Number(next.aiPurchasedTokens) || 0);
+  return next;
+}
+
+function getFallbackAiTokenSummary() {
+  const { data } = readFallbackAiTokenData();
+  const normalized = normalizeFallbackAiTokenData(data);
+  const freeRemaining = Math.max(0, FREE_DAILY_AI_TOKENS - normalized.aiTokensUsedToday);
+  const purchased = Math.max(0, normalized.aiPurchasedTokens);
+  return { available: freeRemaining + purchased, freeRemaining, purchased };
+}
+
+function consumeAiTokenForAssistant() {
+  if (typeof window.XyrexDodge?.consumeAiToken === 'function') {
+    return Boolean(window.XyrexDodge.consumeAiToken());
+  }
+
+  const tokenState = readFallbackAiTokenData();
+  const data = normalizeFallbackAiTokenData(tokenState.data);
+  const freeRemaining = Math.max(0, FREE_DAILY_AI_TOKENS - data.aiTokensUsedToday);
+  const purchased = Math.max(0, data.aiPurchasedTokens);
+  if (freeRemaining + purchased <= 0) return false;
+
+  if (freeRemaining > 0) data.aiTokensUsedToday += 1;
+  else data.aiPurchasedTokens = purchased - 1;
+  localStorage.setItem(tokenState.key || DODGE_STORAGE_KEYS[0], JSON.stringify(data));
+  return true;
+}
 
 function getBetaFeaturesEnabled() {
   return localStorage.getItem('xyrex_beta_features') === 'enabled';
@@ -2935,6 +2999,12 @@ function renderPopularScripts() {
         toggleScriptCategory(headerButton.closest('.script-category'));
         return;
       }
+      const unavailableDiscordButton = event.target.closest('[data-discord-unavailable="true"]');
+      if (unavailableDiscordButton && wrap.contains(unavailableDiscordButton)) {
+        event.stopPropagation();
+        window.alert(NO_OFFICIAL_DISCORD_MESSAGE);
+        return;
+      }
       const copyButton = event.target.closest('.script-copy-btn');
       if (!copyButton || !wrap.contains(copyButton)) return;
       event.stopPropagation();
@@ -3002,12 +3072,17 @@ function renderScriptCard(script) {
   const badges = getScriptBadges(script);
   const stats = script.stats || {};
   const discordUrl = getScriptDiscordUrl(stats);
+  const discordButton = discordUrl
+    ? `<a class="script-discord-btn" href="${escapeHtml(discordUrl)}" target="_blank" rel="noopener noreferrer" title="Open Discord" aria-label="Open Discord for ${escapeHtml(script.name)}">${popularScriptDiscordSvg}</a>`
+    : stats.discordIcon === false
+      ? `<button class="script-discord-btn script-discord-btn-unavailable" type="button" data-discord-unavailable="true" title="No official Discord" aria-label="No official Discord for ${escapeHtml(script.name)}">${popularScriptDiscordSvg}</button>`
+      : '';
   return `
     <article class="script-card">
       <div class="script-card-head">
         <h4 class="script-card-title">${escapeHtml(script.name)}</h4>
         <div class="script-card-meta">
-          ${discordUrl ? `<a class="script-discord-btn" href="${escapeHtml(discordUrl)}" target="_blank" rel="noopener noreferrer" title="Open Discord" aria-label="Open Discord for ${escapeHtml(script.name)}">${popularScriptDiscordSvg}</a>` : ''}
+          ${discordButton}
           <button class="script-copy-btn" type="button" data-script-copy="${escapeHtml(script.script)}" title="Copy script" aria-label="Copy script">
             <span class="script-file-icon">${popularScriptFileSvg}</span>
           </button>
@@ -3314,6 +3389,13 @@ function initExploitAssistant() {
     event.preventDefault();
     const userMessage = input.value.trim();
     if (!userMessage) return;
+
+    if (!consumeAiTokenForAssistant()) {
+      appendMessage('bot', NO_ASSISTANT_TOKENS_MESSAGE, ['AI Tokens']);
+      window.alert(NO_ASSISTANT_TOKENS_MESSAGE);
+      input.focus();
+      return;
+    }
 
     appendMessage('user', userMessage);
     input.value = '';

@@ -377,6 +377,8 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 .script-copy-btn svg{ width:14px; height:14px; }
 .script-discord-btn svg{ width:18px; height:18px; }
 .script-copy-btn:hover,.script-discord-btn:hover{ background:color-mix(in srgb, var(--panel-2) 84%, var(--bg) 16%); color:var(--text); }
+.script-discord-btn-unavailable{ color:var(--muted); opacity:.7; }
+.script-discord-btn-unavailable:hover{ border-color:color-mix(in srgb, var(--accent-warning) 55%, transparent); color:var(--accent-warning); }
 .script-copy-btn.is-copied{ border-color:color-mix(in srgb, var(--accent-success) 72%, transparent); color:var(--accent-success); }
 .script-card-title{ display:inline-flex; align-items:center; gap:8px; }
 .popular-script-categories{ display:flex; flex-direction:column; gap:14px; }
