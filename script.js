@@ -4144,122 +4144,6 @@ function syncNavigationLayoutMetrics() {
 }
 
 
-
-function initLandingIntro() {
-  const intro = qs('#landingIntro');
-  if (!intro) return;
-
-  const canvas = qs('#landingParticleCanvas');
-  const context = canvas?.getContext?.('2d');
-  const reduceMotion = shouldReduceMotion();
-  let animationFrame = 0;
-  let particles = [];
-  let width = 0;
-  let height = 0;
-  let deviceScale = 1;
-
-  const resizeCanvas = () => {
-    if (!canvas || !context) return;
-    deviceScale = Math.min(window.devicePixelRatio || 1, 2);
-    width = Math.max(1, window.innerWidth);
-    height = Math.max(1, window.innerHeight);
-    canvas.width = Math.floor(width * deviceScale);
-    canvas.height = Math.floor(height * deviceScale);
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
-    context.setTransform(deviceScale, 0, 0, deviceScale, 0, 0);
-
-    const particleCount = reduceMotion ? 30 : Math.min(110, Math.max(54, Math.floor(width * height / 15000)));
-    particles = Array.from({ length: particleCount }, (_, index) => ({
-      x: Math.random() * width,
-      y: Math.random() * height,
-      radius: Math.random() * 1.9 + .45,
-      vx: (Math.random() - .5) * (.18 + (index % 5) * .018),
-      vy: (Math.random() - .5) * (.14 + (index % 7) * .012),
-      alpha: Math.random() * .55 + .18,
-      phase: Math.random() * Math.PI * 2
-    }));
-  };
-
-  const drawParticles = time => {
-    if (!context || !canvas) return;
-    context.clearRect(0, 0, width, height);
-
-    const gradient = context.createRadialGradient(width * .5, height * .5, 0, width * .5, height * .5, Math.max(width, height) * .72);
-    gradient.addColorStop(0, 'rgba(32, 205, 255, 0.08)');
-    gradient.addColorStop(1, 'rgba(0, 18, 43, 0)');
-    context.fillStyle = gradient;
-    context.fillRect(0, 0, width, height);
-
-    particles.forEach((particle, index) => {
-      if (!reduceMotion) {
-        particle.x += particle.vx + Math.sin(time * .00045 + particle.phase) * .08;
-        particle.y += particle.vy + Math.cos(time * .00038 + particle.phase) * .06;
-        if (particle.x < -20) particle.x = width + 20;
-        if (particle.x > width + 20) particle.x = -20;
-        if (particle.y < -20) particle.y = height + 20;
-        if (particle.y > height + 20) particle.y = -20;
-      }
-
-      const pulse = reduceMotion ? 1 : .65 + Math.sin(time * .0014 + particle.phase) * .35;
-      context.beginPath();
-      context.fillStyle = `rgba(105, 230, 255, ${particle.alpha * pulse})`;
-      context.shadowColor = 'rgba(55, 214, 255, .85)';
-      context.shadowBlur = 12;
-      context.arc(particle.x, particle.y, particle.radius * pulse, 0, Math.PI * 2);
-      context.fill();
-      context.shadowBlur = 0;
-
-      for (let j = index + 1; j < particles.length; j += 1) {
-        const other = particles[j];
-        const dx = particle.x - other.x;
-        const dy = particle.y - other.y;
-        const distance = Math.hypot(dx, dy);
-        if (distance > 118) continue;
-        context.strokeStyle = `rgba(67, 202, 255, ${(.12 * (1 - distance / 118)).toFixed(3)})`;
-        context.lineWidth = .7;
-        context.beginPath();
-        context.moveTo(particle.x, particle.y);
-        context.lineTo(other.x, other.y);
-        context.stroke();
-      }
-    });
-
-    if (!reduceMotion) animationFrame = window.requestAnimationFrame(drawParticles);
-  };
-
-  const updateCursorLight = event => {
-    const x = `${Math.round((event.clientX / Math.max(window.innerWidth, 1)) * 100)}%`;
-    const y = `${Math.round((event.clientY / Math.max(window.innerHeight, 1)) * 100)}%`;
-    intro.style.setProperty('--cursor-x', x);
-    intro.style.setProperty('--cursor-y', y);
-  };
-
-  const closeIntro = targetPageId => {
-    qsa('.landing-option').forEach(button => {
-      button.disabled = true;
-    });
-
-    syncNavButtonsWithPage(targetPageId);
-    setActivePage(targetPageId);
-    intro.classList.add('is-exiting');
-
-    window.setTimeout(() => {
-      window.cancelAnimationFrame(animationFrame);
-      intro.remove();
-    }, reduceMotion ? 0 : 560);
-  };
-
-  qsa('.landing-option').forEach(button => {
-    button.addEventListener('click', () => closeIntro(button.getAttribute('data-landing-target') || 'executorsPage'));
-  });
-
-  intro.addEventListener('pointermove', updateCursorLight, { passive: true });
-  window.addEventListener('resize', resizeCanvas, { passive: true });
-  resizeCanvas();
-  drawParticles(0);
-}
-
 function hideInitialLoadingOverlay() {
   const overlay = qs('#appLoadingOverlay');
   if (!overlay) return;
@@ -4325,8 +4209,7 @@ function init() {
   });
 
   applyRoute(getInitialRoutePath(), true).finally(() => {
-    hideInitialLoadingOverlay();
-    initLandingIntro();
+    window.setTimeout(hideInitialLoadingOverlay, 1000);
   });
 }
 
