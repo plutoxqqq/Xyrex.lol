@@ -2698,6 +2698,28 @@ function openNoOfficialDiscordModal(scriptName = '') {
   qs('#modalCloseBtn').focus();
 }
 
+
+function openNoAiTokensModal() {
+  const overlay = qs('#modalOverlay');
+  const content = qs('#modalContent');
+  if (!overlay || !content) return;
+
+  setCompactModal(true);
+  lastModalTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  content.innerHTML = `
+    <section class="discord-unavailable-modal ai-token-unavailable-modal" aria-live="polite">
+      <div class="discord-unavailable-icon ai-token-unavailable-icon" aria-hidden="true">
+        <span>!</span>
+      </div>
+      <h2>AI Tokens Unavailable</h2>
+      <p class="modal-headline">${escapeHtml(NO_ASSISTANT_TOKENS_MESSAGE)}</p>
+    </section>`;
+
+  overlay.classList.remove('is-closing');
+  overlay.setAttribute('aria-hidden', 'false');
+  qs('#modalCloseBtn').focus();
+}
+
 function closeModal() {
   const overlay = qs('#modalOverlay');
   if (overlay.getAttribute('aria-hidden') === 'true') return;
@@ -3426,8 +3448,7 @@ function initExploitAssistant() {
 
     if (!consumeAiTokenForAssistant()) {
       appendMessage('bot', NO_ASSISTANT_TOKENS_MESSAGE, ['AI Tokens']);
-      window.alert(NO_ASSISTANT_TOKENS_MESSAGE);
-      input.focus();
+      openNoAiTokensModal();
       return;
     }
 
