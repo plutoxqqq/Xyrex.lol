@@ -9,7 +9,7 @@
   <meta name="author" content="Xyrex.lol" />
   <meta name="robots" content="index,follow,max-snippet:180,max-image-preview:large,max-video-preview:-1" />
   <meta name="googlebot" content="index,follow,max-snippet:180,max-image-preview:large,max-video-preview:-1" />
-  <meta name="theme-color" content="#6f6bff" />
+  <meta name="theme-color" content="#03111f" />
   <meta name="referrer" content="strict-origin-when-cross-origin" />
   <link rel="canonical" href="https://xyrex.lol/" />
   <meta property="og:site_name" content="Xyrex.lol" />
@@ -117,10 +117,34 @@
   <link rel="stylesheet" href="./style.css?v=2.0.3" />
 </head>
 <body>
-  <div id="appLoadingOverlay" class="app-loading-overlay" aria-live="polite" aria-busy="true">
-    <div class="app-loading-spinner" aria-hidden="true"></div>
-    <p class="app-loading-label">Loading Xyrex...</p>
-  </div>
+  <section id="landingIntro" class="landing-intro" aria-labelledby="landingHeroTitle">
+    <canvas id="landingParticleCanvas" class="landing-particle-canvas" aria-hidden="true"></canvas>
+    <div class="landing-fog landing-fog-one" aria-hidden="true"></div>
+    <div class="landing-fog landing-fog-two" aria-hidden="true"></div>
+    <div class="landing-mesh" aria-hidden="true"></div>
+    <div class="landing-grid" aria-hidden="true"></div>
+    <div class="landing-streaks" aria-hidden="true"></div>
+    <div class="landing-cursor-light" aria-hidden="true"></div>
+
+    <div class="landing-shell">
+      <div class="landing-kicker">Xyrex Neural Interface</div>
+      <h1 id="landingHeroTitle">Executor intelligence for the next wave.</h1>
+      <p class="landing-copy">Dive into a cinematic Roblox executor directory and script hub with glowing comparisons, curated tools, and a premium cyber command center.</p>
+
+      <div class="landing-actions" aria-label="Choose your starting view">
+        <button class="landing-option" type="button" data-landing-target="executorsPage">
+          <span class="landing-option-index">01</span>
+          <span class="landing-option-title">Executors</span>
+          <span class="landing-option-copy">Compare platforms, sUNC, trust, pricing, and detection signals.</span>
+        </button>
+        <button class="landing-option" type="button" data-landing-target="scriptsPage">
+          <span class="landing-option-index">02</span>
+          <span class="landing-option-title">Script Hub</span>
+          <span class="landing-option-copy">Open rankings, saved scripts, popular drops, and assistant tools.</span>
+        </button>
+      </div>
+    </div>
+  </section>
 
   <header class="topnav">
     <div class="nav-inner">
