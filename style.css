@@ -169,7 +169,7 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
   body.easter-game-mode .page-layout{ margin-top:var(--nav-height); min-height:calc(100dvh - var(--nav-height)); }
 }
 .sidebar,.main-content{ min-height:0; }
-.sidebar{ background:linear-gradient(180deg,color-mix(in srgb, var(--panel) 92%, var(--bg) 8%), color-mix(in srgb, var(--panel-2) 90%, var(--bg-2) 10%)); border-radius:var(--radius); border:1px solid rgba(178,188,255,.16); box-shadow:var(--soft-shadow); padding:16px 16px 22px; overflow-y:auto; overflow-x:hidden; scrollbar-width:thin; scrollbar-color:rgba(129,146,255,0.5) rgba(11,16,34,0.35); }
+.sidebar{ background:linear-gradient(180deg,color-mix(in srgb, var(--panel) 92%, var(--bg) 8%), color-mix(in srgb, var(--panel-2) 90%, var(--bg-2) 10%)); border-radius:var(--radius); border:1px solid rgba(178,188,255,.16); box-shadow:var(--soft-shadow); padding:16px 16px 22px; overflow-y:auto; overflow-x:hidden; scrollbar-width:thin; scrollbar-color:rgba(129,146,255,0.5) rgba(11,16,34,0.35); transition:max-height var(--motion-med) ease-in-out, padding var(--motion-med) ease-in-out; }
 .main-content{ background:linear-gradient(180deg, rgba(17,20,38,.86), rgba(12,15,28,.86)); border-radius:var(--radius); border:1px solid rgba(178,188,255,.16); box-shadow:var(--soft-shadow); padding:14px; overflow-y:auto; overflow-x:hidden; scrollbar-width:thin; scrollbar-color:rgba(129,146,255,0.5) rgba(11,16,34,0.35); transform-origin:center center; }
 .main-content.is-view-switching{ animation:viewSwitch var(--motion-slow) var(--motion-ease-entrance); will-change:transform, opacity; }
 .sidebar::-webkit-scrollbar,.main-content::-webkit-scrollbar,.modal::-webkit-scrollbar{ width:10px; }
@@ -926,4 +926,14 @@ body.new-ui-enabled .xy-cheat-item input[type="checkbox"]:checked {
 
 @media (min-width: 1180px){
   .page-layout.filters-collapsed .product-grid{ grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+
+@media (max-width: 720px){
+  .sidebar-header{ padding-right:44px; }
+  .filters-edge-toggle{ right:0; border-left:1px solid rgba(178,188,255,.34); border-radius:999px; box-shadow:0 8px 18px rgba(2,6,18,.34); }
+  .page-layout.filters-collapsed{ grid-template-columns:1fr; gap:8px; }
+  .page-layout.filters-collapsed .sidebar{ max-height:62px; padding-block:12px; overflow:hidden; }
+  .page-layout.filters-collapsed .sidebar-header{ margin-bottom:0; }
+  .page-layout.filters-collapsed .filters-edge-toggle{ right:0; }
+  .page-layout.filters-collapsed .filters-edge-toggle span{ transform:translateY(1px) rotate(-90deg); }
 }
