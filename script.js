@@ -2834,17 +2834,20 @@ function renderComparisonSystem() {
   });
   selectedRow.innerHTML = comparisonSelection.length ? `Selected: ${comparisonSelection.map(name => `${escapeHtml(name)} ×`).join(' ').replace(/ ×$/, '')}` : 'Selected: None';
 
-  if (comparisonSelection.length < 2) {
-    tableWrap.hidden = true;
-    winnerSummary.hidden = true;
-    verdictsWrap.hidden = true;
-    return;
-  }
-
   const selectedProducts = comparisonSelection
     .map(name => products.find(item => item.name === name))
     .filter(Boolean)
     .slice(0, 3);
+
+  if (selectedProducts.length < 2) {
+    tableWrap.hidden = true;
+    winnerSummary.hidden = true;
+    verdictsWrap.hidden = true;
+    winnerSummary.innerHTML = '';
+    verdictsWrap.innerHTML = '';
+    table.innerHTML = '';
+    return;
+  }
 
   const suncValues = selectedProducts.map(item => Number.isFinite(item.sunc) ? item.sunc : -1);
   const stabilityValues = selectedProducts.map(item => stabilityScoreMap[item.stability] || 0);
