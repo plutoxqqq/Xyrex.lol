@@ -159,7 +159,14 @@
   <div class="page-layout">
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-inner">
-        <h2 class="sidebar-title">Filters</h2>
+        <div class="sidebar-header">
+          <h2 class="sidebar-title">Filters</h2>
+          <button id="filtersToggleBtn" class="filters-edge-toggle" type="button" aria-expanded="true" aria-controls="filtersContent" aria-label="Collapse filters" title="Collapse filters">
+            <span aria-hidden="true">❮</span>
+          </button>
+        </div>
+
+        <div id="filtersContent" class="filters-content">
 
         <section class="filter-group">
           <h3 class="filter-title">Platform</h3>
@@ -204,6 +211,7 @@
 
         <hr class="sidebar-divider" />
         <button id="resetFilters" class="btn-primary block">Reset filters</button>
+        </div>
       </div>
     </aside>
 
