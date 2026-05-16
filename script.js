@@ -4154,8 +4154,9 @@ function initCollapsibleFilters() {
   const setFiltersCollapsed = collapsed => {
     layout.classList.toggle('filters-collapsed', collapsed);
     toggleBtn.setAttribute('aria-expanded', String(!collapsed));
-    toggleBtn.textContent = collapsed ? 'Show' : 'Hide';
-    toggleBtn.setAttribute('title', collapsed ? 'Expand filters' : 'Collapse filters');
+    const label = collapsed ? 'Expand filters' : 'Collapse filters';
+    toggleBtn.setAttribute('title', label);
+    toggleBtn.setAttribute('aria-label', label);
   };
 
   setFiltersCollapsed(false);
