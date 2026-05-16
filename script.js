@@ -2758,7 +2758,7 @@ function openSettingsModal() {
       <div class="settings-group">
         <h3>AI Usage</h3>
         <p class="settings-token-count">Available AI tokens: <strong>${tokenSummary.available}</strong></p>
-        <div class="settings-actions settings-actions-centered">
+        <div class="settings-actions settings-earn-tokens-action">
           <button id="settingsEarnTokensBtn" class="btn-primary settings-action-btn" type="button">Earn Tokens</button>
         </div>
         <p class="settings-note">Claim 1-30 free tokens. Higher amounts apply a longer cooldown.</p>
