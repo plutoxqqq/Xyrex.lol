@@ -2635,7 +2635,10 @@ function getFallbackAiTokenSummary() {
 
 function getFreeTokenShopStatus() {
   const summary = getAiTokenSummary();
-  const tokenState = readFallbackAiTokenData();
+  const dodgeState = window.XyrexDodge?.getTokenStateSnapshot?.();
+  const tokenState = dodgeState && typeof dodgeState === 'object'
+    ? { data: dodgeState }
+    : readFallbackAiTokenData();
   const data = normalizeFallbackAiTokenData(tokenState.data);
   const now = Date.now();
   const cooldownUntil = Math.max(0, Number(data.freeTokenCooldownUntil) || 0);
@@ -2657,7 +2660,10 @@ function claimFreeTokens(amountInput) {
   if (amount !== Math.trunc(rawAmount)) {
     return { ok: false, reason: `Please enter a whole number between ${FREE_TOKEN_SHOP.minClaim} and ${FREE_TOKEN_SHOP.maxClaim}.` };
   }
-  const tokenState = readFallbackAiTokenData();
+  const dodgeState = window.XyrexDodge?.getTokenStateSnapshot?.();
+  const tokenState = dodgeState && typeof dodgeState === 'object'
+    ? { data: dodgeState }
+    : readFallbackAiTokenData();
   const data = normalizeFallbackAiTokenData(tokenState.data);
   const now = Date.now();
   const cooldownUntil = Math.max(0, Number(data.freeTokenCooldownUntil) || 0);

@@ -1697,6 +1697,18 @@
     return { amount: claimAmount, cooldownUntil: data.freeTokenCooldownUntil };
   }
 
+
+  function getTokenStateSnapshot() {
+    const data = readWithHash();
+    return {
+      aiTokenDate: String(data.aiTokenDate || ''),
+      aiTokensUsedToday: clampInt(data.aiTokensUsedToday, 0, MAX_USED_TODAY),
+      aiPurchasedTokens: clampInt(data.aiPurchasedTokens, 0, MAX_PURCHASED_TOKENS),
+      freeTokenCooldownUntil: clampInt(data.freeTokenCooldownUntil, 0, Date.now() + MAX_COOLDOWN_MS),
+      freeTokenLastClaimAmount: clampInt(data.freeTokenLastClaimAmount, 0, 30),
+    };
+  }
+
   function ensureGame() {
     const mount = document.querySelector('#xyrexDodgeMount');
     if (!mount) return null;
@@ -1731,6 +1743,9 @@
     },
     applyFreeTokenClaim(amount, cooldownMs) {
       return applyFreeTokenClaim(amount, cooldownMs);
+    },
+    getTokenStateSnapshot() {
+      return getTokenStateSnapshot();
     },
   };
 })();
