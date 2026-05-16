@@ -2635,7 +2635,10 @@ function getFallbackAiTokenSummary() {
 
 function getFreeTokenShopStatus() {
   const summary = getAiTokenSummary();
-  const tokenState = readFallbackAiTokenData();
+  const dodgeState = window.XyrexDodge?.getTokenStateSnapshot?.();
+  const tokenState = dodgeState && typeof dodgeState === 'object'
+    ? { data: dodgeState }
+    : readFallbackAiTokenData();
   const data = normalizeFallbackAiTokenData(tokenState.data);
   const now = Date.now();
   const cooldownUntil = Math.max(0, Number(data.freeTokenCooldownUntil) || 0);
@@ -2657,18 +2660,30 @@ function claimFreeTokens(amountInput) {
   if (amount !== Math.trunc(rawAmount)) {
     return { ok: false, reason: `Please enter a whole number between ${FREE_TOKEN_SHOP.minClaim} and ${FREE_TOKEN_SHOP.maxClaim}.` };
   }
-  const tokenState = readFallbackAiTokenData();
+  const dodgeState = window.XyrexDodge?.getTokenStateSnapshot?.();
+  const tokenState = dodgeState && typeof dodgeState === 'object'
+    ? { data: dodgeState }
+    : readFallbackAiTokenData();
   const data = normalizeFallbackAiTokenData(tokenState.data);
   const now = Date.now();
   const cooldownUntil = Math.max(0, Number(data.freeTokenCooldownUntil) || 0);
   if (cooldownUntil > now) {
     return { ok: false, reason: `You can claim free tokens again in ${formatDuration(cooldownUntil - now)}.` };
   }
+  const cooldownMs = getFreeTokenCooldownMs(amount);
+  if (typeof window.XyrexDodge?.applyFreeTokenClaim === 'function') {
+    const claimResult = window.XyrexDodge.applyFreeTokenClaim(amount, cooldownMs);
+    if (!claimResult) {
+      return { ok: false, reason: 'Unable to process token claim right now. Please try again.' };
+    }
+    return { ok: true, amount: claimResult.amount, cooldownMs };
+  }
+
   data.aiPurchasedTokens = Math.max(0, Number(data.aiPurchasedTokens) || 0) + amount;
   data.freeTokenLastClaimAmount = amount;
-  data.freeTokenCooldownUntil = now + getFreeTokenCooldownMs(amount);
+  data.freeTokenCooldownUntil = now + cooldownMs;
   localStorage.setItem(tokenState.key || DODGE_STORAGE_KEYS[0], JSON.stringify(data));
-  return { ok: true, amount, cooldownMs: getFreeTokenCooldownMs(amount) };
+  return { ok: true, amount, cooldownMs };
 }
 
 function openEarnTokensModal() {

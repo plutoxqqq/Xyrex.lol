@@ -1684,6 +1684,31 @@
     return data.aiPurchasedTokens;
   }
 
+
+  function applyFreeTokenClaim(amount, cooldownMs) {
+    const claimAmount = clampInt(amount, 0, 30);
+    if (claimAmount <= 0) return null;
+    const now = Date.now();
+    const data = readWithHash();
+    data.aiPurchasedTokens = clampInt(clampInt(data.aiPurchasedTokens, 0, MAX_PURCHASED_TOKENS) + claimAmount, 0, MAX_PURCHASED_TOKENS);
+    data.freeTokenLastClaimAmount = claimAmount;
+    data.freeTokenCooldownUntil = clampInt(now + clampInt(cooldownMs, 0, MAX_COOLDOWN_MS), 0, now + MAX_COOLDOWN_MS);
+    writeWithHash(data);
+    return { amount: claimAmount, cooldownUntil: data.freeTokenCooldownUntil };
+  }
+
+
+  function getTokenStateSnapshot() {
+    const data = readWithHash();
+    return {
+      aiTokenDate: String(data.aiTokenDate || ''),
+      aiTokensUsedToday: clampInt(data.aiTokensUsedToday, 0, MAX_USED_TODAY),
+      aiPurchasedTokens: clampInt(data.aiPurchasedTokens, 0, MAX_PURCHASED_TOKENS),
+      freeTokenCooldownUntil: clampInt(data.freeTokenCooldownUntil, 0, Date.now() + MAX_COOLDOWN_MS),
+      freeTokenLastClaimAmount: clampInt(data.freeTokenLastClaimAmount, 0, 30),
+    };
+  }
+
   function ensureGame() {
     const mount = document.querySelector('#xyrexDodgeMount');
     if (!mount) return null;
@@ -1715,6 +1740,12 @@
     },
     addPurchasedTokens(amount) {
       return addPurchasedTokens(amount);
+    },
+    applyFreeTokenClaim(amount, cooldownMs) {
+      return applyFreeTokenClaim(amount, cooldownMs);
+    },
+    getTokenStateSnapshot() {
+      return getTokenStateSnapshot();
     },
   };
 })();
