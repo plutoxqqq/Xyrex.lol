@@ -597,6 +597,33 @@ const EXPLOIT_ASSISTANT_API = 'https://xyres-ai-api.vercel.app/api/exploit-assis
 const DODGE_STORAGE_KEYS = ['xyrex_dodge_save_v2', 'xyrex_dodge_save_v1'];
 const FREE_DAILY_AI_TOKENS = 5;
 const NO_ASSISTANT_TOKENS_MESSAGE = 'You have no AI tokens remaining. Daily tokens reset at midnight, or you can buy more in the Token Shop.';
+
+const FREE_TOKEN_SHOP = Object.freeze({
+  minClaim: 1,
+  maxClaim: 30,
+  maxCooldownMs: 7 * 24 * 60 * 60 * 1000
+});
+let settingsCooldownTimerId = null;
+
+function clampTokenClaimAmount(value) {
+  if (!Number.isFinite(value)) return FREE_TOKEN_SHOP.minClaim;
+  return Math.min(FREE_TOKEN_SHOP.maxClaim, Math.max(FREE_TOKEN_SHOP.minClaim, Math.trunc(value)));
+}
+
+function getFreeTokenCooldownMs(amount) {
+  const safeAmount = clampTokenClaimAmount(amount);
+  return Math.round((safeAmount / FREE_TOKEN_SHOP.maxClaim) * FREE_TOKEN_SHOP.maxCooldownMs);
+}
+
+function formatDuration(ms) {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) return `${hours}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
+  return `${minutes}m ${String(seconds).padStart(2, '0')}s`;
+}
+
 const NO_OFFICIAL_DISCORD_MESSAGE = 'This script does not have an official discord server';
 const POPULAR_SCRIPT_CATEGORIES = [
   'Bedwars',
@@ -2591,6 +2618,8 @@ function normalizeFallbackAiTokenData(data) {
   }
   next.aiTokensUsedToday = Math.max(0, Number(next.aiTokensUsedToday) || 0);
   next.aiPurchasedTokens = Math.max(0, Number(next.aiPurchasedTokens) || 0);
+  next.freeTokenCooldownUntil = Math.max(0, Number(next.freeTokenCooldownUntil) || 0);
+  next.freeTokenLastClaimAmount = clampTokenClaimAmount(Number(next.freeTokenLastClaimAmount) || FREE_TOKEN_SHOP.minClaim);
   return next;
 }
 
@@ -2600,6 +2629,85 @@ function getFallbackAiTokenSummary() {
   const freeRemaining = Math.max(0, FREE_DAILY_AI_TOKENS - normalized.aiTokensUsedToday);
   const purchased = Math.max(0, normalized.aiPurchasedTokens);
   return { available: freeRemaining + purchased, freeRemaining, purchased };
+}
+
+
+
+function getFreeTokenShopStatus() {
+  const summary = getAiTokenSummary();
+  const tokenState = readFallbackAiTokenData();
+  const data = normalizeFallbackAiTokenData(tokenState.data);
+  const now = Date.now();
+  const cooldownUntil = Math.max(0, Number(data.freeTokenCooldownUntil) || 0);
+  const remainingMs = Math.max(0, cooldownUntil - now);
+  return {
+    available: summary.available,
+    cooldownUntil,
+    remainingMs,
+    isReady: remainingMs <= 0
+  };
+}
+
+function claimFreeTokens(amountInput) {
+  const rawAmount = Number(amountInput);
+  if (!Number.isFinite(rawAmount)) {
+    return { ok: false, reason: 'Please enter a valid number.' };
+  }
+  const amount = clampTokenClaimAmount(rawAmount);
+  if (amount !== Math.trunc(rawAmount)) {
+    return { ok: false, reason: `Please enter a whole number between ${FREE_TOKEN_SHOP.minClaim} and ${FREE_TOKEN_SHOP.maxClaim}.` };
+  }
+  const tokenState = readFallbackAiTokenData();
+  const data = normalizeFallbackAiTokenData(tokenState.data);
+  const now = Date.now();
+  const cooldownUntil = Math.max(0, Number(data.freeTokenCooldownUntil) || 0);
+  if (cooldownUntil > now) {
+    return { ok: false, reason: `You can claim free tokens again in ${formatDuration(cooldownUntil - now)}.` };
+  }
+  data.aiPurchasedTokens = Math.max(0, Number(data.aiPurchasedTokens) || 0) + amount;
+  data.freeTokenLastClaimAmount = amount;
+  data.freeTokenCooldownUntil = now + getFreeTokenCooldownMs(amount);
+  localStorage.setItem(tokenState.key || DODGE_STORAGE_KEYS[0], JSON.stringify(data));
+  return { ok: true, amount, cooldownMs: getFreeTokenCooldownMs(amount) };
+}
+
+function openEarnTokensModal() {
+  const status = getFreeTokenShopStatus();
+  if (!status.isReady) {
+    openNoAiTokensModal(`Free token claims are on cooldown. Time remaining: ${formatDuration(status.remainingMs)}.`);
+    return;
+  }
+  const overlay = qs('#modalOverlay');
+  const content = qs('#modalContent');
+  if (!overlay || !content) return;
+  setCompactModal(true);
+  lastModalTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  content.innerHTML = `
+    <section class="discord-unavailable-modal" aria-live="polite">
+      <div class="discord-unavailable-icon ai-token-unavailable-icon" aria-hidden="true"><span>+</span></div>
+      <h2>Earn Free Tokens</h2>
+      <p class="modal-headline">Choose a whole number from ${FREE_TOKEN_SHOP.minClaim} to ${FREE_TOKEN_SHOP.maxClaim}. Higher amounts apply a longer cooldown. Claiming ${FREE_TOKEN_SHOP.maxClaim} tokens sets a 1 week cooldown.</p>
+      <label class="settings-note" for="earnTokensAmountInput">Token amount</label>
+      <input id="earnTokensAmountInput" type="number" min="${FREE_TOKEN_SHOP.minClaim}" max="${FREE_TOKEN_SHOP.maxClaim}" step="1" value="${FREE_TOKEN_SHOP.minClaim}" class="xy-amount-input">
+      <div class="settings-actions settings-actions-centered">
+        <button id="confirmEarnTokensBtn" class="btn-primary settings-action-btn" type="button">Claim Tokens</button>
+      </div>
+      <p id="earnTokensFeedback" class="settings-note" aria-live="polite"></p>
+    </section>`;
+  overlay.classList.remove('is-closing');
+  overlay.setAttribute('aria-hidden', 'false');
+  const amountInput = qs('#earnTokensAmountInput');
+  const feedback = qs('#earnTokensFeedback');
+  qs('#confirmEarnTokensBtn')?.addEventListener('click', () => {
+    const claim = claimFreeTokens(amountInput?.value ?? '');
+    if (!claim.ok) {
+      if (feedback) feedback.textContent = claim.reason;
+      return;
+    }
+    if (feedback) feedback.textContent = `Success. You earned ${claim.amount} token${claim.amount === 1 ? '' : 's'}. Cooldown: ${formatDuration(claim.cooldownMs)}.`;
+    window.setTimeout(() => openSettingsModal(), 550);
+  });
+  amountInput?.focus();
 }
 
 function consumeAiTokenForAssistant() {
@@ -2650,6 +2758,11 @@ function openSettingsModal() {
       <div class="settings-group">
         <h3>AI Usage</h3>
         <p class="settings-token-count">Available AI tokens: <strong>${tokenSummary.available}</strong></p>
+        <div class="settings-actions settings-earn-tokens-action">
+          <button id="settingsEarnTokensBtn" class="btn-primary settings-action-btn" type="button">Earn Tokens</button>
+        </div>
+        <p class="settings-note">Claim 1-30 free tokens. Higher amounts apply a longer cooldown.</p>
+        <p class="settings-note" id="settingsCooldownNote"></p>
       </div>
       <footer class="settings-credit">Made by plutoxqq and slick012</footer>
     </section>`;
@@ -2665,6 +2778,18 @@ function openSettingsModal() {
     syncRouteWithState();
     openSettingsModal();
   });
+
+  const earnTokensBtn = qs('#settingsEarnTokensBtn');
+  const cooldownNote = qs('#settingsCooldownNote');
+  if (settingsCooldownTimerId) window.clearInterval(settingsCooldownTimerId);
+  const updateCooldownNote = () => {
+    if (!cooldownNote) return;
+    const status = getFreeTokenShopStatus();
+    cooldownNote.textContent = status.isReady ? 'Free token claim is ready now.' : `Next free claim in ${formatDuration(status.remainingMs)}.`;
+  };
+  updateCooldownNote();
+  settingsCooldownTimerId = window.setInterval(updateCooldownNote, 1000);
+  earnTokensBtn?.addEventListener('click', openEarnTokensModal);
 
   const themeBtn = qs('#settingsThemeCustomizerBtn');
   themeBtn?.addEventListener('click', () => {
@@ -2699,7 +2824,7 @@ function openNoOfficialDiscordModal(scriptName = '') {
 }
 
 
-function openNoAiTokensModal() {
+function openNoAiTokensModal(message = NO_ASSISTANT_TOKENS_MESSAGE) {
   const overlay = qs('#modalOverlay');
   const content = qs('#modalContent');
   if (!overlay || !content) return;
@@ -2712,7 +2837,7 @@ function openNoAiTokensModal() {
         <span>!</span>
       </div>
       <h2>AI Tokens Unavailable</h2>
-      <p class="modal-headline">${escapeHtml(NO_ASSISTANT_TOKENS_MESSAGE)}</p>
+      <p class="modal-headline">${escapeHtml(message)}</p>
     </section>`;
 
   overlay.classList.remove('is-closing');
@@ -2729,6 +2854,10 @@ function closeModal() {
     if (!overlay.classList.contains('is-closing')) return;
     overlay.setAttribute('aria-hidden', 'true');
     overlay.classList.remove('is-closing');
+    if (settingsCooldownTimerId) {
+      window.clearInterval(settingsCooldownTimerId);
+      settingsCooldownTimerId = null;
+    }
     qs('#modalContent').innerHTML = '';
     setCompactModal(false);
     if (lastModalTrigger && typeof lastModalTrigger.focus === 'function') lastModalTrigger.focus();
