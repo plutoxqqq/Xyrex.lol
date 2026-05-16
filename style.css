@@ -325,6 +325,10 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 .smart-ranking-kicker{ margin:0 0 6px; color:var(--muted); font-size:.8rem; letter-spacing:.03em; text-transform:uppercase; }
 .smart-ranking-hero h4{ margin:0; font-size:1rem; color:var(--periwinkle-2); }
 .smart-ranking-executor{ margin:6px 0; font-size:1.15rem; font-weight:800; }
+.smart-ranking-detail-grid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-bottom:8px; }
+.smart-ranking-detail-grid div{ background:rgba(13,17,34,.62); border:1px solid rgba(178,188,255,.18); border-radius:8px; padding:8px; }
+.smart-ranking-detail-grid span{ display:block; color:var(--muted); font-size:.75rem; }
+.smart-ranking-detail-grid strong{ display:block; margin-top:2px; }
 .smart-ranking-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
 .smart-ranking-card{ border:1px solid rgba(178,188,255,.22); border-radius:10px; background:rgba(17,20,38,.72); color:var(--text); padding:12px; text-align:left; min-height:74px; cursor:pointer; }
 .smart-ranking-card span{ display:block; color:var(--muted); font-size:.82rem; }
@@ -333,6 +337,11 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 .smart-ranking-card.is-active{ border-color:rgba(178,188,255,.55); box-shadow:0 0 0 1px rgba(178,188,255,.28), 0 12px 20px rgba(129,146,255,.2); }
 
 .comparison-note{ margin:10px 0; color:var(--muted); }
+.comparison-search-input{ width:100%; margin-bottom:10px; border:1px solid rgba(178,188,255,.24); border-radius:10px; background:rgba(14,18,35,.75); color:var(--text); padding:10px 12px; }
+.comparison-filter-chips{ display:flex; flex-wrap:wrap; gap:7px; margin-bottom:10px; }
+.comparison-filter-chip{ border:1px solid rgba(178,188,255,.25); border-radius:999px; background:rgba(18,23,43,.74); color:var(--text); padding:7px 10px; font-size:.8rem; cursor:pointer; }
+.comparison-filter-chip.is-active{ border-color:rgba(178,188,255,.58); background:rgba(104,118,206,.26); }
+.comparison-selected-row{ margin:0 0 10px; color:#dbe0ff; font-size:.9rem; }
 .comparison-selector{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
 .compare-pick{ border:1px solid rgba(178,188,255,.25); border-radius:999px; background:rgba(18,23,43,.74); color:var(--text); padding:10px 12px; min-height:44px; cursor:pointer; }
 .compare-pick.is-active{ background:linear-gradient(90deg,#8192ff,#adb8ff); color:#090d1d; border-color:transparent; }
@@ -341,6 +350,13 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 .comparison-table th,.comparison-table td{ padding:10px; border-bottom:1px solid rgba(178,188,255,.16); text-align:left; vertical-align:top; }
 .comparison-table th{ color:var(--periwinkle-2); font-weight:700; }
 .comparison-table td.is-best{ background:rgba(93,211,158,.16); box-shadow:inset 0 0 0 1px rgba(93,211,158,.26); }
+.comparison-table td .best-label{ display:inline-flex; margin-left:6px; font-size:.65rem; padding:2px 5px; border-radius:999px; background:rgba(93,211,158,.2); color:#b8f7da; border:1px solid rgba(93,211,158,.35); vertical-align:middle; }
+.comparison-winner-summary{ margin:0 0 10px; padding:10px; border:1px solid rgba(178,188,255,.22); border-radius:10px; background:rgba(17,20,38,.72); }
+.comparison-verdicts{ margin-top:12px; display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; }
+.comparison-verdict-card{ border:1px solid rgba(178,188,255,.2); border-radius:10px; background:rgba(17,20,38,.65); padding:10px; }
+.comparison-verdict-card h4{ margin:0 0 6px; }
+.comparison-verdict-card p{ margin:4px 0; color:var(--muted); font-size:.9rem; }
+@media (max-width:700px){ .smart-ranking-detail-grid{ grid-template-columns:1fr; } }
 .rank-item,.script-card,.saved-script-item{ border:1px solid rgba(178,188,255,.2); border-radius:10px; background:rgba(17,20,38,.7); }
 .rank-item{ display:grid; grid-template-columns:42px 1fr; align-items:start; gap:12px; padding:10px; }
 .rank-item h4,.script-card h4{ margin:0; }
