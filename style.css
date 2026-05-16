@@ -10,6 +10,7 @@
   --periwinkle: #8f9cff;
   --periwinkle-2: #b2bcff;
   --accent-warning: #f0c36f;
+  --accent-danger: #ff4d6d;
   --accent-success: #5dd39e;
   --soft-shadow: 0 10px 24px rgba(0,0,0,0.35);
   --hover-shadow: 0 16px 36px rgba(0,0,0,0.5);
@@ -244,12 +245,18 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 .modal-overlay[aria-hidden="false"]{ opacity:1; pointer-events:auto; animation:overlayFadeIn var(--motion-med) var(--motion-ease-soft); }
 .modal-overlay.is-closing{ animation:overlayFadeOut var(--motion-med) var(--motion-ease-exit) forwards; }
 .modal{ width:min(760px,100%); max-height:88dvh; overflow-y:auto; overflow-x:hidden; border-radius:12px; padding:18px; background:linear-gradient(180deg,color-mix(in srgb, var(--panel) 90%, var(--bg) 10%), color-mix(in srgb, var(--panel-2) 88%, var(--bg-2) 12%)); border:1px solid rgba(178,188,255,.25); box-shadow:0 18px 48px rgba(0,0,0,.62); position:relative; transform-origin:center top; scrollbar-width:thin; scrollbar-color:rgba(178,188,255,0.45) transparent; }
+.modal.modal-compact{ width:min(360px,calc(100vw - 32px)); text-align:center; }
 .modal-overlay[aria-hidden="false"] .modal{ animation:modalIn var(--motion-slow) var(--motion-ease-entrance); }
 .modal-overlay.is-closing .modal{ animation:modalOut var(--motion-med) var(--motion-ease-exit) forwards; }
 .modal-close{ position:absolute; right:10px; top:10px; border:0; background:transparent; color:var(--muted); font-size:24px; cursor:pointer; min-width:40px; min-height:40px; border-radius:10px; }
 .modal-close:focus-visible{ outline:2px solid color-mix(in srgb, var(--periwinkle-2) 62%, transparent); outline-offset:2px; }
 .modal-content h2{ margin:0 0 8px; }
 .modal-headline{ margin:0; color:var(--muted); font-size:.95rem; line-height:1.45; }
+.discord-unavailable-modal{ display:flex; flex-direction:column; align-items:center; gap:10px; padding:8px 6px 2px; }
+.discord-unavailable-modal h2{ margin:0; }
+.discord-unavailable-icon{ width:58px; height:58px; border-radius:16px; display:inline-flex; align-items:center; justify-content:center; position:relative; color:var(--accent-danger); background:color-mix(in srgb, var(--accent-danger) 14%, transparent); border:1px solid color-mix(in srgb, var(--accent-danger) 45%, transparent); }
+.discord-unavailable-icon svg{ width:31px; height:31px; }
+.discord-unavailable-icon span{ position:absolute; right:7px; top:7px; width:18px; height:18px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; background:var(--accent-danger); color:#fff; font-size:13px; font-weight:900; line-height:1; }
 .settings-modal{ display:flex; flex-direction:column; gap:12px; }
 .settings-modal-head h2{ margin:0 0 6px; }
 .settings-group{ border:1px solid rgba(178,188,255,.2); border-radius:12px; background:rgba(15,19,35,.68); padding:12px; }
@@ -374,11 +381,12 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 .script-card pre{ margin:10px 0 0; background:rgba(8,10,18,.82); border:1px solid rgba(178,188,255,.2); color:#d4dbff; border-radius:8px; padding:10px; overflow-x:auto; white-space:pre-wrap; word-break:break-word; }
 .script-code-wrap{ position:relative; }
 .script-copy-btn,.script-discord-btn{ width:30px; height:30px; border-radius:8px; border:1px solid color-mix(in srgb, var(--periwinkle-2) 35%, transparent); background:color-mix(in srgb, var(--panel) 80%, var(--bg) 20%); color:var(--periwinkle-2); display:inline-flex; align-items:center; justify-content:center; cursor:pointer; flex:0 0 auto; }
+.script-discord-btn{ position:relative; }
 .script-copy-btn svg{ width:14px; height:14px; }
 .script-discord-btn svg{ width:18px; height:18px; }
 .script-copy-btn:hover,.script-discord-btn:hover{ background:color-mix(in srgb, var(--panel-2) 84%, var(--bg) 16%); color:var(--text); }
-.script-discord-btn-unavailable{ color:var(--muted); opacity:.7; }
-.script-discord-btn-unavailable:hover{ border-color:color-mix(in srgb, var(--accent-warning) 55%, transparent); color:var(--accent-warning); }
+.script-discord-btn-unavailable,.script-discord-btn-unavailable:hover,.script-discord-btn-unavailable:focus-visible{ border-color:color-mix(in srgb, var(--accent-danger) 62%, transparent); color:var(--accent-danger); opacity:1; }
+.script-card .script-discord-alert{ position:absolute; right:-5px; top:-6px; width:15px; height:15px; border-radius:999px; background:var(--accent-danger); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:11px; font-weight:900; line-height:1; border:2px solid color-mix(in srgb, var(--panel) 88%, var(--bg) 12%); }
 .script-copy-btn.is-copied{ border-color:color-mix(in srgb, var(--accent-success) 72%, transparent); color:var(--accent-success); }
 .script-card-title{ display:inline-flex; align-items:center; gap:8px; }
 .popular-script-categories{ display:flex; flex-direction:column; gap:14px; }

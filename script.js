@@ -2421,9 +2421,16 @@ function applyAllFilters() {
   renderProducts(filtered);
 }
 
+function setCompactModal(isCompact) {
+  const modal = qs('#modalOverlay')?.querySelector('.modal');
+  if (!modal) return;
+  modal.classList.toggle('modal-compact', Boolean(isCompact));
+}
+
 function openModal(product) {
   const overlay = qs('#modalOverlay');
   const content = qs('#modalContent');
+  setCompactModal(false);
   lastModalTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
   const officialSite = product.officialSite || '';
@@ -2503,6 +2510,7 @@ function openModal(product) {
 function openSuncSimulationModal(product) {
   const overlay = qs('#modalOverlay');
   const content = qs('#modalContent');
+  setCompactModal(false);
   const targetScore = Number.isFinite(product.sunc) ? product.sunc : 0;
   content.innerHTML = `
     <section class="sunc-sim-modal">
@@ -2623,6 +2631,7 @@ function setBetaFeaturesEnabled(enabled) {
 function openSettingsModal() {
   const overlay = qs('#modalOverlay');
   const content = qs('#modalContent');
+  setCompactModal(false);
   const tokenSummary = getAiTokenSummary();
   content.innerHTML = `
     <section class="settings-modal">
@@ -2666,6 +2675,29 @@ function openSettingsModal() {
   qs('#modalCloseBtn').focus();
 }
 
+function openNoOfficialDiscordModal(scriptName = '') {
+  const overlay = qs('#modalOverlay');
+  const content = qs('#modalContent');
+  if (!overlay || !content) return;
+
+  setCompactModal(true);
+  lastModalTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const safeName = stripTrailingPeriod(scriptName);
+  content.innerHTML = `
+    <section class="discord-unavailable-modal" aria-live="polite">
+      <div class="discord-unavailable-icon" aria-hidden="true">
+        ${popularScriptDiscordSvg}
+        <span>!</span>
+      </div>
+      <h2>No Official Discord</h2>
+      <p class="modal-headline">${safeName ? `<strong>${escapeHtml(safeName)}</strong> does not have an official Discord server.` : escapeHtml(NO_OFFICIAL_DISCORD_MESSAGE)}</p>
+    </section>`;
+
+  overlay.classList.remove('is-closing');
+  overlay.setAttribute('aria-hidden', 'false');
+  qs('#modalCloseBtn').focus();
+}
+
 function closeModal() {
   const overlay = qs('#modalOverlay');
   if (overlay.getAttribute('aria-hidden') === 'true') return;
@@ -2676,6 +2708,7 @@ function closeModal() {
     overlay.setAttribute('aria-hidden', 'true');
     overlay.classList.remove('is-closing');
     qs('#modalContent').innerHTML = '';
+    setCompactModal(false);
     if (lastModalTrigger && typeof lastModalTrigger.focus === 'function') lastModalTrigger.focus();
     lastModalTrigger = null;
   }, 190);
@@ -3001,8 +3034,9 @@ function renderPopularScripts() {
       }
       const unavailableDiscordButton = event.target.closest('[data-discord-unavailable="true"]');
       if (unavailableDiscordButton && wrap.contains(unavailableDiscordButton)) {
+        event.preventDefault();
         event.stopPropagation();
-        window.alert(NO_OFFICIAL_DISCORD_MESSAGE);
+        openNoOfficialDiscordModal(unavailableDiscordButton.getAttribute('data-script-name') || '');
         return;
       }
       const copyButton = event.target.closest('.script-copy-btn');
@@ -3075,7 +3109,7 @@ function renderScriptCard(script) {
   const discordButton = discordUrl
     ? `<a class="script-discord-btn" href="${escapeHtml(discordUrl)}" target="_blank" rel="noopener noreferrer" title="Open Discord" aria-label="Open Discord for ${escapeHtml(script.name)}">${popularScriptDiscordSvg}</a>`
     : stats.discordIcon === false
-      ? `<button class="script-discord-btn script-discord-btn-unavailable" type="button" data-discord-unavailable="true" title="No official Discord" aria-label="No official Discord for ${escapeHtml(script.name)}">${popularScriptDiscordSvg}</button>`
+      ? `<button class="script-discord-btn script-discord-btn-unavailable" type="button" data-discord-unavailable="true" data-script-name="${escapeHtml(script.name)}" title="No official Discord" aria-label="No official Discord for ${escapeHtml(script.name)}">${popularScriptDiscordSvg}<span class="script-discord-alert" aria-hidden="true">!</span></button>`
       : '';
   return `
     <article class="script-card">
