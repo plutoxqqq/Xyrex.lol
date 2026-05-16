@@ -252,10 +252,15 @@
         <section id="comparisonPanel" class="subtab-panel" role="tabpanel" hidden>
           <h3>Executor Comparison</h3>
           <p class="comparison-note">Select 2 to 3 executors to compare reliability, pricing, and risk at a glance.</p>
+          <input id="comparisonSearchInput" class="comparison-search-input" type="text" placeholder="Search executors..." aria-label="Search executors for comparison" />
+          <div id="comparisonFilterChips" class="comparison-filter-chips"></div>
+          <div id="comparisonSelectedRow" class="comparison-selected-row" aria-live="polite"></div>
           <div id="comparisonSelector" class="comparison-selector"></div>
+          <div id="comparisonWinnerSummary" class="comparison-winner-summary" hidden></div>
           <div id="comparisonTableWrap" class="comparison-table-wrap" hidden>
             <table id="comparisonTable" class="comparison-table"></table>
           </div>
+          <div id="comparisonVerdicts" class="comparison-verdicts" hidden></div>
         </section>
 
         <section id="assistantPanel" class="subtab-panel" role="tabpanel" hidden>

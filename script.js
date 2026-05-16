@@ -2642,15 +2642,71 @@ function estimatedPriceValue(product) {
 }
 
 function computeSmartRanking() {
-  const byName = name => products.find(item => item.name.toLowerCase() === name.toLowerCase()) || null;
+  const clampScore = value => Math.max(0, Math.min(100, Math.round(value)));
+  const mapValue = (value, map) => map[String(value || '').toLowerCase()] ?? 50;
+  const trustScoreMap = { trusted: 96, caution: 68, risky: 36, unknown: 52 };
+  const stabilityScoreLabelMap = { high: 96, medium: 72, low: 46 };
+
+  const safetyScore = product => clampScore(
+    (mapValue(product.trustLevel, trustScoreMap) * 0.52)
+    + (mapValue(product.stability, stabilityScoreLabelMap) * 0.28)
+    + ((10 - detectionRiskScore(product)) * 10 * 0.2)
+  );
+  const powerScore = product => clampScore(
+    ((Number.isFinite(product.sunc) ? product.sunc : 52) * 0.65)
+    + (((product.features || []).length * 7) * 0.2)
+    + ((product.cheatType === 'internal' ? 92 : 72) * 0.15)
+  );
+  const beginnerScore = product => {
+    const baseline = (safetyScore(product) * 0.36) + (mapValue(product.stability, stabilityScoreLabelMap) * 0.24);
+    const freeBoost = ['free', 'both'].includes(product.freeOrPaid) ? 18 : 0;
+    const keyPenalty = String(product.keySystem || '').toLowerCase() === 'key' ? -10 : 8;
+    const desc = String(product.description || '').toLowerCase();
+    const easeBoost = /(simple|easy|beginner|quick setup|user interface)/.test(desc) ? 12 : 0;
+    return clampScore(baseline + freeBoost + keyPenalty + easeBoost);
+  };
+  const valueScore = product => {
+    const price = estimatedPriceValue(product);
+    const normalizedPrice = price <= 0 ? 100 : Math.max(18, 100 - (price * 2.4));
+    return clampScore((powerScore(product) * 0.4) + (safetyScore(product) * 0.28) + (normalizedPrice * 0.32));
+  };
+  const mobileScore = product => {
+    const platforms = (product.platform || []).map(item => String(item).toLowerCase());
+    const mobileReady = platforms.some(item => item.includes('android') || item.includes('ios') || item.includes('mobile'));
+    if (!mobileReady) return -1;
+    return clampScore((safetyScore(product) * 0.33) + (powerScore(product) * 0.29) + (beginnerScore(product) * 0.2) + (valueScore(product) * 0.18));
+  };
+
+  const pickTop = (id, title, scoreFn, noteBuilder) => {
+    const scored = products.map(product => ({ product, score: scoreFn(product) }))
+      .filter(item => Number.isFinite(item.score) && item.score >= 0)
+      .sort((a, b) => b.score - a.score);
+    const winner = scored[0] || null;
+    if (!winner) return null;
+    return {
+      id,
+      title,
+      executor: winner.product,
+      score: winner.score,
+      riskLevel: detectionRiskLabel(winner.product),
+      reason: noteBuilder(winner.product, winner.score),
+      weakness: (winner.product.cons && winner.product.cons[0]) || 'Watch status and trust updates before long sessions.',
+      bestFor: winner.product.tags?.[0] || winner.product.cheatType || 'General use'
+    };
+  };
+
+  const categories = [
+    pickTop('bestFree', scriptsHubData.smartRankingLabels.bestFree, product => (['free', 'both'].includes(product.freeOrPaid) ? valueScore(product) : -1), (p, s) => `${p.name} leads free access value with a balanced ${s}/100 overall score.`),
+    pickTop('safest', scriptsHubData.smartRankingLabels.safest, safetyScore, (p, s) => `${p.name} rates highest for safety based on trust, stability, and risk signals (${s}/100).`),
+    pickTop('beginners', scriptsHubData.smartRankingLabels.beginners, beginnerScore, (p, s) => `${p.name} is easiest for new users thanks to onboarding simplicity and practical safety (${s}/100).`),
+    pickTop('powerful', scriptsHubData.smartRankingLabels.powerful, powerScore, (p, s) => `${p.name} delivers the strongest execution profile right now (${s}/100).`),
+    pickTop('bestValue', 'Best Value', valueScore, (p, s) => `${p.name} gives the strongest feature-to-cost balance overall (${s}/100).`),
+    pickTop('bestMobile', 'Best Mobile', mobileScore, (p, s) => `${p.name} is currently the top mobile-oriented pick from platform-ready executors (${s}/100).`)
+  ].filter(Boolean);
+
   return {
     monthLabel: new Date().toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
-    categories: [
-      { id: 'bestFree', title: scriptsHubData.smartRankingLabels.bestFree, executor: byName('Velocity'), note: 'Velocity is the current best free option for users prioritizing quick setup and no upfront payment.' },
-      { id: 'safest', title: scriptsHubData.smartRankingLabels.safest, executor: byName('Xeno'), note: 'Xeno is the safest right now for users who want stable baseline behavior with lower practical risk.' },
-      { id: 'beginners', title: scriptsHubData.smartRankingLabels.beginners, executor: byName('JJSploit'), note: 'JJSploit is the best starting point for beginners because of its simple workflow and low onboarding friction.' },
-      { id: 'powerful', title: scriptsHubData.smartRankingLabels.powerful, executor: byName('Potassium'), note: 'Potassium is currently the most powerful pick with top-end execution strength and full 100% sUNC.' }
-    ]
+    categories
   };
 }
 
@@ -2661,6 +2717,10 @@ function renderSmartRankings() {
   const wrap = qs('#smartRankingSections');
   if (!wrap) return;
   const ranking = computeSmartRanking();
+  if (!ranking.categories.length) {
+    wrap.innerHTML = '';
+    return;
+  }
   const selected = ranking.categories[activeSmartRankingIndex % ranking.categories.length];
 
   wrap.innerHTML = `
@@ -2668,14 +2728,20 @@ function renderSmartRankings() {
       <p class="smart-ranking-kicker">Updated for ${escapeHtml(ranking.monthLabel)}</p>
       <h4>${escapeHtml(selected.title)}</h4>
       <p class="smart-ranking-executor">${escapeHtml(selected.executor?.name || 'Unavailable')}</p>
-      <p>${escapeHtml(selected.note)}</p>
+      <div class="smart-ranking-detail-grid">
+        <div><span>Score</span><strong>${escapeHtml(String(selected.score || 0))}/100</strong></div>
+        <div><span>Risk Level</span><strong>${escapeHtml(selected.riskLevel || 'Unknown')}</strong></div>
+        <div><span>Best For</span><strong>${escapeHtml(selected.bestFor || 'General')}</strong></div>
+      </div>
+      <p><strong>Reason:</strong> ${escapeHtml(selected.reason || '')}</p>
+      <p><strong>Watch-out:</strong> ${escapeHtml(selected.weakness || '')}</p>
     </article>
     <div class="smart-ranking-grid">
       ${ranking.categories.map((entry, index) => `
         <button class="smart-ranking-card ${index === (activeSmartRankingIndex % ranking.categories.length) ? 'is-active' : ''}" data-smart-ranking-index="${index}" type="button">
           <span>${escapeHtml(entry.title)}</span>
           <strong>${escapeHtml(entry.executor?.name || 'Unavailable')}</strong>
-          <small>Risk: ${escapeHtml(detectionRiskLabel(entry.executor || {}))}</small>
+          <small>Score: ${escapeHtml(String(entry.score || 0))}/100 · Risk: ${escapeHtml(entry.riskLevel || 'Unknown')}</small>
         </button>
       `).join('')}
     </div>
@@ -2699,14 +2765,56 @@ function renderSmartRankings() {
 }
 
 let comparisonSelection = [];
+let comparisonSearchTerm = '';
+let comparisonFilter = 'all';
 
 function renderComparisonSystem() {
   const selector = qs('#comparisonSelector');
   const tableWrap = qs('#comparisonTableWrap');
   const table = qs('#comparisonTable');
-  if (!selector || !tableWrap || !table) return;
+  const selectedRow = qs('#comparisonSelectedRow');
+  const winnerSummary = qs('#comparisonWinnerSummary');
+  const verdictsWrap = qs('#comparisonVerdicts');
+  const searchInput = qs('#comparisonSearchInput');
+  const filterWrap = qs('#comparisonFilterChips');
+  if (!selector || !tableWrap || !table || !selectedRow || !winnerSummary || !verdictsWrap || !searchInput || !filterWrap) return;
 
-  const sorted = [...products].sort((a, b) => a.name.localeCompare(b.name));
+  const filters = [
+    { id: 'all', label: 'All' },
+    { id: 'windows', label: 'Windows' },
+    { id: 'mobile', label: 'Mobile' },
+    { id: 'free', label: 'Free' },
+    { id: 'paid', label: 'Paid' },
+    { id: 'keyless', label: 'Keyless' },
+    { id: 'highsunc', label: 'High sUNC' }
+  ];
+  filterWrap.innerHTML = filters.map(filter => `<button type="button" class="comparison-filter-chip ${comparisonFilter === filter.id ? 'is-active' : ''}" data-compare-filter="${filter.id}">${escapeHtml(filter.label)}</button>`).join('');
+  filterWrap.querySelectorAll('[data-compare-filter]').forEach(button => {
+    button.addEventListener('click', () => {
+      comparisonFilter = button.getAttribute('data-compare-filter') || 'all';
+      renderComparisonSystem();
+    });
+  });
+  if (!searchInput.dataset.bound) {
+    searchInput.addEventListener('input', () => {
+      comparisonSearchTerm = searchInput.value.trim().toLowerCase();
+      renderComparisonSystem();
+    });
+    searchInput.dataset.bound = 'true';
+  }
+  if (searchInput.value !== comparisonSearchTerm) searchInput.value = comparisonSearchTerm;
+
+  const filterMatch = product => {
+    if (comparisonSearchTerm && !product.name.toLowerCase().includes(comparisonSearchTerm)) return false;
+    if (comparisonFilter === 'windows') return (product.platform || []).some(item => String(item).toLowerCase().includes('windows'));
+    if (comparisonFilter === 'mobile') return (product.platform || []).some(item => /(android|ios|mobile)/i.test(String(item)));
+    if (comparisonFilter === 'free') return ['free', 'both'].includes(product.freeOrPaid);
+    if (comparisonFilter === 'paid') return ['paid', 'both'].includes(product.freeOrPaid);
+    if (comparisonFilter === 'keyless') return String(product.keySystem || '').toLowerCase() !== 'key';
+    if (comparisonFilter === 'highsunc') return Number.isFinite(product.sunc) && product.sunc >= 90;
+    return true;
+  };
+  const sorted = [...products].filter(filterMatch).sort((a, b) => a.name.localeCompare(b.name));
   selector.innerHTML = sorted.map(product => {
     const selected = comparisonSelection.includes(product.name);
     return `<button type="button" class="compare-pick ${selected ? 'is-active' : ''}" data-compare-name="${escapeHtml(product.name)}">${escapeHtml(product.name)}</button>`;
@@ -2724,9 +2832,12 @@ function renderComparisonSystem() {
       renderComparisonSystem();
     });
   });
+  selectedRow.innerHTML = comparisonSelection.length ? `Selected: ${comparisonSelection.map(name => `${escapeHtml(name)} ×`).join(' ').replace(/ ×$/, '')}` : 'Selected: None';
 
   if (comparisonSelection.length < 2) {
     tableWrap.hidden = true;
+    winnerSummary.hidden = true;
+    verdictsWrap.hidden = true;
     return;
   }
 
@@ -2741,13 +2852,36 @@ function renderComparisonSystem() {
   const priceValues = selectedProducts.map(item => estimatedPriceValue(item));
   const platformValues = selectedProducts.map(item => (item.platform || []).length);
 
-  const bestSunc = Math.max(...suncValues);
-  const bestStability = Math.max(...stabilityValues);
-  const bestRisk = Math.min(...riskValues);
-  const bestPrice = Math.min(...priceValues);
-  const bestPlatform = Math.max(...platformValues);
+  const winnerIndexes = values => {
+    const valid = values.filter(Number.isFinite);
+    if (!valid.length) return [];
+    const max = Math.max(...valid);
+    return values.filter(value => value === max).length === 1 ? [values.findIndex(value => value === max)] : [];
+  };
+  const winnerIndexesMin = values => {
+    const valid = values.filter(Number.isFinite);
+    if (!valid.length) return [];
+    const min = Math.min(...valid);
+    return values.filter(value => value === min).length === 1 ? [values.findIndex(value => value === min)] : [];
+  };
 
-  const cell = (value, isBest) => `<td class="${isBest ? 'is-best' : ''}">${escapeHtml(String(value))}</td>`;
+  const cell = (value, best) => `<td class="${best ? 'is-best' : ''}">${escapeHtml(String(value))}${best ? '<span class="best-label">Best</span>' : ''}</td>`;
+  const rows = [
+    { label: 'sUNC', values: selectedProducts.map(item => Number.isFinite(item.sunc) ? item.sunc : -1), display: selectedProducts.map(item => Number.isFinite(item.sunc) ? `${item.sunc}%` : 'None'), best: 'max' },
+    { label: 'Stability', values: stabilityValues, display: selectedProducts.map(item => item.stability), best: 'max' },
+    { label: 'Detection Risk', values: riskValues, display: selectedProducts.map((item, idx) => `${detectionRiskLabel(item)} (${riskValues[idx]}/10)`), best: 'min' },
+    { label: 'Price', values: priceValues, display: selectedProducts.map(item => item.pricingOptions?.[0] || item.freeOrPaid), best: 'min' },
+    { label: 'Platform', values: platformValues, display: selectedProducts.map(item => (item.platform || []).join(', ')), best: 'max' },
+    { label: 'Key System', values: selectedProducts.map(item => String(item.keySystem || '').toLowerCase() === 'key' ? 0 : 1), display: selectedProducts.map(item => item.keySystem || 'Unknown'), best: 'max' },
+    { label: 'Cheat Type', values: selectedProducts.map(item => item.cheatType === 'internal' ? 1 : 0), display: selectedProducts.map(item => item.cheatType || 'Unknown'), best: null },
+    { label: 'Status', values: selectedProducts.map(item => String(item.status || '').toLowerCase().includes('up') ? 1 : 0), display: selectedProducts.map(item => item.status || 'Unknown'), best: null },
+    { label: 'Trust Level', values: selectedProducts.map(item => ({ trusted: 3, caution: 2, unknown: 1, risky: 0 }[String(item.trustLevel || '').toLowerCase()] ?? 1)), display: selectedProducts.map(item => item.trustLevel || 'Unknown'), best: 'max' },
+    { label: 'Features', values: selectedProducts.map(item => (item.features || []).length), display: selectedProducts.map(item => (item.features || []).join(', ') || 'None listed'), best: 'max' },
+    { label: 'Pros', values: selectedProducts.map(() => 0), display: selectedProducts.map(item => (item.pros || []).slice(0, 3).join(', ') || 'None listed'), best: null },
+    { label: 'Cons', values: selectedProducts.map(() => 0), display: selectedProducts.map(item => (item.cons || []).slice(0, 3).join(', ') || 'None listed'), best: null },
+    { label: 'Best For', values: selectedProducts.map(() => 0), display: selectedProducts.map(item => item.tags?.[0] || 'General use'), best: null },
+    { label: 'Avoid If', values: selectedProducts.map(() => 0), display: selectedProducts.map(item => (item.cons || [])[0] || 'You need maximum trust certainty'), best: null }
+  ];
 
   table.innerHTML = `
     <thead>
@@ -2757,13 +2891,18 @@ function renderComparisonSystem() {
       </tr>
     </thead>
     <tbody>
-      <tr><th>sUNC</th>${selectedProducts.map((item, idx) => cell(Number.isFinite(item.sunc) ? `${item.sunc}%` : 'None', suncValues[idx] === bestSunc)).join('')}</tr>
-      <tr><th>Stability</th>${selectedProducts.map((item, idx) => cell(item.stability, stabilityValues[idx] === bestStability)).join('')}</tr>
-      <tr><th>Detection risk</th>${selectedProducts.map((item, idx) => cell(`${detectionRiskLabel(item)} (${riskValues[idx]}/10)`, riskValues[idx] === bestRisk)).join('')}</tr>
-      <tr><th>Price</th>${selectedProducts.map((item, idx) => cell(item.pricingOptions?.[0] || item.freeOrPaid, priceValues[idx] === bestPrice)).join('')}</tr>
-      <tr><th>Platform</th>${selectedProducts.map((item, idx) => cell((item.platform || []).join(', '), platformValues[idx] === bestPlatform)).join('')}</tr>
+      ${rows.map(row => {
+        const winners = row.best === 'max' ? winnerIndexes(row.values) : row.best === 'min' ? winnerIndexesMin(row.values) : [];
+        return `<tr><th>${escapeHtml(row.label)}</th>${row.display.map((value, idx) => cell(value, winners.includes(idx))).join('')}</tr>`;
+      }).join('')}
     </tbody>
   `;
+  const recommendationTotals = selectedProducts.map(item => (Number.isFinite(item.sunc) ? item.sunc : 55) + (stabilityScoreMap[item.stability] || 0) + (100 - (detectionRiskScore(item) * 10)));
+  const leadIndex = recommendationTotals.findIndex(score => score === Math.max(...recommendationTotals));
+  winnerSummary.hidden = false;
+  winnerSummary.innerHTML = `<strong>Winner summary:</strong> ${escapeHtml(selectedProducts[leadIndex].name)} currently leads overall for this selection mix.`;
+  verdictsWrap.hidden = false;
+  verdictsWrap.innerHTML = selectedProducts.map(item => `<article class="comparison-verdict-card"><h4>${escapeHtml(item.name)}</h4><p><strong>Verdict:</strong> ${escapeHtml((item.pros || [])[0] || 'Solid overall baseline.')}</p><p><strong>Watch-out:</strong> ${escapeHtml((item.cons || [])[0] || 'Review status and trust before use.')}</p></article>`).join('');
 
   tableWrap.hidden = false;
 }
