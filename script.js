@@ -3307,7 +3307,7 @@ function renderScriptCategory(categoryName, scripts, isOpen, index) {
         </span>
       </button>
       <div id="script-category-body-${index}" class="script-category-body ${isOpen ? 'open' : ''}">
-        ${scripts.length ? scripts.map(renderScriptCard).join('') : '<div class="script-empty-state"><p>No scripts added yet.</p><p>Add entries with this category to show them here.</p></div>'}
+        ${scripts.length ? scripts.map(renderScriptCard).join('') : '<div class="script-empty-state"><p>No scripts added yet</p><p>Please wait for a new update</p></div>'}
       </div>
     </section>`;
 }
