@@ -2865,10 +2865,10 @@ function renderScriptCard(script) {
       <div class="script-card-head">
         <h4 class="script-card-title">${escapeHtml(script.name)}</h4>
         <div class="script-card-meta">
+          ${discordUrl ? `<a class="script-discord-btn" href="${escapeHtml(discordUrl)}" target="_blank" rel="noopener noreferrer" title="Open Discord" aria-label="Open Discord for ${escapeHtml(script.name)}">${popularScriptDiscordSvg}</a>` : ''}
           <button class="script-copy-btn" type="button" data-script-copy="${escapeHtml(script.script)}" title="Copy script" aria-label="Copy script">
             <span class="script-file-icon">${popularScriptFileSvg}</span>
           </button>
-          ${discordUrl ? `<a class="script-discord-btn" href="${escapeHtml(discordUrl)}" target="_blank" rel="noopener noreferrer" title="Open Discord" aria-label="Open Discord for ${escapeHtml(script.name)}">${popularScriptDiscordSvg}</a>` : ''}
         </div>
       </div>
       <p>${escapeHtml(stripTrailingPeriod(script.description))}</p>
@@ -3154,9 +3154,10 @@ function initExploitAssistant() {
   const appendMessage = (role, text, badges = []) => {
     const bubble = document.createElement('article');
     bubble.className = `assistant-message ${role === 'user' ? 'assistant-user' : 'assistant-bot'}`;
-    if (badges.length && role === 'bot') {
+    const visibleBadges = role === 'bot' && Array.isArray(badges) ? badges.filter(badge => badge !== 'Local Data') : [];
+    if (visibleBadges.length) {
       const badgeWrap = document.createElement('div'); badgeWrap.className = 'assistant-badges';
-      badges.forEach(b => { const el = document.createElement('span'); el.className = 'assistant-badge'; el.textContent = b; badgeWrap.appendChild(el); });
+      visibleBadges.forEach(badge => { const el = document.createElement('span'); el.className = 'assistant-badge'; el.textContent = badge; badgeWrap.appendChild(el); });
       bubble.appendChild(badgeWrap);
     }
     const content = document.createElement('div'); content.textContent = text; bubble.appendChild(content);
