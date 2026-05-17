@@ -1,0 +1,7 @@
+.no-text-select {
+  user-select: none;
+}
+.is-hidden,
+[hidden] {
+  display: none !important;
+}
