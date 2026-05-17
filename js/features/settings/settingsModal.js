@@ -2,7 +2,7 @@ import { qs, qsa, escapeHtml } from '../../core/dom.js';
 import { getAiTokenSummary, getBetaFeaturesEnabled, setBetaFeaturesEnabled, getCurrentAccountName, isGuestAccount } from './accountUi.js';
 import { closeModal } from '../executors/modal.js';
 import { syncNavButtonsWithPage, setActivePage, syncRouteWithState } from '../../core/routing.js';
-import { applyUiMode, isNewUiMode, uiModeStorageKey } from '../newUi/uiMode.js';
+import { applyUiMode, getIsNewUiMode, toggleIsNewUiMode } from '../newUi/uiMode.js';
 
 export function openSettingsModal() {
   const overlay = qs('#modalOverlay');
@@ -20,8 +20,8 @@ export function openSettingsModal() {
       <div class="settings-group">
         <h3>Interface</h3>
         <div class="settings-actions">
-          <button id="settingsUiModeBtn" class="btn-primary settings-action-btn" type="button">${isNewUiMode ? 'Switch to Default UI' : 'Switch to New UI'}</button>
-          <button id="settingsThemeCustomizerBtn" class="btn-primary settings-action-btn" type="button" ${isNewUiMode ? '' : 'disabled'}>Theme Customizer</button>
+          <button id="settingsUiModeBtn" class="btn-primary settings-action-btn" type="button">${getIsNewUiMode() ? 'Switch to Default UI' : 'Switch to New UI'}</button>
+          <button id="settingsThemeCustomizerBtn" class="btn-primary settings-action-btn" type="button" ${getIsNewUiMode() ? '' : 'disabled'}>Theme Customizer</button>
         </div>
         <p class="settings-note">Theme Customizer is available when New UI mode is active</p>
       </div>
@@ -57,8 +57,7 @@ export function openSettingsModal() {
 
   const uiModeBtn = qs('#settingsUiModeBtn');
   uiModeBtn?.addEventListener('click', async () => {
-    isNewUiMode = !isNewUiMode;
-    localStorage.setItem(uiModeStorageKey, isNewUiMode ? 'new' : 'default');
+    toggleIsNewUiMode();
     await applyUiMode();
     syncRouteWithState();
     openSettingsModal();
@@ -66,7 +65,7 @@ export function openSettingsModal() {
 
   const themeBtn = qs('#settingsThemeCustomizerBtn');
   themeBtn?.addEventListener('click', () => {
-    if (!isNewUiMode || !window.XyrexNewUI?.toggleThemeCustomizer) return;
+    if (!getIsNewUiMode() || !window.XyrexNewUI?.toggleThemeCustomizer) return;
     window.XyrexNewUI.toggleThemeCustomizer();
   });
 

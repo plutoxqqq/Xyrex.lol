@@ -25,7 +25,15 @@ export function renderRecentChanges() {
 }
 
 const savedScriptsStorageKey = 'voxlis_saved_scripts';
-export let currentSavedScriptId = null;
+let currentSavedScriptId = null;
+
+export function setCurrentSavedScriptId(nextId) {
+  currentSavedScriptId = nextId || null;
+}
+
+export function getCurrentSavedScriptId() {
+  return currentSavedScriptId;
+}
 
 export function getSavedScripts() {
   try {
@@ -51,7 +59,7 @@ export function renderSavedScriptsList() {
   }
 
   wrap.innerHTML = items.map(item => `
-    <button class="saved-script-item ${item.id === currentSavedScriptId ? 'is-active' : ''}" data-saved-script-id="${escapeHtml(item.id)}" type="button">
+    <button class="saved-script-item ${item.id === getCurrentSavedScriptId() ? 'is-active' : ''}" data-saved-script-id="${escapeHtml(item.id)}" type="button">
       <strong>${escapeHtml(item.title)}</strong>
       <span>${new Date(item.updatedAt).toLocaleString()}</span>
     </button>`).join('');
@@ -92,25 +100,25 @@ export function saveScriptFromEditor() {
 
   const items = getSavedScripts();
   const scriptToPersist = {
-    id: currentSavedScriptId || `script_${Date.now()}`,
+    id: getCurrentSavedScriptId() || `script_${Date.now()}`,
     title: trimmedTitle,
     body: bodyInput.value,
     updatedAt: Date.now()
   };
 
-  const withoutCurrent = items.filter(item => item.id !== currentSavedScriptId);
+  const withoutCurrent = items.filter(item => item.id !== getCurrentSavedScriptId());
   writeSavedScripts([scriptToPersist, ...withoutCurrent]);
-  currentSavedScriptId = null;
+  setCurrentSavedScriptId(null);
   clearSavedScriptEditor();
   renderSavedScriptsList();
   nameInput.focus();
 }
 
 export function deleteSelectedScript() {
-  if (!currentSavedScriptId) return;
-  const items = getSavedScripts().filter(item => item.id !== currentSavedScriptId);
+  if (!getCurrentSavedScriptId()) return;
+  const items = getSavedScripts().filter(item => item.id !== getCurrentSavedScriptId());
   writeSavedScripts(items);
-  currentSavedScriptId = null;
+  setCurrentSavedScriptId(null);
   clearSavedScriptEditor();
   renderSavedScriptsList();
 }
