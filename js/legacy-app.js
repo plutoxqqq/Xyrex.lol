@@ -1,3 +1,5 @@
+import { applyAllFilters as applyExecutorFilters } from './pages/executors/executor-filters.js';
+import { renderProducts as renderExecutorProducts } from './pages/executors/executor-render.js';
 const products = (window.XyrexData && Array.isArray(window.XyrexData.products)) ? window.XyrexData.products : [];
 
 
@@ -198,6 +200,10 @@ function createProductCard(product, index) {
 const CARD_EXIT_ANIMATION_MS = 210;
 
 function renderProducts(list) {
+  return renderExecutorProducts(list, { openModal, openSuncSimulationModal, tagSymbolMap, svgIcons });
+}
+
+function __legacyRenderProductsRemoved(list) {
   const grid = qs('#productGrid');
   const sorted = [...list].sort((a, b) => {
     if (a.featured === b.featured) return a.name.localeCompare(b.name);
@@ -291,6 +297,10 @@ function isPriceMatch(prod, priceControls) {
 }
 
 function applyAllFilters() {
+  return applyExecutorFilters(products, list => renderExecutorProducts(list, { openModal, openSuncSimulationModal, tagSymbolMap, svgIcons }));
+}
+
+function __legacyApplyAllFiltersRemoved() {
   const active = getActiveFilters();
   const priceControls = getPriceControls();
   const searchText = qs('#searchInput').value.trim();
