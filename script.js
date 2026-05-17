@@ -3988,6 +3988,7 @@ function setActivePage(targetPageId) {
   activePageId = targetPageId;
 
   const onScriptsPage = targetPageId === 'scriptsPage';
+  if (onScriptsPage && typeof window.setFiltersCollapsed === 'function') window.setFiltersCollapsed(false);
   qs('#sidebar').hidden = onScriptsPage;
   qs('#searchInput').disabled = onScriptsPage;
   qs('#clearSearchBtn').disabled = onScriptsPage;
