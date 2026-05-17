@@ -1,7 +1,21 @@
 import { qs } from '../../core/dom.js';
 
 export const uiModeStorageKey = 'xyrex_ui_mode';
-export let isNewUiMode = localStorage.getItem(uiModeStorageKey) === 'new';
+let isNewUiMode = localStorage.getItem(uiModeStorageKey) === 'new';
+
+export function getIsNewUiMode() {
+  return isNewUiMode;
+}
+
+export function setIsNewUiMode(nextValue) {
+  isNewUiMode = Boolean(nextValue);
+  localStorage.setItem(uiModeStorageKey, isNewUiMode ? 'new' : 'default');
+  return isNewUiMode;
+}
+
+export function toggleIsNewUiMode() {
+  return setIsNewUiMode(!isNewUiMode);
+}
 let newUiLoadAttempted = false;
 
 export function loadNewUiModule() {
@@ -19,8 +33,7 @@ export async function applyUiMode() {
 
   const loaded = await loadNewUiModule();
   if (!loaded || !window.XyrexNewUI) {
-    isNewUiMode = false;
-    localStorage.setItem(uiModeStorageKey, 'default');
+    setIsNewUiMode(false);
     return;
   }
 
