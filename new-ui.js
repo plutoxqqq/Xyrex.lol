@@ -4,7 +4,6 @@
   const THEME_MODAL_ID = 'newUiThemeModal';
   const AI_REQUEST_TIMEOUT_MS = 14000;
   const AI_MAX_ATTEMPTS = 4;
-  const DODGE_STORAGE_KEY = 'xyrex_dodge_save_v1';
   const FREE_DAILY_AI_TOKENS = 5;
   const themeDefaults = {
     bg: '#06070d',
@@ -323,16 +322,16 @@
     const grid = executorsPage.querySelector('#productGrid');
     if (grid) executorsPage.insertBefore(panel, grid);
   }
-  function getDodgeData() {
+  function getAiTokenData() {
     try {
-      const parsed = JSON.parse(localStorage.getItem(DODGE_STORAGE_KEY) || '{}');
+      const parsed = JSON.parse(localStorage.getItem('xyrex_ai_token_store_v1') || '{}');
       return parsed && typeof parsed === 'object' ? parsed : {};
     } catch {
       return {};
     }
   }
-  function writeDodgeData(payload) {
-    localStorage.setItem(DODGE_STORAGE_KEY, JSON.stringify(payload));
+  function writeAiTokenData(payload) {
+    localStorage.setItem('xyrex_ai_token_store_v1', JSON.stringify(payload));
   }
   function getDayKey() {
     const now = new Date();
@@ -362,17 +361,14 @@
     return freeRemaining + Math.max(0, data.aiPurchasedTokens);
   }
   function tryConsumeAiToken() {
-    if (typeof window.XyrexDodge?.consumeAiToken === 'function') {
-      return Boolean(window.XyrexDodge.consumeAiToken());
-    }
-    const raw = getDodgeData();
+        const raw = getAiTokenData();
     const data = normalizeTokenState(raw);
     const available = availableAiTokensFromState(data);
     if (available <= 0) return false;
     const freeRemaining = Math.max(0, FREE_DAILY_AI_TOKENS - data.aiTokensUsedToday);
     if (freeRemaining > 0) data.aiTokensUsedToday += 1;
     else data.aiPurchasedTokens = Math.max(0, data.aiPurchasedTokens - 1);
-    writeDodgeData(data);
+    writeAiTokenData(data);
     return true;
   }
   function productFromCard(card) {
