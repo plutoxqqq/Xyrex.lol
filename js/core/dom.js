@@ -1,2 +1,2 @@
-export const qs = (sel, root = document) => root.querySelector(sel);
-export const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+export const qs = sel => document.querySelector(sel);
+export const qsa = sel => Array.from(document.querySelectorAll(sel));

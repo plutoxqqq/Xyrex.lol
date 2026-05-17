@@ -1,0 +1,9 @@
+.btn-primary,
+.btn-danger,
+.btn-ghost,
+.info-btn,
+.page-switch-btn,
+.settings-tab-btn,
+.filters-edge-toggle {
+  cursor: pointer;
+}

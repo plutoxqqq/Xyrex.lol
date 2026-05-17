@@ -1,0 +1,6 @@
+.platform-chip,
+.comparison-filter-chip,
+.tag-symbols .legend-icon {
+  display: inline-flex;
+  align-items: center;
+}

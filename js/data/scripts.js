@@ -1,7 +1,5 @@
-(function () {
-  window.XyrexData = window.XyrexData || {};
-const NO_OFFICIAL_DISCORD_MESSAGE = 'This script does not have an official discord server';
-const POPULAR_SCRIPT_CATEGORIES = [
+export const NO_OFFICIAL_DISCORD_MESSAGE = 'This script does not have an official discord server';
+export const POPULAR_SCRIPT_CATEGORIES = [
   'Bedwars',
   'Universal',
   'Grace',
@@ -16,7 +14,7 @@ const POPULAR_SCRIPT_CATEGORIES = [
   '99 Nights in the Forest'
 ];
 
-const scriptsHubData = {
+export const scriptsHubData = {
   smartRankingLabels: {
     bestFree: 'Best Free',
     safest: 'Safest Right Now',
@@ -1549,7 +1547,9 @@ const scriptsHubData = {
   recentChanges: (window.XyrexData && Array.isArray(window.XyrexData.changelogData) ? window.XyrexData.changelogData : [])
 };
 
+if (typeof window !== 'undefined') {
+  window.XyrexData = window.XyrexData || {};
   window.XyrexData.NO_OFFICIAL_DISCORD_MESSAGE = NO_OFFICIAL_DISCORD_MESSAGE;
   window.XyrexData.POPULAR_SCRIPT_CATEGORIES = POPULAR_SCRIPT_CATEGORIES;
   window.XyrexData.scriptsHubData = scriptsHubData;
-})();
+}

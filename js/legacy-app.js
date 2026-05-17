@@ -1,18 +1,11 @@
 import { applyAllFilters as applyExecutorFilters } from './pages/executors/executor-filters.js';
 import { renderProducts as renderExecutorProducts } from './pages/executors/executor-render.js';
+import { qs, qsa } from './core/dom.js';
+import { EXPLOIT_ASSISTANT_API, FREE_DAILY_AI_TOKENS, NO_ASSISTANT_TOKENS_MESSAGE, XYREX_OFFICIAL_DISCORD_URL, FREE_TOKEN_SHOP } from './config/constants.js';
+import { AI_TOKEN_STORAGE_KEYS, BETA_FEATURES_KEY } from './config/storageKeys.js';
 const products = (window.XyrexData && Array.isArray(window.XyrexData.products)) ? window.XyrexData.products : [];
 
 
-const EXPLOIT_ASSISTANT_API = 'https://xyres-ai-api.vercel.app/api/exploit-assistant';
-const AI_TOKEN_STORAGE_KEYS = ['xyrex_ai_token_store_v1'];
-const FREE_DAILY_AI_TOKENS = 5;
-const NO_ASSISTANT_TOKENS_MESSAGE = 'You have no AI tokens remaining. Daily tokens reset at midnight, or you can buy more in the Token Shop.';
-
-const FREE_TOKEN_SHOP = Object.freeze({
-  minClaim: 1,
-  maxClaim: 30,
-  maxCooldownMs: 7 * 24 * 60 * 60 * 1000
-});
 let settingsCooldownTimerId = null;
 
 function clampTokenClaimAmount(value) {
@@ -38,7 +31,6 @@ const NO_OFFICIAL_DISCORD_MESSAGE = (window.XyrexData && window.XyrexData.NO_OFF
 const POPULAR_SCRIPT_CATEGORIES = (window.XyrexData && Array.isArray(window.XyrexData.POPULAR_SCRIPT_CATEGORIES)) ? window.XyrexData.POPULAR_SCRIPT_CATEGORIES : [];
 const scriptsHubData = (window.XyrexData && window.XyrexData.scriptsHubData) || { smartRankingLabels: {}, popularScripts: [], recentChanges: [] };
 
-const XYREX_OFFICIAL_DISCORD_URL = 'https://discord.gg/6X8cyjUcAj';
 
 const discordWordmarkSvg = '<svg viewBox="0 0 127.14 96.36" aria-hidden="true" focusable="false"><path fill="currentColor" d="M107.7 8.07A105.15 105.15 0 0081.47 0a72.06 72.06 0 00-3.36 6.83 97.68 97.68 0 00-29.94 0A72.37 72.37 0 0044.8 0 105.89 105.89 0 0018.57 8.08C1.03 34.37-3.72 60 1.39 85.28A105.73 105.73 0 0033.32 96a77.7 77.7 0 006.84-11.16 68.42 68.42 0 01-10.78-5.15c.91-.67 1.8-1.37 2.66-2.09a75.57 75.57 0 0063.48 0c.87.72 1.76 1.42 2.67 2.09a68.68 68.68 0 01-10.8 5.16A77.53 77.53 0 0094.24 96a105.25 105.25 0 0031.91-10.72c6-29.3-1-54.68-18.45-77.21zM42.45 65.69c-6.23 0-11.33-5.69-11.33-12.69s5-12.7 11.33-12.7S53.78 46 53.78 53s-5.03 12.69-11.33 12.69zm42.24 0c-6.23 0-11.33-5.69-11.33-12.69s5-12.7 11.33-12.7S96.02 46 96.02 53s-5.03 12.69-11.33 12.69z"/></svg>';
 
@@ -46,8 +38,6 @@ const popularScriptFileSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0
 const popularScriptCopySvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" aria-hidden="true" focusable="false"><path fill="currentColor" d="M288 64C252.7 64 224 92.7 224 128L224 384C224 419.3 252.7 448 288 448L480 448C515.3 448 544 419.3 544 384L544 183.4C544 166 536.9 149.3 524.3 137.2L466.6 81.8C454.7 70.4 438.8 64 422.3 64L288 64zM160 192C124.7 192 96 220.7 96 256L96 512C96 547.3 124.7 576 160 576L352 576C387.3 576 416 547.3 416 512L416 496L352 496L352 512L160 512L160 256L176 256L176 192L160 192z"/></svg>';
 const popularScriptDiscordSvg = '<svg viewBox="0 0 127.14 96.36" aria-hidden="true" focusable="false"><path fill="currentColor" d="M107.7 8.07A105.15 105.15 0 0081.47 0a72.06 72.06 0 00-3.36 6.83 97.68 97.68 0 00-29.94 0A72.37 72.37 0 0044.8 0 105.89 105.89 0 0018.57 8.08C1.03 34.37-3.72 60 1.39 85.28A105.73 105.73 0 0033.32 96a77.7 77.7 0 006.84-11.16 68.42 68.42 0 01-10.78-5.15c.91-.67 1.8-1.37 2.66-2.09a75.57 75.57 0 0063.48 0c.87.72 1.76 1.42 2.67 2.09a68.68 68.68 0 01-10.8 5.16A77.53 77.53 0 0094.24 96a105.25 105.25 0 0031.91-10.72c6-29.3-1-54.68-18.45-77.21zM42.45 65.69c-6.23 0-11.33-5.69-11.33-12.69s5-12.7 11.33-12.7S53.78 46 53.78 53s-5.03 12.69-11.33 12.69zm42.24 0c-6.23 0-11.33-5.69-11.33-12.69s5-12.7 11.33-12.7S96.02 46 96.02 53s-5.03 12.69-11.33 12.69z"/></svg>';
 
-const qs = sel => document.querySelector(sel);
-const qsa = sel => Array.from(document.querySelectorAll(sel));
 
 const svgIcons = {
   iOS: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M447.1 332.7C446.9 296 463.5 268.3 497.1 247.9C478.3 221 449.9 206.2 412.4 203.3C376.9 200.5 338.1 224 323.9 224C308.9 224 274.5 204.3 247.5 204.3C191.7 205.2 132.4 248.8 132.4 337.5C132.4 363.7 137.2 390.8 146.8 418.7C159.6 455.4 205.8 545.4 254 543.9C279.2 543.3 297 526 329.8 526C361.6 526 378.1 543.9 406.2 543.9C454.8 543.2 496.6 461.4 508.8 424.6C443.6 393.9 447.1 334.6 447.1 332.7zM390.5 168.5C417.8 136.1 415.3 106.6 414.5 96C390.4 97.4 362.5 112.4 346.6 130.9C329.1 150.7 318.8 175.2 321 202.8C347.1 204.8 370.9 191.4 390.5 168.5z"/></svg>',
@@ -587,11 +577,11 @@ function consumeAiTokenForAssistant() {
 }
 
 function getBetaFeaturesEnabled() {
-  return localStorage.getItem('xyrex_beta_features') === 'enabled';
+  return localStorage.getItem(BETA_FEATURES_KEY) === 'enabled';
 }
 
 function setBetaFeaturesEnabled(enabled) {
-  localStorage.setItem('xyrex_beta_features', enabled ? 'enabled' : 'disabled');
+  localStorage.setItem(BETA_FEATURES_KEY, enabled ? 'enabled' : 'disabled');
   document.body.classList.toggle('beta-features-enabled', enabled);
 }
 
