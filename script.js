@@ -594,7 +594,7 @@ const products = [
 ];
 
 const EXPLOIT_ASSISTANT_API = 'https://xyres-ai-api.vercel.app/api/exploit-assistant';
-const DODGE_STORAGE_KEYS = ['xyrex_dodge_save_v2', 'xyrex_dodge_save_v1'];
+const AI_TOKEN_STORAGE_KEY = 'xyrex_ai_tokens_v1';
 const FREE_DAILY_AI_TOKENS = 5;
 const NO_ASSISTANT_TOKENS_MESSAGE = 'You have no AI tokens remaining. Daily tokens reset at midnight, or you can buy more in the Token Shop.';
 
@@ -2576,14 +2576,6 @@ function openSuncSimulationModal(product) {
 
 function getAiTokenSummary() {
   const fallback = { available: 0, freeRemaining: 0, purchased: 0 };
-  const summary = window.XyrexDodge?.getTokenSummary?.();
-  if (summary && typeof summary === 'object') {
-    return {
-      available: Number.isFinite(summary.available) ? summary.available : 0,
-      freeRemaining: Number.isFinite(summary.freeRemaining) ? summary.freeRemaining : 0,
-      purchased: Number.isFinite(summary.purchased) ? summary.purchased : 0
-    };
-  }
   return getFallbackAiTokenSummary() || fallback;
 }
 
@@ -2596,17 +2588,16 @@ function getLocalDayKey() {
 }
 
 function readFallbackAiTokenData() {
-  for (const key of DODGE_STORAGE_KEYS) {
     try {
-      const raw = localStorage.getItem(key);
-      if (!raw) continue;
+    const raw = localStorage.getItem(AI_TOKEN_STORAGE_KEY);
+    if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') return { key, data: parsed };
-    } catch {
-      // Ignore invalid saved token data and keep looking.
+      if (parsed && typeof parsed === 'object') return { key: AI_TOKEN_STORAGE_KEY, data: parsed };
     }
+  } catch {
+    // Ignore invalid saved token data and use defaults.
   }
-  return { key: DODGE_STORAGE_KEYS[0], data: {} };
+  return { key: AI_TOKEN_STORAGE_KEY, data: {} };
 }
 
 function normalizeFallbackAiTokenData(data) {
@@ -2635,10 +2626,7 @@ function getFallbackAiTokenSummary() {
 
 function getFreeTokenShopStatus() {
   const summary = getAiTokenSummary();
-  const dodgeState = window.XyrexDodge?.getTokenStateSnapshot?.();
-  const tokenState = dodgeState && typeof dodgeState === 'object'
-    ? { data: dodgeState }
-    : readFallbackAiTokenData();
+  const tokenState = readFallbackAiTokenData();
   const data = normalizeFallbackAiTokenData(tokenState.data);
   const now = Date.now();
   const cooldownUntil = Math.max(0, Number(data.freeTokenCooldownUntil) || 0);
@@ -2660,10 +2648,7 @@ function claimFreeTokens(amountInput) {
   if (amount !== Math.trunc(rawAmount)) {
     return { ok: false, reason: `Please enter a whole number between ${FREE_TOKEN_SHOP.minClaim} and ${FREE_TOKEN_SHOP.maxClaim}.` };
   }
-  const dodgeState = window.XyrexDodge?.getTokenStateSnapshot?.();
-  const tokenState = dodgeState && typeof dodgeState === 'object'
-    ? { data: dodgeState }
-    : readFallbackAiTokenData();
+  const tokenState = readFallbackAiTokenData();
   const data = normalizeFallbackAiTokenData(tokenState.data);
   const now = Date.now();
   const cooldownUntil = Math.max(0, Number(data.freeTokenCooldownUntil) || 0);
@@ -2671,18 +2656,10 @@ function claimFreeTokens(amountInput) {
     return { ok: false, reason: `You can claim free tokens again in ${formatDuration(cooldownUntil - now)}.` };
   }
   const cooldownMs = getFreeTokenCooldownMs(amount);
-  if (typeof window.XyrexDodge?.applyFreeTokenClaim === 'function') {
-    const claimResult = window.XyrexDodge.applyFreeTokenClaim(amount, cooldownMs);
-    if (!claimResult) {
-      return { ok: false, reason: 'Unable to process token claim right now. Please try again.' };
-    }
-    return { ok: true, amount: claimResult.amount, cooldownMs };
-  }
-
   data.aiPurchasedTokens = Math.max(0, Number(data.aiPurchasedTokens) || 0) + amount;
   data.freeTokenLastClaimAmount = amount;
   data.freeTokenCooldownUntil = now + cooldownMs;
-  localStorage.setItem(tokenState.key || DODGE_STORAGE_KEYS[0], JSON.stringify(data));
+  localStorage.setItem(tokenState.key || AI_TOKEN_STORAGE_KEY, JSON.stringify(data));
   return { ok: true, amount, cooldownMs };
 }
 
@@ -2726,10 +2703,6 @@ function openEarnTokensModal() {
 }
 
 function consumeAiTokenForAssistant() {
-  if (typeof window.XyrexDodge?.consumeAiToken === 'function') {
-    return Boolean(window.XyrexDodge.consumeAiToken());
-  }
-
   const tokenState = readFallbackAiTokenData();
   const data = normalizeFallbackAiTokenData(tokenState.data);
   const freeRemaining = Math.max(0, FREE_DAILY_AI_TOKENS - data.aiTokensUsedToday);
@@ -2738,7 +2711,7 @@ function consumeAiTokenForAssistant() {
 
   if (freeRemaining > 0) data.aiTokensUsedToday += 1;
   else data.aiPurchasedTokens = purchased - 1;
-  localStorage.setItem(tokenState.key || DODGE_STORAGE_KEYS[0], JSON.stringify(data));
+  localStorage.setItem(tokenState.key || AI_TOKEN_STORAGE_KEY, JSON.stringify(data));
   return true;
 }
 
@@ -3988,7 +3961,6 @@ function setActivePage(targetPageId) {
   activePageId = targetPageId;
 
   const onScriptsPage = targetPageId === 'scriptsPage';
-  if (onScriptsPage && typeof window.setFiltersCollapsed === 'function') window.setFiltersCollapsed(false);
   qs('#sidebar').hidden = onScriptsPage;
   qs('#searchInput').disabled = onScriptsPage;
   qs('#clearSearchBtn').disabled = onScriptsPage;
@@ -4150,51 +4122,6 @@ function syncNavigationLayoutMetrics() {
 
 
 
-function initCollapsibleFilters() {
-  const FILTERS_COLLAPSED_KEY = 'xyrex_filters_collapsed';
-  const layout = qs('.page-layout');
-  const toggleBtn = qs('#filtersToggleBtn');
-  const filtersContent = qs('#filtersContent');
-  if (!layout || !toggleBtn || !filtersContent) return;
-
-  const setFiltersCollapsed = collapsed => {
-    const isCollapsed = Boolean(collapsed);
-    layout.classList.toggle('filters-collapsed', isCollapsed);
-    toggleBtn.setAttribute('aria-expanded', String(!isCollapsed));
-    const label = isCollapsed ? 'Expand filters' : 'Collapse filters';
-    toggleBtn.setAttribute('title', label);
-    toggleBtn.setAttribute('aria-label', label);
-    try { localStorage.setItem(FILTERS_COLLAPSED_KEY, String(isCollapsed)); } catch {}
-  };
-
-  const syncToggleProximity = event => {
-    if (window.matchMedia?.('(max-width: 720px)')?.matches) {
-      toggleBtn.classList.add('is-near');
-      return;
-    }
-    const rect = toggleBtn.getBoundingClientRect();
-    const cx = rect.left + (rect.width / 2);
-    const cy = rect.top + (rect.height / 2);
-    const ex = event?.clientX ?? cx;
-    const ey = event?.clientY ?? cy;
-    const distance = Math.hypot(ex - cx, ey - cy);
-    toggleBtn.classList.toggle('is-near', distance <= 78);
-  };
-
-  window.setFiltersCollapsed = setFiltersCollapsed;
-  let initialCollapsed = false;
-  try { initialCollapsed = localStorage.getItem(FILTERS_COLLAPSED_KEY) === 'true'; } catch {}
-  setFiltersCollapsed(initialCollapsed);
-  document.addEventListener('mousemove', syncToggleProximity, { passive: true });
-  toggleBtn.addEventListener('mouseleave', () => syncToggleProximity());
-  syncToggleProximity();
-
-  toggleBtn.addEventListener('click', () => {
-    const collapsed = !layout.classList.contains('filters-collapsed');
-    setFiltersCollapsed(collapsed);
-  });
-}
-
 function hideInitialLoadingOverlay() {
   const overlay = qs('#appLoadingOverlay');
   if (!overlay) return;
@@ -4207,7 +4134,6 @@ function hideInitialLoadingOverlay() {
 function init() {
   setBetaFeaturesEnabled(getBetaFeaturesEnabled());
   syncNavigationLayoutMetrics();
-  initCollapsibleFilters();
   renderProducts(products);
   initScriptsHub();
   injectLegendIcons();
