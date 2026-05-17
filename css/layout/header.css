@@ -1,0 +1,44 @@
+.topnav{
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 70;
+  padding-top: var(--safe-top);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  background: rgba(8, 10, 18, 0.88);
+  border-bottom: 1px solid rgba(178,188,255,0.16);
+  backdrop-filter: blur(12px);
+}
+.topnav .nav-inner{
+  width:min(100%, var(--max-width));
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 12px 16px;
+}
+.topnav .nav-inner > *{ min-width:0; }
+.brand{ font-weight: 800; letter-spacing: .6px; color: var(--periwinkle-2); }
+.brand-btn{ border:0; background:transparent; font-size:1rem; cursor:pointer; }
+.nav-spacer { flex: 1; }
+
+.search-wrap{ display:flex; align-items:center; justify-content:center; flex:1; max-width:700px; margin:0 auto; position:relative; }
+.search-input{ width:100%; height:48px; padding:11px 46px 11px 16px; border-radius:999px; border:1px solid rgba(178,188,255,0.3); background: rgba(20,26,48,.9); color:var(--text); outline:none; transition: box-shadow var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease); }
+.search-input:focus{ border-color:var(--periwinkle-2); box-shadow:0 0 0 3px rgba(143,156,255,0.2); }
+
+.btn-ghost{ position:absolute; right:8px; border:0; background:transparent; color:var(--muted); font-weight:700; cursor:pointer; width:30px; height:30px; padding:0; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; line-height:1; transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease); }
+.btn-ghost:hover{ background:rgba(178,188,255,.12); color:var(--text); }
+
+.ui-toggle-btn{ border:1px solid rgba(178,188,255,.3); background:rgba(17,24,46,.82); color:var(--periwinkle-2); border-radius:999px; min-height:40px; padding:8px 14px; font-weight:700; cursor:pointer; transition: all var(--motion-fast) var(--motion-ease); white-space:nowrap; }
+.ui-toggle-btn:hover{ border-color:rgba(178,188,255,.6); background:rgba(26,35,66,.96); }
+.ui-toggle-btn.is-active{ color:var(--periwinkle-2); border-color:rgba(178,188,255,.3); background:rgba(17,24,46,.82); }
+
+.theme-customizer-btn{
+  display:none;
+}
+
+body.new-ui-enabled .theme-customizer-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}

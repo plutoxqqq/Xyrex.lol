@@ -23,6 +23,7 @@
 @import "./features/recent-changes.css";
 @import "./features/settings.css";
 @import "./features/dodge.css";
+@import "./features/new-ui.css";
 
 @import "./utilities/animations.css";
 @import "./utilities/helpers.css";
