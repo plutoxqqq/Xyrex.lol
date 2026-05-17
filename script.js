@@ -3964,6 +3964,10 @@ function shouldReduceMotion() {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
 }
 
+function isCoarsePointerDevice() {
+  return window.matchMedia?.('(pointer: coarse)')?.matches || false;
+}
+
 let activeSubtabTransitionToken = 0;
 
 
@@ -3984,6 +3988,7 @@ function setActivePage(targetPageId) {
   activePageId = targetPageId;
 
   const onScriptsPage = targetPageId === 'scriptsPage';
+  if (onScriptsPage && typeof window.setFiltersCollapsed === 'function') window.setFiltersCollapsed(false);
   qs('#sidebar').hidden = onScriptsPage;
   qs('#searchInput').disabled = onScriptsPage;
   qs('#clearSearchBtn').disabled = onScriptsPage;
@@ -3997,11 +4002,11 @@ function focusFirstElementInPanel(panel) {
   if (!panel) return;
   const focusable = panel.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
   if (focusable) {
-    focusable.focus();
+    focusable.focus({ preventScroll: true });
     return;
   }
   panel.setAttribute('tabindex', '-1');
-  panel.focus();
+  panel.focus({ preventScroll: true });
 }
 
 function setActiveSubtab(targetSubtabId, options = {}) {
@@ -4074,7 +4079,7 @@ function initScriptsHub() {
     btn.addEventListener('click', () => {
       const target = btn.getAttribute('data-subtab-target');
       syncSubtabButtons(target);
-      setActiveSubtab(target, { moveFocus: true });
+      setActiveSubtab(target, { moveFocus: !isCoarsePointerDevice() });
     });
 
     btn.addEventListener('keydown', event => {
@@ -4092,7 +4097,7 @@ function initScriptsHub() {
       nextButton.focus();
       const target = nextButton.getAttribute('data-subtab-target');
       syncSubtabButtons(target);
-      setActiveSubtab(target, { moveFocus: true });
+      setActiveSubtab(target, { moveFocus: !isCoarsePointerDevice() });
     });
   });
 
@@ -4159,6 +4164,7 @@ function initCollapsibleFilters() {
     toggleBtn.setAttribute('aria-label', label);
   };
 
+  window.setFiltersCollapsed = setFiltersCollapsed;
   setFiltersCollapsed(false);
   toggleBtn.addEventListener('click', () => {
     const collapsed = !layout.classList.contains('filters-collapsed');
