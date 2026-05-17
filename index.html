@@ -116,11 +116,32 @@
   <link rel="apple-touch-icon" sizes="180x180" href="./favicon.ico" />
   <link rel="stylesheet" href="./style.css?v=2.0.3" />
 </head>
-<body>
-  <div id="appLoadingOverlay" class="app-loading-overlay" aria-live="polite" aria-busy="true">
-    <div class="app-loading-spinner" aria-hidden="true"></div>
-    <p class="app-loading-label">Loading Xyrex...</p>
+<body class="landing-active">
+  <div class="cinematic-bg" aria-hidden="true">
+    <canvas id="cinematicBgCanvas"></canvas>
+    <div class="cinematic-bg__veil cinematic-bg__veil--top"></div>
+    <div class="cinematic-bg__veil cinematic-bg__veil--bottom"></div>
   </div>
+
+  <section id="landingPage" class="landing-page" aria-labelledby="landingTitle">
+    <div class="landing-shell">
+      <p class="landing-kicker">Xyrex.lol Intelligence Layer</p>
+      <h1 id="landingTitle">Executor directory and Script Hub, wrapped in a cinematic AI interface.</h1>
+      <p class="landing-copy">Choose a section to enter the existing Xyrex UI. The executor filters, cards, and Script Hub tabs stay exactly where you expect them.</p>
+      <div class="landing-actions" aria-label="Choose a section">
+        <button class="landing-card" type="button" data-landing-target="executorsPage">
+          <span class="landing-card__eyebrow">Section 01</span>
+          <span class="landing-card__title">Executors</span>
+          <span class="landing-card__copy">Compare platforms, trust levels, sUNC scores, and pricing.</span>
+        </button>
+        <button class="landing-card" type="button" data-landing-target="scriptsPage">
+          <span class="landing-card__eyebrow">Section 02</span>
+          <span class="landing-card__title">Script Hub</span>
+          <span class="landing-card__copy">Open rankings, comparisons, saved scripts, and recent updates.</span>
+        </button>
+      </div>
+    </div>
+  </section>
 
   <header class="topnav">
     <div class="nav-inner">
