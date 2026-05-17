@@ -4151,21 +4151,44 @@ function syncNavigationLayoutMetrics() {
 
 
 function initCollapsibleFilters() {
+  const FILTERS_COLLAPSED_KEY = 'xyrex_filters_collapsed';
   const layout = qs('.page-layout');
   const toggleBtn = qs('#filtersToggleBtn');
   const filtersContent = qs('#filtersContent');
   if (!layout || !toggleBtn || !filtersContent) return;
 
   const setFiltersCollapsed = collapsed => {
-    layout.classList.toggle('filters-collapsed', collapsed);
-    toggleBtn.setAttribute('aria-expanded', String(!collapsed));
-    const label = collapsed ? 'Expand filters' : 'Collapse filters';
+    const isCollapsed = Boolean(collapsed);
+    layout.classList.toggle('filters-collapsed', isCollapsed);
+    toggleBtn.setAttribute('aria-expanded', String(!isCollapsed));
+    const label = isCollapsed ? 'Expand filters' : 'Collapse filters';
     toggleBtn.setAttribute('title', label);
     toggleBtn.setAttribute('aria-label', label);
+    try { localStorage.setItem(FILTERS_COLLAPSED_KEY, String(isCollapsed)); } catch {}
+  };
+
+  const syncToggleProximity = event => {
+    if (window.matchMedia?.('(max-width: 720px)')?.matches) {
+      toggleBtn.classList.add('is-near');
+      return;
+    }
+    const rect = toggleBtn.getBoundingClientRect();
+    const cx = rect.left + (rect.width / 2);
+    const cy = rect.top + (rect.height / 2);
+    const ex = event?.clientX ?? cx;
+    const ey = event?.clientY ?? cy;
+    const distance = Math.hypot(ex - cx, ey - cy);
+    toggleBtn.classList.toggle('is-near', distance <= 78);
   };
 
   window.setFiltersCollapsed = setFiltersCollapsed;
-  setFiltersCollapsed(false);
+  let initialCollapsed = false;
+  try { initialCollapsed = localStorage.getItem(FILTERS_COLLAPSED_KEY) === 'true'; } catch {}
+  setFiltersCollapsed(initialCollapsed);
+  document.addEventListener('mousemove', syncToggleProximity, { passive: true });
+  toggleBtn.addEventListener('mouseleave', () => syncToggleProximity());
+  syncToggleProximity();
+
   toggleBtn.addEventListener('click', () => {
     const collapsed = !layout.classList.contains('filters-collapsed');
     setFiltersCollapsed(collapsed);
