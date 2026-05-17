@@ -1,6 +1,4 @@
-(function () {
-  window.XyrexData = window.XyrexData || {};
-  window.XyrexData.products = [
+export const products = [
   {
     name: 'Aimmy',
     featured: false,
@@ -593,5 +591,9 @@
     status: 'Unknown',
     officialSite: 'https://yub-x.net/',
   }
-];;
-})();
+];
+
+if (typeof window !== 'undefined') {
+  window.XyrexData = window.XyrexData || {};
+  window.XyrexData.products = products;
+}
