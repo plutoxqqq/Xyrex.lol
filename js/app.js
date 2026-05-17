@@ -2,7 +2,7 @@ const products = (window.XyrexData && Array.isArray(window.XyrexData.products)) 
 
 
 const EXPLOIT_ASSISTANT_API = 'https://xyres-ai-api.vercel.app/api/exploit-assistant';
-const DODGE_STORAGE_KEYS = ['xyrex_dodge_save_v2', 'xyrex_dodge_save_v1'];
+const AI_TOKEN_STORAGE_KEYS = ['xyrex_ai_token_store_v1'];
 const FREE_DAILY_AI_TOKENS = 5;
 const NO_ASSISTANT_TOKENS_MESSAGE = 'You have no AI tokens remaining. Daily tokens reset at midnight, or you can buy more in the Token Shop.';
 
@@ -436,14 +436,6 @@ function openSuncSimulationModal(product) {
 
 function getAiTokenSummary() {
   const fallback = { available: 0, freeRemaining: 0, purchased: 0 };
-  const summary = window.XyrexDodge?.getTokenSummary?.();
-  if (summary && typeof summary === 'object') {
-    return {
-      available: Number.isFinite(summary.available) ? summary.available : 0,
-      freeRemaining: Number.isFinite(summary.freeRemaining) ? summary.freeRemaining : 0,
-      purchased: Number.isFinite(summary.purchased) ? summary.purchased : 0
-    };
-  }
   return getFallbackAiTokenSummary() || fallback;
 }
 
@@ -456,7 +448,7 @@ function getLocalDayKey() {
 }
 
 function readFallbackAiTokenData() {
-  for (const key of DODGE_STORAGE_KEYS) {
+  for (const key of AI_TOKEN_STORAGE_KEYS) {
     try {
       const raw = localStorage.getItem(key);
       if (!raw) continue;
@@ -466,7 +458,7 @@ function readFallbackAiTokenData() {
       // Ignore invalid saved token data and keep looking.
     }
   }
-  return { key: DODGE_STORAGE_KEYS[0], data: {} };
+  return { key: AI_TOKEN_STORAGE_KEYS[0], data: {} };
 }
 
 function normalizeFallbackAiTokenData(data) {
@@ -495,10 +487,7 @@ function getFallbackAiTokenSummary() {
 
 function getFreeTokenShopStatus() {
   const summary = getAiTokenSummary();
-  const dodgeState = window.XyrexDodge?.getTokenStateSnapshot?.();
-  const tokenState = dodgeState && typeof dodgeState === 'object'
-    ? { data: dodgeState }
-    : readFallbackAiTokenData();
+  const tokenState = readFallbackAiTokenData();
   const data = normalizeFallbackAiTokenData(tokenState.data);
   const now = Date.now();
   const cooldownUntil = Math.max(0, Number(data.freeTokenCooldownUntil) || 0);
@@ -520,10 +509,7 @@ function claimFreeTokens(amountInput) {
   if (amount !== Math.trunc(rawAmount)) {
     return { ok: false, reason: `Please enter a whole number between ${FREE_TOKEN_SHOP.minClaim} and ${FREE_TOKEN_SHOP.maxClaim}.` };
   }
-  const dodgeState = window.XyrexDodge?.getTokenStateSnapshot?.();
-  const tokenState = dodgeState && typeof dodgeState === 'object'
-    ? { data: dodgeState }
-    : readFallbackAiTokenData();
+  const tokenState = readFallbackAiTokenData();
   const data = normalizeFallbackAiTokenData(tokenState.data);
   const now = Date.now();
   const cooldownUntil = Math.max(0, Number(data.freeTokenCooldownUntil) || 0);
@@ -531,18 +517,10 @@ function claimFreeTokens(amountInput) {
     return { ok: false, reason: `You can claim free tokens again in ${formatDuration(cooldownUntil - now)}.` };
   }
   const cooldownMs = getFreeTokenCooldownMs(amount);
-  if (typeof window.XyrexDodge?.applyFreeTokenClaim === 'function') {
-    const claimResult = window.XyrexDodge.applyFreeTokenClaim(amount, cooldownMs);
-    if (!claimResult) {
-      return { ok: false, reason: 'Unable to process token claim right now. Please try again.' };
-    }
-    return { ok: true, amount: claimResult.amount, cooldownMs };
-  }
-
   data.aiPurchasedTokens = Math.max(0, Number(data.aiPurchasedTokens) || 0) + amount;
   data.freeTokenLastClaimAmount = amount;
   data.freeTokenCooldownUntil = now + cooldownMs;
-  localStorage.setItem(tokenState.key || DODGE_STORAGE_KEYS[0], JSON.stringify(data));
+  localStorage.setItem(tokenState.key || AI_TOKEN_STORAGE_KEYS[0], JSON.stringify(data));
   return { ok: true, amount, cooldownMs };
 }
 
@@ -586,10 +564,6 @@ function openEarnTokensModal() {
 }
 
 function consumeAiTokenForAssistant() {
-  if (typeof window.XyrexDodge?.consumeAiToken === 'function') {
-    return Boolean(window.XyrexDodge.consumeAiToken());
-  }
-
   const tokenState = readFallbackAiTokenData();
   const data = normalizeFallbackAiTokenData(tokenState.data);
   const freeRemaining = Math.max(0, FREE_DAILY_AI_TOKENS - data.aiTokensUsedToday);
@@ -598,7 +572,7 @@ function consumeAiTokenForAssistant() {
 
   if (freeRemaining > 0) data.aiTokensUsedToday += 1;
   else data.aiPurchasedTokens = purchased - 1;
-  localStorage.setItem(tokenState.key || DODGE_STORAGE_KEYS[0], JSON.stringify(data));
+  localStorage.setItem(tokenState.key || AI_TOKEN_STORAGE_KEYS[0], JSON.stringify(data));
   return true;
 }
 
@@ -1848,7 +1822,6 @@ function setActivePage(targetPageId) {
   qs('#searchInput').disabled = onScriptsPage;
   qs('#clearSearchBtn').disabled = onScriptsPage;
   qs('.page-layout').classList.toggle('scripts-mode', onScriptsPage);
-  document.body.classList.remove('easter-game-mode');
 
   syncRouteWithState();
 }
