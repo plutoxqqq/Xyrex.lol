@@ -4122,168 +4122,6 @@ function syncNavigationLayoutMetrics() {
 
 
 
-
-function initCinematicBackground() {
-  const canvas = qs('#cinematicBgCanvas');
-  if (!canvas || !canvas.getContext) return;
-
-  const ctx = canvas.getContext('2d', { alpha: true });
-  const reduceMotion = shouldReduceMotion();
-  let width = 0;
-  let height = 0;
-  let dpr = 1;
-  let rafId = null;
-  let lastTime = 0;
-  let phase = 0;
-  let isRunning = false;
-
-  const cloudBands = [
-    { y: .28, amp: .045, speed: .16, alpha: .09, hue: 'rgba(102,126,255,' },
-    { y: .48, amp: .06, speed: -.11, alpha: .08, hue: 'rgba(80,210,255,' },
-    { y: .67, amp: .05, speed: .09, alpha: .07, hue: 'rgba(178,188,255,' }
-  ];
-
-  function resize() {
-    const rect = canvas.getBoundingClientRect();
-    width = Math.max(1, Math.floor(rect.width));
-    height = Math.max(1, Math.floor(rect.height));
-    dpr = Math.min(window.devicePixelRatio || 1, 1.75);
-    canvas.width = Math.floor(width * dpr);
-    canvas.height = Math.floor(height * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-
-  function drawBand(band, timeOffset) {
-    const baseY = height * band.y;
-    const waveHeight = height * .22;
-    const gradient = ctx.createLinearGradient(0, baseY - waveHeight, 0, baseY + waveHeight);
-    gradient.addColorStop(0, `${band.hue}0)`);
-    gradient.addColorStop(.45, `${band.hue}${band.alpha})`);
-    gradient.addColorStop(1, `${band.hue}0)`);
-
-    ctx.beginPath();
-    ctx.moveTo(0, height);
-    for (let x = 0; x <= width + 24; x += 24) {
-      const nx = x / Math.max(width, 1);
-      const y = baseY
-        + Math.sin(nx * 7.2 + timeOffset * band.speed) * height * band.amp
-        + Math.sin(nx * 13.5 - timeOffset * band.speed * 1.4) * height * band.amp * .42;
-      ctx.lineTo(x, y);
-    }
-    ctx.lineTo(width, height);
-    ctx.closePath();
-    ctx.fillStyle = gradient;
-    ctx.fill();
-  }
-
-  function drawLightStreak(y, progress, length, alpha, thickness) {
-    const x = (progress * (width + length * 2)) - length;
-    const gradient = ctx.createLinearGradient(x, y, x + length, y);
-    gradient.addColorStop(0, 'rgba(95,182,255,0)');
-    gradient.addColorStop(.5, `rgba(155,202,255,${alpha})`);
-    gradient.addColorStop(1, 'rgba(95,182,255,0)');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(x, y, length, thickness);
-  }
-
-  function render(timestamp = 0) {
-    if (!lastTime) lastTime = timestamp;
-    const delta = Math.min(32, timestamp - lastTime);
-    lastTime = timestamp;
-    phase += delta * .001;
-
-    ctx.clearRect(0, 0, width, height);
-
-    const base = ctx.createLinearGradient(0, 0, width, height);
-    base.addColorStop(0, '#050711');
-    base.addColorStop(.48, '#0a1024');
-    base.addColorStop(1, '#05060c');
-    ctx.fillStyle = base;
-    ctx.fillRect(0, 0, width, height);
-
-    const glowA = ctx.createRadialGradient(width * (.72 + Math.sin(phase * .12) * .03), height * .2, 0, width * .72, height * .2, Math.max(width, height) * .62);
-    glowA.addColorStop(0, 'rgba(100,124,255,.22)');
-    glowA.addColorStop(1, 'rgba(100,124,255,0)');
-    ctx.fillStyle = glowA;
-    ctx.fillRect(0, 0, width, height);
-
-    const glowB = ctx.createRadialGradient(width * .18, height * (.72 + Math.cos(phase * .1) * .04), 0, width * .18, height * .72, Math.max(width, height) * .54);
-    glowB.addColorStop(0, 'rgba(73,212,255,.12)');
-    glowB.addColorStop(1, 'rgba(73,212,255,0)');
-    ctx.fillStyle = glowB;
-    ctx.fillRect(0, 0, width, height);
-
-    cloudBands.forEach((band, index) => drawBand(band, phase + index * 8));
-
-    ctx.globalCompositeOperation = 'screen';
-    drawLightStreak(height * .31, (phase * .025) % 1, Math.min(width * .52, 620), .32, 2);
-    drawLightStreak(height * .43, (phase * .018 + .42) % 1, Math.min(width * .68, 780), .2, 1.5);
-    drawLightStreak(height * .59, (phase * .021 + .68) % 1, Math.min(width * .58, 660), .18, 1);
-    ctx.globalCompositeOperation = 'source-over';
-
-    const horizon = ctx.createLinearGradient(0, height * .48, width, height * .48);
-    horizon.addColorStop(0, 'rgba(111,139,255,0)');
-    horizon.addColorStop(.5, 'rgba(153,194,255,.1)');
-    horizon.addColorStop(1, 'rgba(111,139,255,0)');
-    ctx.fillStyle = horizon;
-    ctx.fillRect(0, height * .48, width, 1);
-
-    if (isRunning && !reduceMotion) rafId = window.requestAnimationFrame(render);
-  }
-
-  function start() {
-    if (isRunning || reduceMotion) return;
-    isRunning = true;
-    lastTime = 0;
-    rafId = window.requestAnimationFrame(render);
-  }
-
-  function stop() {
-    isRunning = false;
-    if (rafId) window.cancelAnimationFrame(rafId);
-    rafId = null;
-  }
-
-  resize();
-  render(0);
-  if (!reduceMotion) start();
-
-  window.addEventListener('resize', resize, { passive: true });
-  window.addEventListener('orientationchange', resize, { passive: true });
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) stop();
-    else start();
-  });
-  window.addEventListener('beforeunload', stop, { once: true });
-}
-
-function isLandingRoute(pathname) {
-  return normalisePath(pathname) === '/';
-}
-
-let selectedLandingTargetId = null;
-
-function exitLandingPage(targetPageId) {
-  selectedLandingTargetId = targetPageId;
-  document.body.classList.remove('landing-active');
-  qs('#landingPage')?.setAttribute('aria-hidden', 'true');
-  syncNavButtonsWithPage(targetPageId);
-  setActivePage(targetPageId);
-}
-
-function initLandingPage(initialRoutePath) {
-  const shouldShowLanding = isLandingRoute(initialRoutePath);
-  document.body.classList.toggle('landing-active', shouldShowLanding);
-  qs('#landingPage')?.setAttribute('aria-hidden', String(!shouldShowLanding));
-
-  qsa('[data-landing-target]').forEach(button => {
-    button.addEventListener('click', () => {
-      const target = button.getAttribute('data-landing-target') || 'executorsPage';
-      exitLandingPage(target);
-    });
-  });
-}
-
 function hideInitialLoadingOverlay() {
   const overlay = qs('#appLoadingOverlay');
   if (!overlay) return;
@@ -4294,9 +4132,6 @@ function hideInitialLoadingOverlay() {
 }
 
 function init() {
-  const initialRoutePath = getInitialRoutePath();
-  initCinematicBackground();
-  initLandingPage(initialRoutePath);
   setBetaFeaturesEnabled(getBetaFeaturesEnabled());
   syncNavigationLayoutMetrics();
   renderProducts(products);
@@ -4351,12 +4186,8 @@ function init() {
     applyRoute(getInitialRoutePath(), true);
   });
 
-  applyRoute(initialRoutePath, true).finally(() => {
-    if (selectedLandingTargetId) {
-      syncNavButtonsWithPage(selectedLandingTargetId);
-      setActivePage(selectedLandingTargetId);
-    }
-    hideInitialLoadingOverlay();
+  applyRoute(getInitialRoutePath(), true).finally(() => {
+    window.setTimeout(hideInitialLoadingOverlay, 1000);
   });
 }
 
