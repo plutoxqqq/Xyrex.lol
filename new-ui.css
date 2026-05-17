@@ -598,8 +598,6 @@ body.new-ui-enabled .search-input:focus,
 body.new-ui-enabled .page-switch-btn.is-active,
 body.new-ui-enabled .subtab-btn.is-active,
 body.new-ui-enabled .script-card,
-body.new-ui-enabled .settings-group,
-body.new-ui-enabled .xy-dodge-panel,
-body.new-ui-enabled .xy-dodge-canvas-wrap {
+body.new-ui-enabled .settings-group {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--periwinkle-2) 18%, transparent), 0 18px 36px color-mix(in srgb, var(--periwinkle) 16%, transparent);
 }
