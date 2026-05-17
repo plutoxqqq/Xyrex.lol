@@ -161,7 +161,9 @@ export function setActivePage(targetPageId) {
   qs('#sidebar').hidden = onScriptsPage || onEasterPage;
   qs('#searchInput').disabled = onScriptsPage;
   qs('#clearSearchBtn').disabled = onScriptsPage;
-  qs('.page-layout').classList.toggle('scripts-mode', onScriptsPage || onEasterPage);
+  const pageLayout = qs('.page-layout');
+  pageLayout.classList.toggle('scripts-mode', onScriptsPage || onEasterPage);
+  if (onScriptsPage || onEasterPage) pageLayout.classList.remove('filters-collapsed');
   document.body.classList.toggle('easter-game-mode', onEasterPage);
 
   if (onEasterPage) {

@@ -1,5 +1,5 @@
 import { qs, qsa } from '../../core/dom.js';
-import { renderTierList, renderPopularScripts, renderRecentChanges, renderSavedScriptsList, getSavedScripts, setEditorFromSavedScript, saveScriptFromEditor, deleteSelectedScript, currentSavedScriptId } from './hub.js';
+import { renderTierList, renderPopularScripts, renderRecentChanges, renderSavedScriptsList, getSavedScripts, setEditorFromSavedScript, saveScriptFromEditor, deleteSelectedScript, setCurrentSavedScriptId } from './hub.js';
 import { scriptsHubData } from '../../data/scriptHub.js';
 import { syncNavButtonsWithPage, setActivePage, setActiveSubtab } from '../../core/routing.js';
 
@@ -19,6 +19,9 @@ export function initScriptsHub() {
         item.setAttribute('aria-selected', String(active));
       });
       setActiveSubtab(target);
+      if (window.matchMedia && window.matchMedia('(max-width: 720px)').matches) {
+        btn.blur();
+      }
     });
   });
 
@@ -33,8 +36,9 @@ export function initScriptsHub() {
   qs('#savedScriptsList').addEventListener('click', event => {
     const trigger = event.target.closest('[data-saved-script-id]');
     if (!trigger) return;
-    currentSavedScriptId = trigger.getAttribute('data-saved-script-id');
-    const selected = getSavedScripts().find(item => item.id === currentSavedScriptId);
+    const selectedId = trigger.getAttribute('data-saved-script-id');
+    setCurrentSavedScriptId(selectedId);
+    const selected = getSavedScripts().find(item => item.id === selectedId);
     setEditorFromSavedScript(selected);
     renderSavedScriptsList();
   });

@@ -7,9 +7,43 @@ import { getBetaFeaturesEnabled, setBetaFeaturesEnabled } from '../features/sett
 import { initScriptsHub } from '../features/scriptsHub/initHub.js';
 import { syncNavigationLayoutMetrics } from './layout.js';
 import { injectLegendIcons, applyRoute, getInitialRoutePath, syncNavButtonsWithPage, setActivePage } from './routing.js';
+
+function initCollapsibleFilters() {
+  const layout = qs('.page-layout');
+  const toggleBtn = qs('#filtersToggleBtn');
+  const filtersContent = qs('#filtersContent');
+  if (!layout || !toggleBtn || !filtersContent) return;
+
+  const setCollapsed = collapsed => {
+    layout.classList.toggle('filters-collapsed', collapsed);
+    toggleBtn.setAttribute('aria-expanded', String(!collapsed));
+    const label = collapsed ? 'Expand filters' : 'Collapse filters';
+    toggleBtn.setAttribute('title', label);
+    toggleBtn.setAttribute('aria-label', label);
+  };
+
+  setCollapsed(false);
+
+  toggleBtn.addEventListener('click', () => {
+    setCollapsed(!layout.classList.contains('filters-collapsed'));
+  });
+
+  const nearHandler = event => {
+    const rect = toggleBtn.getBoundingClientRect();
+    const distX = Math.max(rect.left - event.clientX, event.clientX - rect.right, 0);
+    const distY = Math.max(rect.top - event.clientY, event.clientY - rect.bottom, 0);
+    toggleBtn.classList.toggle('is-near', Math.hypot(distX, distY) <= 70);
+  };
+
+  document.addEventListener('pointermove', nearHandler, { passive: true });
+  toggleBtn.addEventListener('pointerenter', () => toggleBtn.classList.add('is-near'));
+  toggleBtn.addEventListener('pointerleave', () => toggleBtn.classList.remove('is-near'));
+}
+
 export function initApp() {
   setBetaFeaturesEnabled(getBetaFeaturesEnabled());
   syncNavigationLayoutMetrics();
+  initCollapsibleFilters();
   renderProducts(products);
   initScriptsHub();
   injectLegendIcons();
