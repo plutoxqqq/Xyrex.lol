@@ -640,6 +640,140 @@ const POPULAR_SCRIPT_CATEGORIES = [
   '99 Nights in the Forest'
 ];
 
+
+const WEAO_STATUS_ENDPOINTS = [
+  'https://weao.xyz/api/status/exploits',
+  'https://api.weao.xyz/status/exploits',
+  'https://whatexpsare.online/api/status/exploits',
+  'https://api.whatexpsare.online/status/exploits',
+];
+const WEAO_STATUS_REFRESH_MS = 5 * 60 * 1000;
+let weaoStatusTimer = null;
+
+function normalizeExecutorName(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/\b(executor|external|internal|windows|android|ios|macos|mac|roblox|exploit)\b/g, '')
+    .replace(/\.(lol|gg|xyz|onl|fun|pro|best|wtf|lat)\b/g, '')
+    .replace(/[^a-z0-9]+/g, '');
+}
+
+function getExecutorAliases(product) {
+  const aliases = new Set([product.name]);
+  const aliasMap = {
+    bunni: ['Bunni.lol'],
+    macsploit: ['MacSploit', 'Mac Sploit'],
+    vegax: ['Vega X', 'VegaX'],
+    yubx: ['YuB-X', 'YuBX'],
+  };
+  (aliasMap[normalizeExecutorName(product.name)] || []).forEach(alias => aliases.add(alias));
+  if (product.officialSite) {
+    try {
+      const host = new URL(product.officialSite).hostname.replace(/^www\./, '').split('.')[0];
+      if (host) aliases.add(host);
+    } catch (error) {
+      // Ignore malformed community-provided URLs; the visible product name remains the primary match key.
+    }
+  }
+  return Array.from(aliases).map(normalizeExecutorName).filter(Boolean);
+}
+
+function normalizeWeaoEntry(rawEntry) {
+  const source = rawEntry?.properties && typeof rawEntry.properties === 'object'
+    ? { ...rawEntry, ...rawEntry.properties }
+    : rawEntry;
+  const title = source?.title || source?.name || '';
+  return {
+    title,
+    updateStatus: source?.updateStatus,
+    detected: source?.detected,
+    version: source?.version || '',
+    updatedDate: source?.updatedDate || '',
+    platform: source?.platform || '',
+    hidden: Boolean(source?.hidden),
+    beta: Boolean(source?.beta),
+  };
+}
+
+function getWeaoStatusState(statusEntry) {
+  if (!statusEntry) return 'unknown';
+  if (statusEntry.hidden || statusEntry.beta) return 'unstable';
+  if (statusEntry.updateStatus === true) return 'up';
+  if (statusEntry.updateStatus === false) return 'down';
+  const text = String(statusEntry.status || statusEntry.state || '').toLowerCase();
+  if (/unstable|unknown|outage|maintenance|partial/.test(text)) return 'unstable';
+  if (/up|online|working|updated/.test(text)) return 'up';
+  if (/down|offline|patched|not\s*updated/.test(text)) return 'down';
+  return 'unknown';
+}
+
+function getWeaoStatusLabel(statusEntry) {
+  const state = getWeaoStatusState(statusEntry);
+  if (state === 'up') return 'WEAO: Up';
+  if (state === 'down') return 'WEAO: Down';
+  if (state === 'unstable') return 'WEAO: Unstable';
+  return 'WEAO: Unknown';
+}
+
+function getWeaoStatusDetail(statusEntry) {
+  if (!statusEntry) return 'No matching WEAO status entry found yet.';
+  const parts = [];
+  if (statusEntry.version) parts.push(`Version ${statusEntry.version}`);
+  if (statusEntry.updatedDate) parts.push(`Updated ${statusEntry.updatedDate}`);
+  if (statusEntry.detected === true) parts.push('Detected');
+  if (statusEntry.detected === false) parts.push('Not detected');
+  return parts.join(' • ') || 'Matched from WEAO executor status data.';
+}
+
+function applyWeaoStatuses(rawEntries) {
+  const entries = (Array.isArray(rawEntries) ? rawEntries : []).map(normalizeWeaoEntry).filter(entry => entry.title);
+  const byName = new Map();
+  entries.forEach(entry => {
+    const key = normalizeExecutorName(entry.title);
+    if (key) byName.set(key, entry);
+  });
+
+  products.forEach(product => {
+    const aliases = getExecutorAliases(product);
+    let match = aliases.map(alias => byName.get(alias)).find(Boolean);
+    if (!match) {
+      match = entries.find(entry => {
+        const titleKey = normalizeExecutorName(entry.title);
+        return aliases.some(alias => titleKey.includes(alias) || alias.includes(titleKey));
+      });
+    }
+    product.weaoStatus = match || null;
+  });
+  applyAllFilters();
+}
+
+async function fetchWeaoStatuses() {
+  let lastError = null;
+  for (const endpoint of WEAO_STATUS_ENDPOINTS) {
+    try {
+      const response = await fetch(endpoint, {
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+      });
+      if (!response.ok) throw new Error(`WEAO status request failed with ${response.status}`);
+      const data = await response.json();
+      applyWeaoStatuses(data);
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  console.warn('WEAO executor status data is unavailable; showing unknown status bars.', lastError);
+  products.forEach(product => { product.weaoStatus = null; });
+  applyAllFilters();
+}
+
+function initWeaoStatuses() {
+  fetchWeaoStatuses();
+  if (weaoStatusTimer) window.clearInterval(weaoStatusTimer);
+  weaoStatusTimer = window.setInterval(fetchWeaoStatuses, WEAO_STATUS_REFRESH_MS);
+}
+
 const scriptsHubData = {
   smartRankingLabels: {
     bestFree: 'Best Free',
@@ -2312,6 +2446,24 @@ function createProductCard(product, index) {
   header.appendChild(left);
   header.appendChild(right);
 
+  const statusState = getWeaoStatusState(product.weaoStatus);
+  const statusBar = document.createElement('div');
+  statusBar.className = `weao-status-bar weao-status-${statusState}`;
+  statusBar.setAttribute('role', 'status');
+  statusBar.setAttribute('aria-label', `${product.name} ${getWeaoStatusLabel(product.weaoStatus)}`);
+  statusBar.title = getWeaoStatusDetail(product.weaoStatus);
+
+  const statusLabel = document.createElement('span');
+  statusLabel.className = 'weao-status-label';
+  statusLabel.textContent = getWeaoStatusLabel(product.weaoStatus);
+
+  const statusMeta = document.createElement('span');
+  statusMeta.className = 'weao-status-meta';
+  statusMeta.textContent = product.weaoStatus?.updatedDate || 'Live check pending';
+
+  statusBar.appendChild(statusLabel);
+  statusBar.appendChild(statusMeta);
+
   const summary = document.createElement('p');
   summary.className = 'summary';
   summary.textContent = buildExpandedExecutorDescription(product);
@@ -2321,6 +2473,7 @@ function createProductCard(product, index) {
   price.textContent = getPriceLabel(product);
 
   body.appendChild(header);
+  body.appendChild(statusBar);
   body.appendChild(createPlatformChips(product.platform));
   body.appendChild(summary);
   body.appendChild(price);
@@ -2501,6 +2654,8 @@ function openModal(product) {
       <aside class="status-panel">
         <h3>Status</h3>
         <div class="status-item"><span>Current State</span><strong>${escapeHtml(product.status)}</strong></div>
+        <div class="status-item"><span>WEAO Status</span><strong class="weao-modal-status weao-status-text-${getWeaoStatusState(product.weaoStatus)}">${escapeHtml(getWeaoStatusLabel(product.weaoStatus).replace('WEAO: ', ''))}</strong></div>
+        <div class="status-item"><span>WEAO Details</span><strong>${escapeHtml(getWeaoStatusDetail(product.weaoStatus))}</strong></div>
         <div class="status-item"><span>Trust Level</span><strong>${escapeHtml(product.trustLevel)}</strong></div>
         <div class="status-item"><span>Stability</span><strong>${escapeHtml(product.stability)}</strong></div>
         <div class="status-item"><span>sUNC</span><strong>${Number.isFinite(product.sunc) ? `${product.sunc}%` : 'None'}</strong></div>
@@ -4135,6 +4290,7 @@ function init() {
   setBetaFeaturesEnabled(getBetaFeaturesEnabled());
   syncNavigationLayoutMetrics();
   renderProducts(products);
+  initWeaoStatuses();
   initScriptsHub();
   injectLegendIcons();
 

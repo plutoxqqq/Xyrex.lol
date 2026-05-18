@@ -229,6 +229,31 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 .sunc{ background:rgba(143,156,255,.16); color:var(--periwinkle-2); border-radius:999px; padding:5px 9px; font-size:.78rem; font-weight:700; }
 .tag-symbols{ display:flex; gap:6px; }
 .tag-symbols .legend-icon{ width:18px; height:18px; font-size:.7rem; }
+
+.weao-status-bar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  min-height:30px;
+  padding:6px 10px;
+  border-radius:9px;
+  border:1px solid rgba(178,188,255,.2);
+  color:#fff;
+  font-size:.78rem;
+  font-weight:800;
+  letter-spacing:.01em;
+  box-shadow:inset 4px 0 0 currentColor, 0 8px 18px rgba(0,0,0,.18);
+}
+.weao-status-label{ white-space:nowrap; }
+.weao-status-meta{ color:rgba(255,255,255,.76); font-size:.72rem; font-weight:650; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.weao-status-up{ color:#5dd39e; background:rgba(39,147,94,.19); border-color:rgba(93,211,158,.42); }
+.weao-status-down{ color:#ff4d6d; background:rgba(158,38,61,.2); border-color:rgba(255,77,109,.46); }
+.weao-status-unknown,.weao-status-unstable{ color:#9ca3af; background:rgba(102,112,133,.2); border-color:rgba(156,163,175,.42); }
+.weao-status-text-up{ color:var(--accent-success); }
+.weao-status-text-down{ color:var(--accent-danger); }
+.weao-status-text-unknown,.weao-status-text-unstable{ color:#c4c9d4; }
+
 .summary{ margin:0; color:var(--muted); line-height:1.45; }
 .price{ margin-top:auto; color:var(--periwinkle-2); font-weight:800; }
 .platform-chips{ display:flex; flex-wrap:wrap; gap:8px; }
