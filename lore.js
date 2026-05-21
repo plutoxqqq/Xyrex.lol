@@ -1,158 +1,473 @@
 (function () {
+  'use strict';
+
   const STORAGE = {
     fragments: 'xyrex_lore_fragments',
     unlocked: 'xyrex_archive_unlocked',
     level: 'xyrex_corruption_level'
   };
-  const FRAGMENTS = ['NULL', 'TRUST', 'INDEX', 'MIRROR', '1.337'];
-  const keyBuffer = [];
-  const sequenceGoal = ['logo', 'search', 'footer', 'featured', 'logo'];
-  let sequence = [];
-  let matrixTimer = null;
+
+  const FRAGMENT_ORDER = ['NULL', 'TRUST', 'INDEX', 'MIRROR', '1.337'];
+  const SURFACE_PHRASES = [
+    'ARCHIVE NODE 03 FAILED TO RESPOND.',
+    'The directory was not built. It was recovered.',
+    'Do not trust entries marked VERIFIED after 03:17.',
+    'NULL remembers every filter you opened.'
+  ];
+
+  const ARCHIVE_LOGS = [
+    '[LOG 001] RECOVERED\nThe first scan returned 47 executors.\nThe second returned 48.\nThe extra entry had no name.',
+    '[LOG 002] DAMAGED\nTrust score did not measure trust.\nIt measured ██████████.',
+    '[LOG 003] PARTIAL\nWKH DUFKLYH LV QRW GHDG',
+    '[LOG 004] TRACE\nUFJPVE9DT0xfMS4zMzc=',
+    '[LOG 005] MIRROR\nNULL-TRUST-INDEX-MIRROR-1.337',
+    '[LOG 006] FRAGMENT\n01001110 01010101 01001100 01001100',
+    '[LOG 007] DAMAGED\nProtocol 1.337 was not made to activate.\nIt was made to erase activation.'
+  ];
+
+  const runtime = {
+    initialized: false,
+    typedBuffer: '',
+    keySequenceBuffer: [],
+    clickSequence: [],
+    logoClicks: 0,
+    matrixInterval: null,
+    flickerInterval: null,
+    statusInterval: null,
+    matrixResize: null,
+    terminalRoot: null,
+    archiveRoot: null,
+    restoreButton: null,
+    statusPill: null
+  };
 
   const state = {
-    fragments: new Set(JSON.parse(localStorage.getItem(STORAGE.fragments) || '[]')),
+    fragments: new Set(parseJson(localStorage.getItem(STORAGE.fragments), [])),
     archiveUnlocked: localStorage.getItem(STORAGE.unlocked) === '1',
-    level: Number(localStorage.getItem(STORAGE.level) || 0)
+    corruptionLevel: Number(localStorage.getItem(STORAGE.level) || 0)
   };
+
+  function parseJson(value, fallback) {
+    try { return JSON.parse(value); } catch { return fallback; }
+  }
 
   function saveState() {
     localStorage.setItem(STORAGE.fragments, JSON.stringify([...state.fragments]));
     localStorage.setItem(STORAGE.unlocked, state.archiveUnlocked ? '1' : '0');
-    localStorage.setItem(STORAGE.level, String(state.level));
+    localStorage.setItem(STORAGE.level, String(state.corruptionLevel));
   }
 
-  function collectFragment(id, source = 'Unknown') {
-    if (!FRAGMENTS.includes(id) || state.fragments.has(id)) return;
+  function getProgress() {
+    return `${state.fragments.size}/${FRAGMENT_ORDER.length}`;
+  }
+
+  function toast(message, timeout = 2800) {
+    const el = document.createElement('div');
+    el.className = 'lore-toast';
+    el.textContent = message;
+    document.body.appendChild(el);
+    window.setTimeout(() => el.remove(), timeout);
+  }
+
+  function maybeCollectCompositeFragment() {
+    const needed = ['NULL', 'TRUST', 'INDEX', 'MIRROR'];
+    if (needed.every(name => state.fragments.has(name))) {
+      collectFragment('1.337', 'composite.key');
+    }
+  }
+
+  function collectFragment(id, source) {
+    if (!FRAGMENT_ORDER.includes(id) || state.fragments.has(id)) return false;
     state.fragments.add(id);
     saveState();
-    toast(`FRAGMENT RECOVERED: ${id} · source: ${source}`);
-    console.info(`[XYREX ARCHIVE] Fragment detected: ${state.fragments.size}/5`);
-    if (state.fragments.size === FRAGMENTS.length) {
+    toast(`Fragment recovered: ${id} · ${source}`);
+    console.info(`[XYREX ARCHIVE] Fragment detected: ${getProgress()}`);
+    updateStatusPill();
+    if (state.fragments.size === FRAGMENT_ORDER.length) {
       state.archiveUnlocked = true;
       saveState();
       toast('ARCHIVE ACCESS GRANTED');
     }
+    return true;
   }
 
-  function unlockArchive() { state.archiveUnlocked = true; saveState(); openArchive(); }
-
-  function initHiddenTerminal() {
+  function ensureTerminal() {
+    if (runtime.terminalRoot) return runtime.terminalRoot;
     const root = document.createElement('section');
     root.className = 'xyrex-terminal';
-    root.innerHTML = `<div class="lore-backdrop"></div><div class="lore-panel"><div class="lore-panel-header"><strong>Recovered Layer Terminal</strong><button class="lore-panel-close" type="button">Close</button></div><div class="lore-output" id="loreOutput"></div><form class="lore-input-row"><input class="lore-input" autocomplete="off" placeholder="Type command..." /><button class="lore-submit" type="submit">Run</button></form></div>`;
+    root.innerHTML = `
+      <div class="lore-backdrop" data-close-terminal></div>
+      <div class="lore-panel" role="dialog" aria-modal="true" aria-label="Recovered Layer Terminal">
+        <div class="lore-panel-header">
+          <strong>Recovered Layer Terminal</strong>
+          <button class="lore-panel-close" type="button" data-close-terminal>Close</button>
+        </div>
+        <div class="lore-output" id="loreOutput"></div>
+        <form class="lore-input-row" autocomplete="off">
+          <input class="lore-input" placeholder="Command: help" />
+          <button class="lore-submit" type="submit">Run</button>
+        </form>
+      </div>`;
     document.body.appendChild(root);
+
     const output = root.querySelector('#loreOutput');
     const input = root.querySelector('.lore-input');
     const form = root.querySelector('form');
 
-    const write = text => output.insertAdjacentHTML('beforeend', `<div>> ${text}</div>`);
-    const commands = {
-      help: 'help, status, logs, decrypt, protocol, null, restore, clear',
-      status: 'SYSTEM STATUS: UNSTABLE\nARCHIVE LAYER: PARTIALLY RECOVERED\nNULL TRACE: ACTIVE',
-      logs: () => { collectFragment('INDEX', 'terminal.logs'); openArchive(); return 'Opening archive logs...'; },
-      decrypt: '01001110 01010101 01001100 01001100 -> NULL',
-      protocol: 'Protocol 1.337 is dormant. Activation requires recovered key fragments.',
-      null: 'NULL is not absence. NULL is what remains after deletion.',
-      restore: () => { restoreSite(); return 'Corruption effects removed.'; },
-      clear: () => { output.innerHTML = ''; return ''; }
+    const print = (text, klass = '') => {
+      const row = document.createElement('div');
+      row.className = `lore-line ${klass}`.trim();
+      row.textContent = text;
+      output.appendChild(row);
+      output.scrollTop = output.scrollHeight;
     };
-    form.addEventListener('submit', e => {
-      e.preventDefault(); const cmd = input.value.trim().toLowerCase(); if (!cmd) return;
-      write(cmd); const response = commands[cmd]; write(typeof response === 'function' ? response() : (response || 'Unknown command.')); input.value = '';
+
+    const fastDecrypt = callback => {
+      print('Decrypting fragments...', 'lore-line-muted');
+      const frames = ['[##......] 22%', '[####....] 49%', '[######..] 73%', '[########] 100%'];
+      let i = 0;
+      const timer = setInterval(() => {
+        if (i >= frames.length) {
+          clearInterval(timer);
+          callback();
+          return;
+        }
+        print(frames[i], 'lore-line-accent');
+        i += 1;
+      }, 130);
+    };
+
+    const commands = {
+      help: () => print('help, status, logs, decrypt, protocol, null, restore, clear'),
+      status: () => print('SYSTEM STATUS: UNSTABLE\nARCHIVE LAYER: PARTIALLY RECOVERED\nNULL TRACE: ACTIVE'),
+      logs: () => {
+        collectFragment('INDEX', 'terminal.logs');
+        openArchive();
+        print('Opening recovered logs...');
+      },
+      decrypt: () => fastDecrypt(() => {
+        collectFragment('TRUST', 'terminal.decrypt');
+        print('Result: 01001110 01010101 01001100 01001100 -> NULL');
+      }),
+      protocol: () => {
+        const unlocked = state.fragments.size === FRAGMENT_ORDER.length;
+        print(unlocked ? 'Protocol 1.337 ready. Run: protocol 1.337' : 'Protocol 1.337 dormant. Recover all fragments first.');
+      },
+      null: () => print('NULL is not absence. NULL is what remains after deletion.'),
+      restore: () => {
+        restoreSite();
+        print('Corruption effects removed.');
+      },
+      clear: () => {
+        output.innerHTML = '';
+      }
+    };
+
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      const raw = input.value.trim();
+      if (!raw) return;
+      print(`> ${raw}`);
+      const cmd = raw.toLowerCase();
+
+      if (cmd === 'protocol 1.337') {
+        if (state.fragments.size === FRAGMENT_ORDER.length) {
+          activateCorruption(3);
+          print('Protocol 1.337 engaged.', 'lore-line-warning');
+        } else {
+          print('Missing fragments. Required key: NULL-TRUST-INDEX-MIRROR-1.337');
+        }
+      } else if (commands[cmd]) {
+        commands[cmd]();
+      } else {
+        print('Unknown command. Type help.');
+      }
+
+      input.value = '';
     });
-    root.querySelector('.lore-panel-close').addEventListener('click', () => root.classList.remove('is-open'));
-    root.querySelector('.lore-backdrop').addEventListener('click', () => root.classList.remove('is-open'));
 
-    function openTerminal() { root.classList.add('is-open'); input.focus(); }
+    root.querySelectorAll('[data-close-terminal]').forEach(el => el.addEventListener('click', () => closeTerminal()));
 
-    let typed = '';
-    document.addEventListener('keydown', e => {
-      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'x') { e.preventDefault(); openTerminal(); return; }
-      if (e.key.length === 1) typed = (typed + e.key.toLowerCase()).slice(-12);
-      if (typed.endsWith('archive') || typed.endsWith('xyrex')) openTerminal();
+    runtime.terminalRoot = root;
+    return root;
+  }
+
+  function openTerminal() {
+    const terminal = ensureTerminal();
+    terminal.classList.add('is-open');
+    terminal.querySelector('.lore-input')?.focus();
+  }
+
+  function closeTerminal() {
+    runtime.terminalRoot?.classList.remove('is-open');
+  }
+
+  function ensureArchive() {
+    if (runtime.archiveRoot) return runtime.archiveRoot;
+    const root = document.createElement('section');
+    root.className = 'xyrex-archive-modal';
+    root.innerHTML = `
+      <div class="lore-backdrop" data-close-archive></div>
+      <div class="lore-panel" role="dialog" aria-modal="true" aria-label="Recovered Archive Logs">
+        <div class="lore-panel-header">
+          <strong>The Archive</strong>
+          <button class="lore-panel-close" type="button" data-close-archive>Close</button>
+        </div>
+        <div class="archive-wrap"></div>
+      </div>`;
+    const wrap = root.querySelector('.archive-wrap');
+    ARCHIVE_LOGS.forEach(log => {
+      const block = document.createElement('article');
+      block.className = 'archive-log';
+      block.textContent = log;
+      wrap.appendChild(block);
     });
-
-    return { openTerminal };
+    document.body.appendChild(root);
+    root.querySelectorAll('[data-close-archive]').forEach(el => el.addEventListener('click', () => root.classList.remove('is-open')));
+    runtime.archiveRoot = root;
+    return root;
   }
 
   function openArchive() {
-    const modal = document.querySelector('.xyrex-archive-modal');
-    if (modal) return modal.classList.add('is-open');
-    const wrap = document.createElement('section');
-    wrap.className = 'xyrex-archive-modal is-open';
-    wrap.innerHTML = `<div class="lore-backdrop"></div><div class="lore-panel"><div class="lore-panel-header"><strong>The Archive · Recovered Layer</strong><button class="lore-panel-close" type="button">Close</button></div><div class="archive-log">[LOG 001] RECOVERED\nThe first scan returned 47 executors.\nThe second returned 48.\nThe extra entry had no name.</div><div class="archive-log">[LOG 002] DAMAGED\nUser trust score was never meant to measure trust.\nIt measured ██████████.</div><div class="archive-log">[LOG 003] PARTIAL\nWKH DUFKLYH LV QRW GHDG</div><div class="archive-log">[LOG 004] RECOVERED\nUFJPVE9DT0xfMS4zMzc=</div><div class="archive-log">[LOG 005] TRACE\nFinal key format: NULL-TRUST-INDEX-MIRROR-1.337</div></div>`;
-    document.body.appendChild(wrap);
-    wrap.querySelector('.lore-panel-close').addEventListener('click', () => wrap.classList.remove('is-open'));
-    wrap.querySelector('.lore-backdrop').addEventListener('click', () => wrap.classList.remove('is-open'));
+    if (!state.archiveUnlocked) {
+      toast('Archive locked. Recover more fragments first.');
+      return;
+    }
+    ensureArchive().classList.add('is-open');
+  }
+
+  function updateStatusPill() {
+    if (!runtime.statusPill) return;
+    runtime.statusPill.textContent = `Archive fragments: ${getProgress()}`;
+  }
+
+  function initCorruptionProtocol() {
+    if (runtime.restoreButton) return;
+
+    const restoreBtn = document.createElement('button');
+    restoreBtn.type = 'button';
+    restoreBtn.className = 'lore-restore-btn';
+    restoreBtn.textContent = 'Restore Site';
+    restoreBtn.addEventListener('click', restoreSite);
+    document.body.appendChild(restoreBtn);
+    runtime.restoreButton = restoreBtn;
+
+    const pill = document.createElement('div');
+    pill.className = 'lore-status-pill';
+    runtime.statusPill = pill;
+    updateStatusPill();
+    document.body.appendChild(pill);
+  }
+
+  function applyRandomFlicker() {
+    const cards = Array.from(document.querySelectorAll('.product-card, .executor-card, .card')).slice(0, 8);
+    if (!cards.length) return;
+    const target = cards[Math.floor(Math.random() * cards.length)];
+    target.classList.add('lore-flicker-once');
+    window.setTimeout(() => target.classList.remove('lore-flicker-once'), 450);
+  }
+
+  function startMatrixOverlay() {
+    if (document.querySelector('.lore-matrix')) return;
+    const canvas = document.createElement('canvas');
+    canvas.className = 'lore-matrix';
+    document.body.appendChild(canvas);
+    const context = canvas.getContext('2d');
+    const chars = 'NULLXYZREX01337';
+
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener('resize', resize, { passive: true });
+    runtime.matrixResize = resize;
+
+    runtime.matrixInterval = window.setInterval(() => {
+      context.fillStyle = 'rgba(3, 2, 7, 0.14)';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = 'rgba(104, 255, 206, 0.72)';
+      context.font = '13px monospace';
+      for (let i = 0; i < 22; i += 1) {
+        const char = chars[Math.floor(Math.random() * chars.length)];
+        context.fillText(char, Math.random() * canvas.width, Math.random() * canvas.height);
+      }
+    }, 130);
+  }
+
+  function stopMatrixOverlay() {
+    const canvas = document.querySelector('.lore-matrix');
+    if (canvas) canvas.remove();
+    if (runtime.matrixInterval) {
+      clearInterval(runtime.matrixInterval);
+      runtime.matrixInterval = null;
+    }
+    if (runtime.matrixResize) {
+      window.removeEventListener('resize', runtime.matrixResize);
+      runtime.matrixResize = null;
+    }
   }
 
   function activateCorruption(level) {
-    restoreSite();
-    state.level = Math.max(1, Math.min(3, level)); saveState();
-    document.body.classList.add(`lore-corruption-l${state.level}`);
-    if (state.level === 3) {
-      const canvas = document.createElement('canvas'); canvas.className = 'lore-matrix'; document.body.appendChild(canvas);
-      const ctx = canvas.getContext('2d'); const chars = 'NULL01XYREX1337';
-      const resize = () => { canvas.width = innerWidth; canvas.height = innerHeight; };
-      resize(); window.addEventListener('resize', resize, { passive: true });
-      matrixTimer = setInterval(() => {
-        ctx.fillStyle = 'rgba(0,0,0,0.08)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = 'rgba(83,240,198,0.7)'; ctx.font = '14px monospace';
-        for (let i = 0; i < 24; i++) ctx.fillText(chars[Math.floor(Math.random() * chars.length)], Math.random() * canvas.width, Math.random() * canvas.height);
-      }, 120);
+    const normalized = Math.max(1, Math.min(3, Number(level) || 1));
+    restoreSite({ keepState: true });
+    state.corruptionLevel = normalized;
+    saveState();
+
+    document.body.classList.add(`lore-corruption-l${normalized}`);
+    toast(`Corruption Level ${normalized} engaged. Press R to restore.`);
+
+    if (normalized >= 2) {
+      runtime.flickerInterval = window.setInterval(applyRandomFlicker, 1400);
     }
-    toast(`Protocol engaged: Level ${state.level}. Press R or use Restore Site.`);
+
+    if (normalized === 3) {
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        startMatrixOverlay();
+      }
+      runtime.statusInterval = window.setInterval(() => {
+        const phrase = SURFACE_PHRASES[Math.floor(Math.random() * SURFACE_PHRASES.length)];
+        toast(phrase, 1700);
+      }, 6200);
+      console.warn('[XYREX ARCHIVE] Protocol 1.337 active. Monitoring containment drift.');
+    }
   }
 
-  function restoreSite() {
-    [1, 2, 3].forEach(level => document.body.classList.remove(`lore-corruption-l${level}`));
-    const matrix = document.querySelector('.lore-matrix'); if (matrix) matrix.remove();
-    if (matrixTimer) { clearInterval(matrixTimer); matrixTimer = null; }
-    state.level = 0; saveState();
+  function restoreSite(options = {}) {
+    document.body.classList.remove('lore-corruption-l1', 'lore-corruption-l2', 'lore-corruption-l3');
+    stopMatrixOverlay();
+
+    if (runtime.flickerInterval) {
+      clearInterval(runtime.flickerInterval);
+      runtime.flickerInterval = null;
+    }
+    if (runtime.statusInterval) {
+      clearInterval(runtime.statusInterval);
+      runtime.statusInterval = null;
+    }
+
+    document.querySelectorAll('.lore-flicker-once').forEach(el => el.classList.remove('lore-flicker-once'));
+
+    if (!options.keepState) {
+      state.corruptionLevel = 0;
+      saveState();
+    }
   }
 
-  function toast(message) {
-    const el = document.createElement('div'); el.className = 'lore-toast'; el.textContent = message; document.body.appendChild(el);
-    setTimeout(() => el.remove(), 2800);
+  function unlockArchive() {
+    state.archiveUnlocked = true;
+    saveState();
+    openArchive();
+  }
+
+  function handlePuzzleInput(event) {
+    if (event.target && /input|textarea/i.test(event.target.tagName)) return;
+
+    if (event.key.toLowerCase() === 'r') restoreSite();
+
+    if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'x') {
+      event.preventDefault();
+      openTerminal();
+      collectFragment('NULL', 'shortcut.ctrl+shift+x');
+      return;
+    }
+
+    if (event.key.length === 1) {
+      runtime.typedBuffer = (runtime.typedBuffer + event.key.toLowerCase()).slice(-20);
+      runtime.keySequenceBuffer.push(event.key.toLowerCase());
+      if (runtime.keySequenceBuffer.length > 5) runtime.keySequenceBuffer.shift();
+
+      if (runtime.typedBuffer.endsWith('archive') || runtime.typedBuffer.endsWith('xyrex')) {
+        openTerminal();
+      }
+      if (runtime.keySequenceBuffer.join('') === 'xyrex') {
+        collectFragment('TRUST', 'key.sequence.xyrex');
+      }
+    }
+  }
+
+  function addSurfaceClues() {
+    console.log('%c[XYREX ARCHIVE] Fragment detected: 2/5', 'color:#9f87ff;font-weight:700;');
+    console.log('[XYREX ARCHIVE] Binary clue: 01001110 01010101 01001100 01001100');
+    console.log('[XYREX ARCHIVE] Base64 clue: UFJPVE9DT0xfMS4zMzc=');
+
+    const hint = document.createElement('div');
+    hint.className = 'lore-fragment-hint';
+    hint.setAttribute('aria-hidden', 'true');
+    hint.textContent = '// The directory was not built. It was recovered.';
+    document.body.appendChild(hint);
+
+    const subtitle = document.querySelector('.seo-hero-subtitle');
+    if (subtitle) {
+      subtitle.dataset.archiveTrace = 'ARCHIVE NODE 03 FAILED TO RESPOND.';
+      subtitle.classList.add('lore-hover-target');
+    }
+  }
+
+  function bindSequencePuzzle() {
+    const steps = ['logo', 'search', 'footer', 'featured', 'logo'];
+
+    const bind = (selector, token, collectOnClick) => {
+      const element = document.querySelector(selector);
+      if (!element) return;
+      element.addEventListener('click', () => {
+        runtime.clickSequence.push(token);
+        runtime.clickSequence = runtime.clickSequence.slice(-steps.length);
+        if (collectOnClick) collectOnClick();
+
+        if (runtime.clickSequence.join('|') === steps.join('|')) {
+          collectFragment('MIRROR', 'ui.sequence');
+          state.archiveUnlocked = true;
+          saveState();
+          toast('Archive access granted.');
+        }
+      });
+    };
+
+    bind('#brandHomeBtn', 'logo', () => {
+      runtime.logoClicks += 1;
+      if (runtime.logoClicks >= 7) {
+        runtime.logoClicks = 0;
+        collectFragment('NULL', 'logo.7.clicks');
+        openTerminal();
+      }
+    });
+    bind('#searchInput', 'search');
+    bind('.seo-hero-subtitle', 'footer');
+    bind('.product-card, .executor-card, .card', 'featured');
   }
 
   function initLoreSystem() {
-    console.log('%c[XYREX ARCHIVE] Fragment detected: 2/5', 'color:#8f7bff;font-weight:700');
-    console.log('[XYREX ARCHIVE] Binary clue: 01001110 01010101 01001100 01001100');
-    console.log('[XYREX ARCHIVE] Base64 clue: UFJPVE9DT0xfMS4zMzc=');
-    document.body.insertAdjacentHTML('beforeend', '<div class="lore-fragment-hint" aria-hidden="true">// The directory was not built. It was recovered.</div>');
+    if (runtime.initialized) return;
+    runtime.initialized = true;
 
-    const terminal = initHiddenTerminal();
-    const brandBtn = document.querySelector('#brandHomeBtn');
-    const search = document.querySelector('#searchInput');
-    const footerGlyph = document.querySelector('.seo-hero-subtitle') || document.querySelector('.topnav');
-    const featured = document.querySelector('.product-card, .card, .executor-card');
+    addSurfaceClues();
+    initCorruptionProtocol();
+    ensureTerminal();
+    ensureArchive();
+    bindSequencePuzzle();
 
-    const clickNode = (node, token) => node && node.addEventListener('click', () => {
-      sequence.push(token); sequence = sequence.slice(-sequenceGoal.length);
-      if (JSON.stringify(sequence) === JSON.stringify(sequenceGoal)) { collectFragment('MIRROR', 'ui-sequence'); unlockArchive(); }
-    });
-    clickNode(brandBtn, 'logo'); clickNode(search, 'search'); clickNode(footerGlyph, 'footer'); clickNode(featured, 'featured'); clickNode(brandBtn, 'logo');
+    document.addEventListener('keydown', handlePuzzleInput);
 
-    let logoClicks = 0;
-    brandBtn?.addEventListener('click', () => { logoClicks += 1; if (logoClicks >= 7) { terminal.openTerminal(); collectFragment('NULL', 'logo-7'); logoClicks = 0; } });
+    maybeCollectCompositeFragment();
 
-    document.addEventListener('keydown', e => {
-      if (e.key.length === 1) { keyBuffer.push(e.key.toLowerCase()); if (keyBuffer.length > 5) keyBuffer.shift(); }
-      if (keyBuffer.join('') === 'xyrex') collectFragment('TRUST', 'key-sequence');
-      if (e.key.toLowerCase() === 'r') restoreSite();
-    });
+    if (state.archiveUnlocked) {
+      toast('Recovered archive state detected. Use terminal command: logs');
+    }
 
-    const restoreBtn = document.createElement('button');
-    restoreBtn.className = 'lore-restore-btn'; restoreBtn.textContent = 'Restore Site';
-    restoreBtn.style.position = 'fixed'; restoreBtn.style.left = '16px'; restoreBtn.style.bottom = '16px'; restoreBtn.style.zIndex = '1300';
-    restoreBtn.addEventListener('click', restoreSite);
-    document.body.appendChild(restoreBtn);
-
-    if (state.fragments.has('NULL') && state.fragments.has('TRUST') && state.fragments.has('INDEX')) collectFragment('1.337', 'composite');
-    if (state.archiveUnlocked) toast('Archive state recovered. Use terminal command: logs');
+    if (state.corruptionLevel > 0) {
+      activateCorruption(state.corruptionLevel);
+    }
   }
 
-  window.XyrexLore = { initLoreSystem, initHiddenTerminal, initCorruptionProtocol: () => {}, unlockArchive, activateCorruption, restoreSite, collectFragment };
+  window.XyrexLore = {
+    initLoreSystem,
+    initHiddenTerminal: openTerminal,
+    initCorruptionProtocol,
+    unlockArchive,
+    activateCorruption,
+    restoreSite,
+    collectFragment,
+    openArchive
+  };
 })();
