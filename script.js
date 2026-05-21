@@ -4345,6 +4345,10 @@ function init() {
   applyRoute(getInitialRoutePath(), true).finally(() => {
     window.setTimeout(hideInitialLoadingOverlay, 1000);
   });
+
+  if (window.XyrexLore?.initLoreSystem) {
+    window.XyrexLore.initLoreSystem();
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);

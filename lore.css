@@ -1,0 +1,71 @@
+:root {
+  --lore-accent: #8f7bff;
+  --lore-accent-2: #53f0c6;
+}
+
+.lore-fragment-hint {
+  position: fixed;
+  bottom: 14px;
+  right: 16px;
+  font: 600 10px/1.2 "JetBrains Mono", "Fira Code", monospace;
+  letter-spacing: 0.08em;
+  color: rgba(195, 185, 255, 0.36);
+  pointer-events: none;
+  z-index: 12;
+}
+
+.xyrex-terminal,
+.xyrex-archive-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  z-index: 1200;
+}
+
+.xyrex-terminal.is-open,
+.xyrex-archive-modal.is-open { display: block; }
+
+.lore-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 5, 14, 0.7);
+  backdrop-filter: blur(3px);
+}
+
+.lore-panel {
+  position: relative;
+  width: min(780px, calc(100vw - 2rem));
+  max-height: calc(100vh - 3rem);
+  margin: 1.5rem auto;
+  background: linear-gradient(180deg, rgba(19, 14, 35, 0.96), rgba(9, 8, 18, 0.95));
+  border: 1px solid rgba(143, 123, 255, 0.3);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+  color: #e8e6ff;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  overflow: hidden;
+}
+.lore-panel-header { display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid rgba(143,123,255,.24); }
+.lore-panel-close,.lore-restore-btn { background:#1a1430; color:#d7cfff; border:1px solid rgba(143,123,255,.4); border-radius:10px; padding:6px 10px; cursor:pointer; }
+.lore-output{ height:300px; overflow:auto; padding:14px; font-size:13px; line-height:1.45; }
+.lore-input-row{ display:flex; gap:8px; padding:10px; border-top:1px solid rgba(143,123,255,.2); }
+.lore-input{ flex:1; background:#09070f; color:#b6ffd7; border:1px solid rgba(83,240,198,.3); border-radius:10px; padding:9px 12px; }
+.lore-submit{ background:linear-gradient(180deg,#7d62ff,#5c43d5); border:0; border-radius:10px; color:#fff; padding:0 14px; }
+
+.archive-log { padding: 12px 14px; border-bottom:1px dashed rgba(143,123,255,.2); white-space:pre-wrap; }
+
+body.lore-corruption-l1::before,
+body.lore-corruption-l2::before,
+body.lore-corruption-l3::before {
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:1100;
+  background: repeating-linear-gradient(180deg, rgba(200,180,255,.03) 0, rgba(200,180,255,.03) 1px, transparent 2px, transparent 4px);
+}
+body.lore-corruption-l2 .card-title, body.lore-corruption-l3 .card-title { animation: loreFlicker .6s steps(2,end) 6; }
+@keyframes loreFlicker { 50% { opacity:.45; text-shadow: 0 0 8px rgba(143,123,255,.7);} }
+
+.lore-matrix { position:fixed; inset:0; pointer-events:none; z-index:1099; opacity:.24; }
+.lore-toast { position:fixed; top:18px; right:18px; z-index:1300; background:rgba(15,11,30,.95); border:1px solid rgba(143,123,255,.35); color:#ddd6ff; padding:10px 12px; border-radius:10px; font:600 12px/1.4 "JetBrains Mono", monospace; }
+
+@media (prefers-reduced-motion: reduce) {
+  body.lore-corruption-l2 .card-title, body.lore-corruption-l3 .card-title { animation: none; }
+}
