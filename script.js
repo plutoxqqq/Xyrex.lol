@@ -686,6 +686,8 @@ function normalizeWeaoEntry(rawEntry) {
   return {
     title,
     updateStatus: source?.updateStatus,
+    status: source?.status || source?.Status || '',
+    state: source?.state || '',
     detected: source?.detected,
     version: source?.version || '',
     updatedDate: source?.updatedDate || '',
@@ -709,10 +711,10 @@ function getWeaoStatusState(statusEntry) {
 
 function getWeaoStatusLabel(statusEntry) {
   const state = getWeaoStatusState(statusEntry);
-  if (state === 'up') return 'WEAO: Up';
-  if (state === 'down') return 'WEAO: Down';
-  if (state === 'unstable') return 'WEAO: Unstable';
-  return 'WEAO: Unknown';
+  if (state === 'up') return 'Working';
+  if (state === 'down') return 'Not Working';
+  if (state === 'unstable') return 'Unstable';
+  return 'Unknown';
 }
 
 function getWeaoStatusDetail(statusEntry) {
@@ -2459,7 +2461,7 @@ function createProductCard(product, index) {
 
   const statusMeta = document.createElement('span');
   statusMeta.className = 'weao-status-meta';
-  statusMeta.textContent = product.weaoStatus?.updatedDate || 'Live check pending';
+  statusMeta.textContent = getWeaoStatusDetail(product.weaoStatus);
 
   statusBar.appendChild(statusLabel);
   statusBar.appendChild(statusMeta);
@@ -2654,7 +2656,7 @@ function openModal(product) {
       <aside class="status-panel">
         <h3>Status</h3>
         <div class="status-item"><span>Current State</span><strong>${escapeHtml(product.status)}</strong></div>
-        <div class="status-item"><span>WEAO Status</span><strong class="weao-modal-status weao-status-text-${getWeaoStatusState(product.weaoStatus)}">${escapeHtml(getWeaoStatusLabel(product.weaoStatus).replace('WEAO: ', ''))}</strong></div>
+        <div class="status-item"><span>WEAO Status</span><strong class="weao-modal-status weao-status-text-${getWeaoStatusState(product.weaoStatus)}">${escapeHtml(getWeaoStatusLabel(product.weaoStatus))}</strong></div>
         <div class="status-item"><span>WEAO Details</span><strong>${escapeHtml(getWeaoStatusDetail(product.weaoStatus))}</strong></div>
         <div class="status-item"><span>Trust Level</span><strong>${escapeHtml(product.trustLevel)}</strong></div>
         <div class="status-item"><span>Stability</span><strong>${escapeHtml(product.stability)}</strong></div>
