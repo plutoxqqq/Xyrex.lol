@@ -3673,7 +3673,7 @@ Follow these steps to unlock every lore entry and effect:
 2. In the terminal, run **decrypt** to recover the **TRUST** fragment.
 3. In the terminal, run **logs** to recover the **INDEX** fragment.
 4. Click the site logo **seven times** to recover the **NULL** fragment.
-5. Type the key sequence **x y r e x** to recover the **MIRROR** fragment.
+5. Complete the click sequence **Logo → Search → Subtitle → Featured card → Logo** to recover the **MIRROR** fragment.
 6. When NULL, TRUST, INDEX, and MIRROR are recovered, fragment **1.337** unlocks automatically.
 7. Run **protocol** in the terminal, then run **protocol 1.337** to activate the final sequence.
 8. Open the Archive logs once all fragments are complete to view every lore log.
