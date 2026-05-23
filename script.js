@@ -2537,7 +2537,7 @@ function createProductCard(product, index) {
   header.appendChild(right);
 
   const statusState = getWeaoStatusState(product.weaoStatus);
-  name.classList.add(`product-name-status-${statusState}`);
+  card.dataset.statusState = statusState;
   name.title = `Current State: ${getWeaoStatusLabel(product.weaoStatus)} • Last Updated: ${getStatusLastUpdated(product.weaoStatus)} • Detection: ${getDetectionStatusLabel(product.weaoStatus)}`;
 
   const statusDetails = document.createElement('div');
