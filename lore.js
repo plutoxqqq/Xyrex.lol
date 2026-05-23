@@ -416,8 +416,6 @@
     if (runtime.initialized) return;
     runtime.initialized = true;
 
-    addSurfaceClues();
-    initCorruptionProtocol();
     ensureTerminal();
     ensureArchive();
     bindSequencePuzzle();
