@@ -4,16 +4,6 @@
   --lore-terminal-green: #67ffcf;
 }
 
-.lore-fragment-hint {
-  position: fixed;
-  right: 16px;
-  bottom: 15px;
-  z-index: 12;
-  pointer-events: none;
-  color: rgba(212, 204, 255, 0.38);
-  font: 600 10px/1.2 "JetBrains Mono", "Fira Code", monospace;
-  letter-spacing: 0.08em;
-}
 
 .lore-hover-target { position: relative; }
 .lore-hover-target::after {
@@ -71,14 +61,12 @@
 }
 
 .lore-panel-close,
-.lore-restore-btn,
 .lore-submit {
   border-radius: 10px;
   cursor: pointer;
 }
 
-.lore-panel-close,
-.lore-restore-btn {
+.lore-panel-close {
   border: 1px solid rgba(143, 123, 255, .4);
   background: #1a1431;
   color: #ddd3ff;
@@ -131,26 +119,7 @@
   line-height: 1.4;
 }
 
-.lore-status-pill {
-  position: fixed;
-  left: 16px;
-  bottom: 16px;
-  z-index: 1250;
-  pointer-events: none;
-  border: 1px solid rgba(143, 123, 255, .35);
-  border-radius: 999px;
-  padding: 6px 10px;
-  color: rgba(230, 223, 255, .8);
-  background: rgba(12, 9, 24, .82);
-  font: 600 11px/1.2 "JetBrains Mono", monospace;
-}
 
-.lore-restore-btn {
-  position: fixed;
-  left: 16px;
-  bottom: 48px;
-  z-index: 1251;
-}
 
 .lore-toast {
   position: fixed;
@@ -176,18 +145,6 @@ body.lore-corruption-l3::before {
   background: repeating-linear-gradient(180deg, rgba(209, 188, 255, .03) 0, rgba(209, 188, 255, .03) 1px, transparent 2px, transparent 4px);
 }
 
-body.lore-corruption-l2::after,
-body.lore-corruption-l3::after {
-  content: "ARCHIVE BLEED";
-  position: fixed;
-  right: 14px;
-  bottom: 82px;
-  z-index: 1098;
-  font: 700 10px/1 "JetBrains Mono", monospace;
-  letter-spacing: .16em;
-  color: rgba(188, 255, 226, .35);
-  pointer-events: none;
-}
 
 .lore-flicker-once { animation: lore-flicker .45s linear 1; }
 @keyframes lore-flicker {

@@ -10,7 +10,7 @@
   const FRAGMENT_ORDER = ['NULL', 'TRUST', 'INDEX', 'MIRROR', '1.337'];
   const SURFACE_PHRASES = [
     'ARCHIVE NODE 03 FAILED TO RESPOND.',
-    'The directory was not built. It was recovered.',
+    'The directory was not built.',
     'Do not trust entries marked VERIFIED after 03:17.',
     'NULL remembers every filter you opened.'
   ];
@@ -236,28 +236,9 @@
     ensureArchive().classList.add('is-open');
   }
 
-  function updateStatusPill() {
-    if (!runtime.statusPill) return;
-    runtime.statusPill.textContent = `Archive fragments: ${getProgress()}`;
-  }
+  function updateStatusPill() {}
 
-  function initCorruptionProtocol() {
-    if (runtime.restoreButton) return;
-
-    const restoreBtn = document.createElement('button');
-    restoreBtn.type = 'button';
-    restoreBtn.className = 'lore-restore-btn';
-    restoreBtn.textContent = 'Restore Site';
-    restoreBtn.addEventListener('click', restoreSite);
-    document.body.appendChild(restoreBtn);
-    runtime.restoreButton = restoreBtn;
-
-    const pill = document.createElement('div');
-    pill.className = 'lore-status-pill';
-    runtime.statusPill = pill;
-    updateStatusPill();
-    document.body.appendChild(pill);
-  }
+  function initCorruptionProtocol() {}
 
   function applyRandomFlicker() {
     const cards = Array.from(document.querySelectorAll('.product-card, .executor-card, .card')).slice(0, 8);
@@ -391,12 +372,6 @@
     console.log('[XYREX ARCHIVE] Binary clue: 01001110 01010101 01001100 01001100');
     console.log('[XYREX ARCHIVE] Base64 clue: UFJPVE9DT0xfMS4zMzc=');
 
-    const hint = document.createElement('div');
-    hint.className = 'lore-fragment-hint';
-    hint.setAttribute('aria-hidden', 'true');
-    hint.textContent = '// The directory was not built. It was recovered.';
-    document.body.appendChild(hint);
-
     const subtitle = document.querySelector('.seo-hero-subtitle');
     if (subtitle) {
       subtitle.dataset.archiveTrace = 'ARCHIVE NODE 03 FAILED TO RESPOND.';
@@ -441,8 +416,6 @@
     if (runtime.initialized) return;
     runtime.initialized = true;
 
-    addSurfaceClues();
-    initCorruptionProtocol();
     ensureTerminal();
     ensureArchive();
     bindSequencePuzzle();
