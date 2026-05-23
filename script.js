@@ -692,11 +692,21 @@ function normalizeWeaoEntry(rawEntry) {
     status: source?.status || source?.Status || '',
     state: source?.state || '',
     detected: source?.detected,
-    version: source?.version || '',
+    version: source?.version || source?.rbxversion || '',
     updatedDate: source?.updatedDate || '',
     platform: source?.platform || '',
     hidden: Boolean(source?.hidden),
     beta: Boolean(source?.beta),
+    suncPercentage: source?.suncPercentage,
+    uncPercentage: source?.uncPercentage,
+    free: source?.free,
+    keysystem: source?.keysystem,
+    websitelink: source?.websitelink,
+    discordlink: source?.discordlink,
+    purchaselink: source?.purchaselink,
+    rbxversion: source?.rbxversion,
+    cost: source?.cost,
+    extype: source?.extype,
   };
 }
 
@@ -747,7 +757,80 @@ function applyWeaoStatuses(rawEntries) {
         return aliases.some(alias => titleKey.includes(alias) || alias.includes(titleKey));
       });
     }
+
     product.weaoStatus = match || null;
+
+    if (!match) return;
+
+    if (Number.isFinite(Number(match.suncPercentage))) {
+      product.sunc = Number(match.suncPercentage);
+    } else if (Number.isFinite(Number(match.uncPercentage))) {
+      product.sunc = Number(match.uncPercentage);
+    }
+
+    if (Array.isArray(match.platform)) {
+      product.platform = match.platform.filter(Boolean);
+    } else if (typeof match.platform === 'string' && match.platform.trim()) {
+      product.platform = match.platform.split(/[,/|]/).map(item => item.trim()).filter(Boolean);
+    }
+
+    if (typeof match.keysystem === 'boolean') {
+      product.keySystem = match.keysystem ? 'Keyed' : 'Keyless';
+    } else if (typeof match.keysystem === 'string' && match.keysystem.trim()) {
+      product.keySystem = /keyless|no\s*key/i.test(match.keysystem) ? 'Keyless' : 'Keyed';
+    }
+
+    const weaoState = getWeaoStatusState(match);
+    if (weaoState === 'up') {
+      product.status = 'Working';
+    } else if (weaoState === 'down') {
+      product.status = 'Down';
+    } else if (weaoState === 'unstable') {
+      product.status = 'Buggy';
+    } else {
+      product.status = 'Unknown';
+    }
+
+    const freeValue = typeof match.free === 'string' ? match.free.toLowerCase() : match.free;
+    const confirmedFree = freeValue === true || freeValue === 'true' || freeValue === 'free';
+    const confirmedPaid = freeValue === false || freeValue === 'false' || freeValue === 'paid' || Boolean(match.purchaselink) || (typeof match.cost === 'string' && match.cost.trim() && !/free/i.test(match.cost));
+
+    if (confirmedFree && confirmedPaid) {
+      product.freeOrPaid = 'both';
+    } else if (confirmedFree) {
+      product.freeOrPaid = 'free';
+    } else if (confirmedPaid) {
+      product.freeOrPaid = 'paid';
+      const pricing = String(match.cost || '').trim();
+      if (pricing) product.pricingOptions = [pricing];
+    }
+
+    if (typeof match.websitelink === 'string' && match.websitelink.trim()) product.officialSite = match.websitelink.trim();
+    if (typeof match.discordlink === 'string' && match.discordlink.trim()) product.officialDiscord = match.discordlink.trim();
+    if (typeof match.version === 'string' && match.version.trim()) product.version = match.version.trim();
+
+    product.weaoLiveData = {
+      suncPercentage: match.suncPercentage ?? null,
+      uncPercentage: match.uncPercentage ?? null,
+      free: match.free ?? null,
+      keysystem: match.keysystem ?? null,
+      websitelink: match.websitelink || '',
+      discordlink: match.discordlink || '',
+      purchaselink: match.purchaselink || '',
+      rbxversion: match.rbxversion || '',
+      cost: match.cost || '',
+      extype: match.extype || '',
+      version: match.version || '',
+      updateStatus: match.updateStatus,
+      status: match.status || '',
+      state: match.state || '',
+      detected: match.detected,
+      updatedDate: match.updatedDate || '',
+      hidden: Boolean(match.hidden),
+      beta: Boolean(match.beta),
+      title: match.title || '',
+      refreshedAt: new Date().toISOString(),
+    };
   });
   applyAllFilters();
 }
@@ -2664,6 +2747,7 @@ function openModal(product) {
         <div class="status-item"><span>Trust Level</span><strong>${escapeHtml(product.trustLevel)}</strong></div>
         <div class="status-item"><span>Stability</span><strong>${escapeHtml(product.stability)}</strong></div>
         <div class="status-item"><span>sUNC</span><strong>${Number.isFinite(product.sunc) ? `${product.sunc}%` : 'None'}</strong></div>
+        <div class="status-item"><span>Version</span><strong>${escapeHtml(product.version || product.weaoLiveData?.rbxversion || 'Unknown')}</strong></div>
         <div class="status-item status-site">
           <span>Official Site</span>
           ${

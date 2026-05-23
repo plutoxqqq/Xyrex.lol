@@ -232,8 +232,8 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 
 .product-name-status-up{ color:#22c55e; }
 .product-name-status-down{ color:#ef4444; }
-.product-name-status-unstable{ color:#9ca3af; }
-.product-name-status-unknown{ color:#c4c9d4; }
+.product-name-status-unstable{ color:#f59e0b; }
+.product-name-status-unknown{ color:#9ca3af; }
 
 .weao-status-details{
   border:1px solid rgba(178,188,255,.2);
