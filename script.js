@@ -593,7 +593,10 @@ const products = [
   }
 ];
 
-const EXPLOIT_ASSISTANT_API = 'https://xyres-ai-api.vercel.app/api/exploit-assistant';
+const EXPLOIT_ASSISTANT_APIS = [
+  'https://xyres-ai-api.vercel.app/api/exploit-assistant',
+  'https://xyrex-ai-api.vercel.app/api/exploit-assistant'
+];
 const AI_TOKEN_STORAGE_KEY = 'xyrex_ai_tokens_v1';
 const FREE_DAILY_AI_TOKENS = 5;
 const NO_ASSISTANT_TOKENS_MESSAGE = 'You have no AI tokens remaining. Daily tokens reset at midnight, or you can buy more in the Token Shop.';
@@ -2623,7 +2626,7 @@ function openModal(product) {
     ? (() => {
         try {
           return new URL(officialSite).hostname;
-        } catch {
+        } catch (error) {
           return officialSite;
         }
       })()
@@ -2638,7 +2641,7 @@ function openModal(product) {
     ? (() => {
         try {
           return new URL(officialDiscord).hostname;
-        } catch {
+        } catch (error) {
           return officialDiscord;
         }
       })()
@@ -3344,7 +3347,7 @@ function renderPopularScripts() {
         await navigator.clipboard.writeText(scriptValue);
         copyButton.classList.add('is-copied');
         window.setTimeout(() => copyButton.classList.remove('is-copied'), 900);
-      } catch {
+      } catch (error) {
         // no-op
       }
     });
@@ -3494,7 +3497,7 @@ function getAssistantKnowledgeText(product) {
   return `${product.name}: ${product.description} Platforms: ${platforms}. Features: ${features}. sUNC: ${Number.isFinite(product.sunc) ? `${product.sunc}%` : 'None'}. Stability: ${product.stability}. Risk: ${detectionRiskLabel(product)} (${detectionRiskScore(product)}/10). Price: ${price}.${site}`;
 }
 
-const assistantIntents = { COMPARE:'compare', RECOMMEND:'recommend', SAFETY:'safety', PRICE:'price', PLATFORM:'platform', SUNC:'sunc', BEGINNER:'beginner', DETAILS:'details', FILTER_SHOW:'filter_show', UNKNOWN:'unknown' };
+const assistantIntents = { COMPARE:'compare', RECOMMEND:'recommend', SAFETY:'safety', PRICE:'price', PLATFORM:'platform', SUNC:'sunc', BEGINNER:'beginner', DETAILS:'details', LORE:'lore', FILTER_SHOW:'filter_show', UNKNOWN:'unknown' };
 const assistantLoadingSteps = ['Reading Xyrex executor data...','Checking platform, price, and key system...','Comparing sUNC, trust, and stability...','Building a clear recommendation...'];
 let assistantContext = { lastIntent:null, lastExecutors:[], lastFilters:{}, lastQuestion:'', lastRecommendation:null };
 
@@ -3522,6 +3525,7 @@ function detectAssistantIntent(message) {
   else if (/(free|paid|cost|keyless|keyed)/i.test(input)) intent = assistantIntents.PRICE;
   else if (/(windows|mac|android|ios|mobile|pc)/i.test(input)) intent = assistantIntents.PLATFORM;
   else if (/(sunc|score|percentage|highest unc|highest sunc)/i.test(input)) intent = assistantIntents.SUNC;
+  else if (/(\blore\b|archive|fragment|protocol 1\.337|null|terminal command|how.*unlock)/i.test(input)) intent = assistantIntents.LORE;
   else if (beginner) intent = assistantIntents.BEGINNER;
   else if (entities.length) intent = assistantIntents.DETAILS;
   return { intent, entities, filters, beginner, wantsFilterAction };
@@ -3659,6 +3663,26 @@ Based on Xyrex data:
 Confidence: ${getAssistantConfidence(best)} — Based on current local Xyrex data and may change over time.`;
 }
 
+
+function buildLoreAccessGuide() {
+  return `### Full lore access guide
+
+Follow these steps to unlock every lore entry and effect:
+
+1. Open the **Recovered Layer Terminal** by typing **archive** or **xyrex** anywhere on the page.
+2. In the terminal, run **decrypt** to recover the **TRUST** fragment.
+3. In the terminal, run **logs** to recover the **INDEX** fragment.
+4. Click the site logo **seven times** to recover the **NULL** fragment.
+5. Type the key sequence **x y r e x** to recover the **MIRROR** fragment.
+6. When NULL, TRUST, INDEX, and MIRROR are recovered, fragment **1.337** unlocks automatically.
+7. Run **protocol** in the terminal, then run **protocol 1.337** to activate the final sequence.
+8. Open the Archive logs once all fragments are complete to view every lore log.
+
+Helpful terminal commands: **help**, **status**, **logs**, **decrypt**, **protocol**, **null**, **restore**, **clear**.
+
+Tip: If you want to reset visual corruption effects, run **restore** in the terminal.`;
+}
+
 function isLikelyCannedAssistantReply(replyText) {
   const normalized = String(replyText || '').toLowerCase().replace(/\s+/g, ' ').trim();
   if (!normalized) return true;
@@ -3671,21 +3695,30 @@ function isLikelyCannedAssistantReply(replyText) {
 }
 
 async function askExploitAssistant(message) {
-  const response = await fetch(EXPLOIT_ASSISTANT_API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      message,
-      executors: products
-    })
-  });
+  const payload = JSON.stringify({ message, executors: products });
+  const errors = [];
 
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => '');
-    throw new Error(`Exploit Assistant API request failed (${response.status} ${response.statusText})${errorText ? `: ${errorText.slice(0, 240)}` : ''}`);
+  for (const apiUrl of EXPLOIT_ASSISTANT_APIS) {
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => '');
+        errors.push(`${apiUrl} -> ${response.status} ${response.statusText}${errorText ? `: ${errorText.slice(0, 160)}` : ''}`);
+        continue;
+      }
+
+      return response.json();
+    } catch (error) {
+      errors.push(`${apiUrl} -> ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
-  return response.json();
+  throw new Error(`Exploit Assistant API request failed on all endpoints. ${errors.join(' | ')}`);
 }
 
 function initExploitAssistant() {
@@ -3746,6 +3779,8 @@ function initExploitAssistant() {
       } else if (intentData.intent === assistantIntents.COMPARE && intentData.entities.length >= 2) {
         const pair = intentData.entities.slice(0, 2).map(n => products.find(p => p.name === n)).filter(Boolean);
         replyText = `### ${pair[0].name} vs ${pair[1].name}\n\nCategory comparison:\n- Price: ${pair[0].freeOrPaid} vs ${pair[1].freeOrPaid}\n- Platform: ${(pair[0].platform || []).join(', ')} vs ${(pair[1].platform || []).join(', ')}\n- Key System: ${pair[0].keySystem} vs ${pair[1].keySystem}\n- sUNC: ${pair[0].sunc ?? 'None'} vs ${pair[1].sunc ?? 'None'}\n- Trust: ${pair[0].trustLevel} vs ${pair[1].trustLevel}\n- Stability: ${pair[0].stability} vs ${pair[1].stability}\n- Status: ${pair[0].status} vs ${pair[1].status}\n\nVerdict:\nBased on Xyrex data, ${recommendationScore(pair[0], intentData) >= recommendationScore(pair[1], intentData) ? pair[0].name : pair[1].name} currently looks stronger overall.\n\nConfidence:\n${getAssistantConfidence(pair)} — This comparison is based on local Xyrex fields and may change over time.`;
+      } else if (intentData.intent === assistantIntents.LORE) {
+        replyText = buildLoreAccessGuide();
       } else {
         const apiPayload = await askExploitAssistant(userMessage);
         const apiReply = String(apiPayload?.reply || apiPayload?.message || '').trim();
@@ -3759,8 +3794,8 @@ function initExploitAssistant() {
         loadingMessage.appendChild(clearBtn);
       }
       assistantContext = { lastIntent: intentData.intent, lastExecutors: intentData.entities, lastFilters: intentData.filters, lastQuestion: userMessage, lastRecommendation: intentData.entities[0] || null };
-    } catch {
-      setAssistantMessageMarkdown(loadingMessage, 'Local Data mode is active because live research is currently unavailable. I’ll answer using Xyrex’s stored executor data.\n\n' + getLocalAssistantFallback(userMessage));
+    } catch (error) {
+      setAssistantMessageMarkdown(loadingMessage, `Live research is temporarily unavailable (${(error && error.message) ? error.message : 'unknown error'}). I’ll continue using stored Xyrex data.\n\n${intentData.intent === assistantIntents.LORE ? buildLoreAccessGuide() : getLocalAssistantFallback(userMessage)}`);
     } finally {
       if (loadingInterval) { clearInterval(loadingInterval); loadingInterval = null; }
       input.disabled = false;
