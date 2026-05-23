@@ -647,6 +647,8 @@ const POPULAR_SCRIPT_CATEGORIES = [
 const WEAO_STATUS_ENDPOINTS = [
   'https://weao.xyz/api/status/exploits',
   'https://api.weao.xyz/status/exploits',
+  'https://whatexpsare.online/api/status/exploits',
+  'https://api.whatexpsare.online/status/exploits',
 ];
 const WEAO_STATUS_REFRESH_MS = 5 * 60 * 1000;
 let weaoStatusTimer = null;
