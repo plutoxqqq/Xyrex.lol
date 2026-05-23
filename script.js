@@ -730,14 +730,16 @@ function getWeaoStatusLabel(statusEntry) {
   return 'Unknown';
 }
 
-function getWeaoStatusDetail(statusEntry) {
-  if (!statusEntry) return 'No matching WEAO status entry found yet.';
-  const parts = [];
-  if (statusEntry.version) parts.push(`Version ${statusEntry.version}`);
-  if (statusEntry.updatedDate) parts.push(`Updated ${statusEntry.updatedDate}`);
-  if (statusEntry.detected === true) parts.push('Detected');
-  if (statusEntry.detected === false) parts.push('Not detected');
-  return parts.join(' • ') || 'Matched from WEAO executor status data.';
+function getStatusLastUpdated(statusEntry) {
+  if (!statusEntry || !statusEntry.updatedDate) return 'Unknown';
+  return statusEntry.updatedDate;
+}
+
+function getDetectionStatusLabel(statusEntry) {
+  if (!statusEntry) return 'Unknown';
+  if (statusEntry.detected === true) return 'Detected';
+  if (statusEntry.detected === false) return 'Not detected';
+  return 'Unknown';
 }
 
 function applyWeaoStatuses(rawEntries) {
@@ -2536,14 +2538,15 @@ function createProductCard(product, index) {
 
   const statusState = getWeaoStatusState(product.weaoStatus);
   name.classList.add(`product-name-status-${statusState}`);
-  name.title = `${getWeaoStatusLabel(product.weaoStatus)} • ${getWeaoStatusDetail(product.weaoStatus)}`;
+  name.title = `Current State: ${getWeaoStatusLabel(product.weaoStatus)} • Last Updated: ${getStatusLastUpdated(product.weaoStatus)} • Detection: ${getDetectionStatusLabel(product.weaoStatus)}`;
 
   const statusDetails = document.createElement('div');
-  statusDetails.className = 'weao-status-details';
+  statusDetails.className = 'status-details';
   statusDetails.hidden = true;
   statusDetails.innerHTML = `
-    <div class="weao-status-line"><strong>Status:</strong> ${escapeHtml(getWeaoStatusLabel(product.weaoStatus))}</div>
-    <div class="weao-status-line"><strong>Details:</strong> ${escapeHtml(getWeaoStatusDetail(product.weaoStatus))}</div>
+    <div class="status-line"><strong>Current State:</strong> ${escapeHtml(getWeaoStatusLabel(product.weaoStatus))}</div>
+    <div class="status-line"><strong>Last Updated:</strong> ${escapeHtml(getStatusLastUpdated(product.weaoStatus))}</div>
+    <div class="status-line"><strong>Detection:</strong> ${escapeHtml(getDetectionStatusLabel(product.weaoStatus))}</div>
   `;
 
   card.addEventListener('click', event => {
@@ -2617,8 +2620,9 @@ function renderProducts(list) {
     const orderedCards = sorted.map((product, index) => {
       const existingCard = existingByName.get(product.name);
       if (existingCard) {
-        existingCard.setAttribute('data-index', String(index));
-        return existingCard;
+        const refreshedCard = createProductCard(product, index);
+        existingCard.replaceWith(refreshedCard);
+        return refreshedCard;
       }
       const newCard = createProductCard(product, index);
       newCard.classList.add('card-enter');
@@ -2741,9 +2745,9 @@ function openModal(product) {
       </div>
       <aside class="status-panel">
         <h3>Status</h3>
-        <div class="status-item"><span>Current State</span><strong>${escapeHtml(product.status)}</strong></div>
-        <div class="status-item"><span>WEAO Status</span><strong class="weao-modal-status weao-status-text-${getWeaoStatusState(product.weaoStatus)}">${escapeHtml(getWeaoStatusLabel(product.weaoStatus))}</strong></div>
-        <div class="status-item"><span>WEAO Details</span><strong>${escapeHtml(getWeaoStatusDetail(product.weaoStatus))}</strong></div>
+        <div class="status-item"><span>Current State</span><strong class="status-text-${getWeaoStatusState(product.weaoStatus)}">${escapeHtml(getWeaoStatusLabel(product.weaoStatus))}</strong></div>
+        <div class="status-item"><span>Last Updated</span><strong>${escapeHtml(getStatusLastUpdated(product.weaoStatus))}</strong></div>
+        <div class="status-item"><span>Detection</span><strong>${escapeHtml(getDetectionStatusLabel(product.weaoStatus))}</strong></div>
         <div class="status-item"><span>Trust Level</span><strong>${escapeHtml(product.trustLevel)}</strong></div>
         <div class="status-item"><span>Stability</span><strong>${escapeHtml(product.stability)}</strong></div>
         <div class="status-item"><span>sUNC</span><strong>${Number.isFinite(product.sunc) ? `${product.sunc}%` : 'None'}</strong></div>
