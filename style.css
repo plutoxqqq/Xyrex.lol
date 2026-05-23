@@ -232,10 +232,10 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 
 .product-name-status-up{ color:#22c55e; }
 .product-name-status-down{ color:#ef4444; }
-.product-name-status-unstable{ color:#9ca3af; }
-.product-name-status-unknown{ color:#c4c9d4; }
+.product-name-status-unstable{ color:#f59e0b; }
+.product-name-status-unknown{ color:#9ca3af; }
 
-.weao-status-details{
+.status-details{
   border:1px solid rgba(178,188,255,.2);
   background:rgba(10,14,28,.6);
   border-radius:10px;
@@ -243,9 +243,9 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
   font-size:.78rem;
   color:#d7dcf2;
 }
-.weao-status-line + .weao-status-line{ margin-top:6px; }
-.weao-status-line strong{ color:#eef1ff; }
-.card-expanded .weao-status-details{ animation:fadeInUp .16s ease-out; }
+.status-line + .status-line{ margin-top:6px; }
+.status-line strong{ color:#eef1ff; }
+.card-expanded .status-details{ animation:fadeInUp .16s ease-out; }
 
 .summary{ margin:0; color:var(--muted); line-height:1.45; }
 .price{ margin-top:auto; color:var(--periwinkle-2); font-weight:800; }
@@ -931,3 +931,8 @@ body.new-ui-enabled .xy-cheat-item input[type="checkbox"]:checked {
 }
 
 .sidebar-header{ display:flex; align-items:center; margin-bottom:10px; }
+
+.status-text-up{ color:#22c55e; }
+.status-text-down{ color:#ef4444; }
+.status-text-unstable{ color:#f59e0b; }
+.status-text-unknown{ color:#9ca3af; }

@@ -692,11 +692,21 @@ function normalizeWeaoEntry(rawEntry) {
     status: source?.status || source?.Status || '',
     state: source?.state || '',
     detected: source?.detected,
-    version: source?.version || '',
+    version: source?.version || source?.rbxversion || '',
     updatedDate: source?.updatedDate || '',
     platform: source?.platform || '',
     hidden: Boolean(source?.hidden),
     beta: Boolean(source?.beta),
+    suncPercentage: source?.suncPercentage,
+    uncPercentage: source?.uncPercentage,
+    free: source?.free,
+    keysystem: source?.keysystem,
+    websitelink: source?.websitelink,
+    discordlink: source?.discordlink,
+    purchaselink: source?.purchaselink,
+    rbxversion: source?.rbxversion,
+    cost: source?.cost,
+    extype: source?.extype,
   };
 }
 
@@ -720,14 +730,16 @@ function getWeaoStatusLabel(statusEntry) {
   return 'Unknown';
 }
 
-function getWeaoStatusDetail(statusEntry) {
-  if (!statusEntry) return 'No matching WEAO status entry found yet.';
-  const parts = [];
-  if (statusEntry.version) parts.push(`Version ${statusEntry.version}`);
-  if (statusEntry.updatedDate) parts.push(`Updated ${statusEntry.updatedDate}`);
-  if (statusEntry.detected === true) parts.push('Detected');
-  if (statusEntry.detected === false) parts.push('Not detected');
-  return parts.join(' • ') || 'Matched from WEAO executor status data.';
+function getStatusLastUpdated(statusEntry) {
+  if (!statusEntry || !statusEntry.updatedDate) return 'Unknown';
+  return statusEntry.updatedDate;
+}
+
+function getDetectionStatusLabel(statusEntry) {
+  if (!statusEntry) return 'Unknown';
+  if (statusEntry.detected === true) return 'Detected';
+  if (statusEntry.detected === false) return 'Not detected';
+  return 'Unknown';
 }
 
 function applyWeaoStatuses(rawEntries) {
@@ -747,7 +759,80 @@ function applyWeaoStatuses(rawEntries) {
         return aliases.some(alias => titleKey.includes(alias) || alias.includes(titleKey));
       });
     }
+
     product.weaoStatus = match || null;
+
+    if (!match) return;
+
+    if (Number.isFinite(Number(match.suncPercentage))) {
+      product.sunc = Number(match.suncPercentage);
+    } else if (Number.isFinite(Number(match.uncPercentage))) {
+      product.sunc = Number(match.uncPercentage);
+    }
+
+    if (Array.isArray(match.platform)) {
+      product.platform = match.platform.filter(Boolean);
+    } else if (typeof match.platform === 'string' && match.platform.trim()) {
+      product.platform = match.platform.split(/[,/|]/).map(item => item.trim()).filter(Boolean);
+    }
+
+    if (typeof match.keysystem === 'boolean') {
+      product.keySystem = match.keysystem ? 'Keyed' : 'Keyless';
+    } else if (typeof match.keysystem === 'string' && match.keysystem.trim()) {
+      product.keySystem = /keyless|no\s*key/i.test(match.keysystem) ? 'Keyless' : 'Keyed';
+    }
+
+    const weaoState = getWeaoStatusState(match);
+    if (weaoState === 'up') {
+      product.status = 'Working';
+    } else if (weaoState === 'down') {
+      product.status = 'Down';
+    } else if (weaoState === 'unstable') {
+      product.status = 'Buggy';
+    } else {
+      product.status = 'Unknown';
+    }
+
+    const freeValue = typeof match.free === 'string' ? match.free.toLowerCase() : match.free;
+    const confirmedFree = freeValue === true || freeValue === 'true' || freeValue === 'free';
+    const confirmedPaid = freeValue === false || freeValue === 'false' || freeValue === 'paid' || Boolean(match.purchaselink) || (typeof match.cost === 'string' && match.cost.trim() && !/free/i.test(match.cost));
+
+    if (confirmedFree && confirmedPaid) {
+      product.freeOrPaid = 'both';
+    } else if (confirmedFree) {
+      product.freeOrPaid = 'free';
+    } else if (confirmedPaid) {
+      product.freeOrPaid = 'paid';
+      const pricing = String(match.cost || '').trim();
+      if (pricing) product.pricingOptions = [pricing];
+    }
+
+    if (typeof match.websitelink === 'string' && match.websitelink.trim()) product.officialSite = match.websitelink.trim();
+    if (typeof match.discordlink === 'string' && match.discordlink.trim()) product.officialDiscord = match.discordlink.trim();
+    if (typeof match.version === 'string' && match.version.trim()) product.version = match.version.trim();
+
+    product.weaoLiveData = {
+      suncPercentage: match.suncPercentage ?? null,
+      uncPercentage: match.uncPercentage ?? null,
+      free: match.free ?? null,
+      keysystem: match.keysystem ?? null,
+      websitelink: match.websitelink || '',
+      discordlink: match.discordlink || '',
+      purchaselink: match.purchaselink || '',
+      rbxversion: match.rbxversion || '',
+      cost: match.cost || '',
+      extype: match.extype || '',
+      version: match.version || '',
+      updateStatus: match.updateStatus,
+      status: match.status || '',
+      state: match.state || '',
+      detected: match.detected,
+      updatedDate: match.updatedDate || '',
+      hidden: Boolean(match.hidden),
+      beta: Boolean(match.beta),
+      title: match.title || '',
+      refreshedAt: new Date().toISOString(),
+    };
   });
   applyAllFilters();
 }
@@ -2453,14 +2538,15 @@ function createProductCard(product, index) {
 
   const statusState = getWeaoStatusState(product.weaoStatus);
   name.classList.add(`product-name-status-${statusState}`);
-  name.title = `${getWeaoStatusLabel(product.weaoStatus)} • ${getWeaoStatusDetail(product.weaoStatus)}`;
+  name.title = `Current State: ${getWeaoStatusLabel(product.weaoStatus)} • Last Updated: ${getStatusLastUpdated(product.weaoStatus)} • Detection: ${getDetectionStatusLabel(product.weaoStatus)}`;
 
   const statusDetails = document.createElement('div');
-  statusDetails.className = 'weao-status-details';
+  statusDetails.className = 'status-details';
   statusDetails.hidden = true;
   statusDetails.innerHTML = `
-    <div class="weao-status-line"><strong>Status:</strong> ${escapeHtml(getWeaoStatusLabel(product.weaoStatus))}</div>
-    <div class="weao-status-line"><strong>Details:</strong> ${escapeHtml(getWeaoStatusDetail(product.weaoStatus))}</div>
+    <div class="status-line"><strong>Current State:</strong> ${escapeHtml(getWeaoStatusLabel(product.weaoStatus))}</div>
+    <div class="status-line"><strong>Last Updated:</strong> ${escapeHtml(getStatusLastUpdated(product.weaoStatus))}</div>
+    <div class="status-line"><strong>Detection:</strong> ${escapeHtml(getDetectionStatusLabel(product.weaoStatus))}</div>
   `;
 
   card.addEventListener('click', event => {
@@ -2534,8 +2620,9 @@ function renderProducts(list) {
     const orderedCards = sorted.map((product, index) => {
       const existingCard = existingByName.get(product.name);
       if (existingCard) {
-        existingCard.setAttribute('data-index', String(index));
-        return existingCard;
+        const refreshedCard = createProductCard(product, index);
+        existingCard.replaceWith(refreshedCard);
+        return refreshedCard;
       }
       const newCard = createProductCard(product, index);
       newCard.classList.add('card-enter');
@@ -2658,12 +2745,13 @@ function openModal(product) {
       </div>
       <aside class="status-panel">
         <h3>Status</h3>
-        <div class="status-item"><span>Current State</span><strong>${escapeHtml(product.status)}</strong></div>
-        <div class="status-item"><span>WEAO Status</span><strong class="weao-modal-status weao-status-text-${getWeaoStatusState(product.weaoStatus)}">${escapeHtml(getWeaoStatusLabel(product.weaoStatus))}</strong></div>
-        <div class="status-item"><span>WEAO Details</span><strong>${escapeHtml(getWeaoStatusDetail(product.weaoStatus))}</strong></div>
+        <div class="status-item"><span>Current State</span><strong class="status-text-${getWeaoStatusState(product.weaoStatus)}">${escapeHtml(getWeaoStatusLabel(product.weaoStatus))}</strong></div>
+        <div class="status-item"><span>Last Updated</span><strong>${escapeHtml(getStatusLastUpdated(product.weaoStatus))}</strong></div>
+        <div class="status-item"><span>Detection</span><strong>${escapeHtml(getDetectionStatusLabel(product.weaoStatus))}</strong></div>
         <div class="status-item"><span>Trust Level</span><strong>${escapeHtml(product.trustLevel)}</strong></div>
         <div class="status-item"><span>Stability</span><strong>${escapeHtml(product.stability)}</strong></div>
         <div class="status-item"><span>sUNC</span><strong>${Number.isFinite(product.sunc) ? `${product.sunc}%` : 'None'}</strong></div>
+        <div class="status-item"><span>Version</span><strong>${escapeHtml(product.version || product.weaoLiveData?.rbxversion || 'Unknown')}</strong></div>
         <div class="status-item status-site">
           <span>Official Site</span>
           ${
