@@ -765,7 +765,7 @@ async function fetchWeaoStatuses() {
       lastError = error;
     }
   }
-  console.warn('WEAO executor status data is unavailable; showing unknown status bars.', lastError);
+  console.warn('WEAO executor status data is unavailable; showing unknown status indicators.', lastError);
   products.forEach(product => { product.weaoStatus = null; });
   applyAllFilters();
 }
@@ -2428,8 +2428,9 @@ function createProductCard(product, index) {
   const left = document.createElement('div');
   left.className = 'card-header-left no-text-select';
 
-  const name = document.createElement('div');
-  name.className = 'product-name';
+  const name = document.createElement('button');
+  name.className = 'product-name product-name-toggle';
+  name.type = 'button';
   name.textContent = product.name;
 
   left.appendChild(name);
@@ -2449,22 +2450,25 @@ function createProductCard(product, index) {
   header.appendChild(right);
 
   const statusState = getWeaoStatusState(product.weaoStatus);
-  const statusBar = document.createElement('div');
-  statusBar.className = `weao-status-bar weao-status-${statusState}`;
-  statusBar.setAttribute('role', 'status');
-  statusBar.setAttribute('aria-label', `${product.name} ${getWeaoStatusLabel(product.weaoStatus)}`);
-  statusBar.title = getWeaoStatusDetail(product.weaoStatus);
+  name.classList.add(`product-name-status-${statusState}`);
+  name.title = `${getWeaoStatusLabel(product.weaoStatus)} • ${getWeaoStatusDetail(product.weaoStatus)}`;
 
-  const statusLabel = document.createElement('span');
-  statusLabel.className = 'weao-status-label';
-  statusLabel.textContent = getWeaoStatusLabel(product.weaoStatus);
+  const statusDetails = document.createElement('div');
+  statusDetails.className = 'weao-status-details';
+  statusDetails.hidden = true;
+  statusDetails.setAttribute('aria-hidden', 'true');
+  statusDetails.innerHTML = `
+    <div class="weao-status-line"><strong>Status:</strong> ${escapeHtml(getWeaoStatusLabel(product.weaoStatus))}</div>
+    <div class="weao-status-line"><strong>Details:</strong> ${escapeHtml(getWeaoStatusDetail(product.weaoStatus))}</div>
+  `;
 
-  const statusMeta = document.createElement('span');
-  statusMeta.className = 'weao-status-meta';
-  statusMeta.textContent = getWeaoStatusDetail(product.weaoStatus);
-
-  statusBar.appendChild(statusLabel);
-  statusBar.appendChild(statusMeta);
+  name.setAttribute('aria-expanded', 'false');
+  name.addEventListener('click', () => {
+    statusDetails.hidden = !statusDetails.hidden;
+    statusDetails.setAttribute('aria-hidden', String(statusDetails.hidden));
+    name.setAttribute('aria-expanded', String(!statusDetails.hidden));
+    card.classList.toggle('card-expanded', !statusDetails.hidden);
+  });
 
   const summary = document.createElement('p');
   summary.className = 'summary';
@@ -2475,7 +2479,7 @@ function createProductCard(product, index) {
   price.textContent = getPriceLabel(product);
 
   body.appendChild(header);
-  body.appendChild(statusBar);
+  body.appendChild(statusDetails);
   body.appendChild(createPlatformChips(product.platform));
   body.appendChild(summary);
   body.appendChild(price);
