@@ -731,7 +731,7 @@ function normalizeDetectionFromWeao(statusEntry) {
 
   const hasBanwaveSignal = /banwave|ban\s*wave|last\s*banwave|use at your own risk/.test(implicitText);
   const hasUndetectedSignal = /undetected|not\s*detected|no\s*bans?|no\s*ban\s*reports?|observed no bans|safe/.test(implicitText);
-  const hasDetectedSignal = /detected|detection|flagged|bans?\s*(seen|reported|observed|active)|unsafe/.test(implicitText);
+  const hasDetectedSignal = /\bdetected\b|\bflagged\b|unsafe|ban\s*reports?\s*(active|confirmed)|bans?\s*(seen|reported|observed|active)/.test(implicitText);
 
   if (statusEntry.detected === true) return 'Detected';
   if (statusEntry.detected === false) {
@@ -2585,6 +2585,8 @@ function createProductCard(product, index) {
   const name = document.createElement('div');
   name.className = 'product-name';
   name.textContent = product.name;
+  name.setAttribute('role', 'button');
+  name.setAttribute('tabindex', '0');
 
   left.appendChild(name);
   const right = document.createElement('div');
@@ -2615,10 +2617,16 @@ function createProductCard(product, index) {
     <div class="status-line"><strong>Detection:</strong> ${escapeHtml(getDetectionStatusLabel(product.weaoStatus))}</div>
   `;
 
-  card.addEventListener('click', event => {
-    if (event.target.closest('.info-btn, .sunc, a, button, input, textarea, select')) return;
+  const toggleStatusDetails = () => {
     statusDetails.hidden = !statusDetails.hidden;
     card.classList.toggle('card-expanded', !statusDetails.hidden);
+  };
+
+  name.addEventListener('click', toggleStatusDetails);
+  name.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    toggleStatusDetails();
   });
 
   const summary = document.createElement('p');
