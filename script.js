@@ -760,7 +760,27 @@ function getWeaoDetectionMessage(statusEntry) {
 
   if (directReason) return directReason;
   if (comment) return comment;
-  if (narrative) return narrative;
+
+  if (narrative) {
+    const compactNarrative = narrative
+      .replace(/\[[^\]]+\]\(([^)]+)\)/g, '$1')
+      .replace(/[*_`>#]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const sentenceList = compactNarrative
+      .split(/(?<=[.!?])\s+/)
+      .map(item => item.trim())
+      .filter(Boolean);
+
+    const detectionSentences = sentenceList.filter(sentence => (
+      /(detected|undetected|unknown|banwave|ban\s*wave|no\s*bans?|risk|use at your own risk|safe|unsafe)/i.test(sentence)
+    ));
+    const selected = detectionSentences.slice(0, 2).join(' ');
+    if (selected) return selected;
+
+    const lastBanwaveMatch = compactNarrative.match(/last\s*banwave[^.?!]*/i);
+    if (lastBanwaveMatch) return lastBanwaveMatch[0].trim();
+  }
 
   if (statusEntry.detected === true) return 'WEAO marks this exploit as detected, but no detailed detection reason was provided.';
   if (statusEntry.detected === false) return 'WEAO marks this exploit as undetected. No extra detection notes were provided.';
