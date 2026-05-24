@@ -720,18 +720,17 @@ function normalizeDetectionFromWeao(statusEntry) {
     .map(value => String(value || '').toLowerCase())
     .join(' ');
 
-  if (text.includes('this exploit bypass client modification but potentially could cause bans in banwaves')) {
-    return 'Undetected (affected by banwaves)';
-  }
-  if (text.includes('this exploit is reported as undetected')) {
-    return 'Undetected';
-  }
-  if (text.includes('this exploit might be detected by hyperion, use at your own risk')) {
-    return 'Detected';
-  }
-
   if (statusEntry.detected === true) return 'Detected';
   if (statusEntry.detected === false) return 'Undetected';
+
+  if (/undetected|not\s*detected|safe/.test(text)) {
+    if (/banwave|ban\s*wave|risk|use at your own risk/.test(text)) return 'Undetected (banwave risk)';
+    return 'Undetected';
+  }
+
+  if (/detected|detection|flagged/.test(text)) return 'Detected';
+  if (/unknown|no\s*data|n\/?a/.test(text)) return 'Unknown';
+
   return 'Unknown';
 }
 
@@ -784,9 +783,9 @@ function getStatusLastUpdated(statusEntry) {
 
 function getDetectionStatusLabel(statusEntry) {
   const normalized = normalizeDetectionFromWeao(statusEntry);
-  if (normalized === 'Undetected') return 'Not detected';
   return normalized;
 }
+
 
 function applyWeaoStatuses(rawEntries) {
   const entries = (Array.isArray(rawEntries) ? rawEntries : []).map(normalizeWeaoEntry).filter(entry => entry.title);
@@ -2844,13 +2843,13 @@ function openSuncSimulationModal(product) {
   content.innerHTML = `
     <section class="sunc-sim-modal">
       <h2>sUNC Score</h2>
-      <p class="modal-headline">Running a sUNC test for <strong>${escapeHtml(product.name)}</strong> based on listed executor data.</p>
+      <p class="modal-headline">Running a standardized sUNC test for <strong>${escapeHtml(product.name)}</strong> based on the latest listed executor data.</p>
       <div class="sunc-sim-progress-wrap" aria-live="polite">
         <div id="suncSimBar" class="sunc-sim-progress-bar"><span id="suncSimFill" class="sunc-sim-progress-fill"></span></div>
         <div id="suncSimValue" class="sunc-sim-value">0%</div>
       </div>
       <h2>UNC Score</h2>
-      <p class="modal-headline">Running an UNC test for <strong>${escapeHtml(product.name)}</strong> using WEAO data.</p>
+      <p class="modal-headline">Running an UNC test for <strong>${escapeHtml(product.name)}</strong> using the official live status feed.</p>
       <div class="sunc-sim-progress-wrap" aria-live="polite">
         <div id="uncSimBar" class="sunc-sim-progress-bar"><span id="uncSimFill" class="sunc-sim-progress-fill"></span></div>
         <div id="uncSimValue" class="sunc-sim-value">0%</div>
