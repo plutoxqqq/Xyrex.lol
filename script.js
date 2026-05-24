@@ -751,6 +751,23 @@ function normalizeDetectionFromWeao(statusEntry) {
   return 'Unknown';
 }
 
+function getWeaoDetectionMessage(statusEntry) {
+  if (!statusEntry) return '';
+
+  const directReason = String(statusEntry.detectionReason || '').trim();
+  const comment = String(statusEntry.comment || '').trim();
+  const narrative = String(statusEntry.detectionNarrative || '').trim();
+
+  if (directReason) return directReason;
+  if (comment) return comment;
+  if (narrative) return narrative;
+
+  if (statusEntry.detected === true) return 'WEAO marks this exploit as detected, but no detailed detection reason was provided.';
+  if (statusEntry.detected === false) return 'WEAO marks this exploit as undetected. No extra detection notes were provided.';
+
+  return 'No detection information is currently available.';
+}
+
 
 function buildWeaoFeatureList(match, currentFeatures) {
   const existing = new Set(Array.isArray(currentFeatures) ? currentFeatures.filter(Boolean) : []);
@@ -859,6 +876,7 @@ function applyWeaoStatuses(rawEntries) {
     }
 
     product.detection = normalizeDetectionFromWeao(match);
+    product.detectionMessage = getWeaoDetectionMessage(match);
 
     const freeValue = typeof match.free === 'string' ? match.free.toLowerCase() : match.free;
     const confirmedFree = freeValue === true || freeValue === 'true' || freeValue === 'free';
@@ -894,6 +912,9 @@ function applyWeaoStatuses(rawEntries) {
       status: match.status || '',
       state: match.state || '',
       detected: match.detected,
+      detectionReason: match.detectionReason || '',
+      detectionNarrative: match.detectionNarrative || '',
+      detectionMessage: product.detectionMessage || '',
       updatedDate: match.updatedDate || '',
       comment: match.comment || '',
       hidden: Boolean(match.hidden),
@@ -2608,7 +2629,7 @@ function createProductCard(product, index) {
 
   const statusState = getWeaoStatusState(product.weaoStatus);
   card.dataset.statusState = statusState;
-  name.title = `Current State: ${getWeaoStatusLabel(product.weaoStatus)} • Last Updated: ${getStatusLastUpdated(product.weaoStatus)} • Detection: ${getDetectionStatusLabel(product.weaoStatus)}`;
+  name.title = `Current State: ${getWeaoStatusLabel(product.weaoStatus)} • Last Updated: ${getStatusLastUpdated(product.weaoStatus)} • Detection Risk: ${product.detection || getDetectionStatusLabel(product.weaoStatus)} • Reason: ${product.detectionMessage || getWeaoDetectionMessage(product.weaoStatus)}`;
 
   const statusDetails = document.createElement('div');
   statusDetails.className = 'status-details';
@@ -2616,7 +2637,8 @@ function createProductCard(product, index) {
   statusDetails.innerHTML = `
     <div class="status-line"><strong>Current State:</strong> ${escapeHtml(getWeaoStatusLabel(product.weaoStatus))}</div>
     <div class="status-line"><strong>Last Updated:</strong> ${escapeHtml(getStatusLastUpdated(product.weaoStatus))}</div>
-    <div class="status-line"><strong>Detection:</strong> ${escapeHtml(getDetectionStatusLabel(product.weaoStatus))}</div>
+    <div class="status-line"><strong>Detection Risk:</strong> ${escapeHtml(product.detection || getDetectionStatusLabel(product.weaoStatus))}</div>
+    <div class="status-line"><strong>Reason:</strong> ${escapeHtml(product.detectionMessage || getWeaoDetectionMessage(product.weaoStatus))}</div>
   `;
 
   const toggleStatusDetails = () => {
