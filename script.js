@@ -791,31 +791,7 @@ function getWeaoDetectionMessage(statusEntry) {
 
 function getWeaoLastBanwave(statusEntry) {
   if (!statusEntry) return '';
-
-  const explicitBanwave = String(statusEntry.lastBanwave || '').trim();
-  if (explicitBanwave) return explicitBanwave;
-
-  const sourceText = [
-    statusEntry.detectionReason,
-    statusEntry.comment,
-    statusEntry.detectionNarrative,
-  ]
-    .map(value => String(value || ''))
-    .join(' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-  if (!sourceText) return '';
-
-  const labeledBanwaveMatch = sourceText.match(/(?:last\s*)?ban\s*wave\s*[:=-]\s*([^.!\n\r]+)/i);
-  if (labeledBanwaveMatch) return labeledBanwaveMatch[1].trim();
-
-  const datedBanwaveMatch = sourceText.match(/(?:last\s*)?ban\s*wave[^\n\r]*?(\d{1,2}[\/.-]\d{1,2}(?:[\/.-]\d{2,4})?|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+\d{1,2}(?:,\s*\d{2,4})?)/i);
-  if (datedBanwaveMatch) return datedBanwaveMatch[1].trim();
-
-  const genericBanwaveMatch = sourceText.match(/(?:last\s*)?ban\s*wave[^.!\n\r]*/i);
-  if (genericBanwaveMatch) return genericBanwaveMatch[0].trim();
-
-  return '';
+  return String(statusEntry.lastBanwave || '').trim();
 }
 
 
@@ -903,9 +879,9 @@ function applyWeaoStatuses(rawEntries) {
     }
 
     if (Array.isArray(match.platform)) {
-      product.platform = match.platform.filter(Boolean);
+      product.platform = match.platform.map(normalizePlatformLabel).filter(Boolean);
     } else if (typeof match.platform === 'string' && match.platform.trim()) {
-      product.platform = match.platform.split(/[,/|]/).map(item => item.trim()).filter(Boolean);
+      product.platform = match.platform.split(/[,/|]/).map(item => normalizePlatformLabel(item)).filter(Boolean);
     }
 
     if (typeof match.keysystem === 'boolean') {
@@ -2606,14 +2582,26 @@ function getPlatformLogo(platform) {
   return svgIcons[platform] ? `<span class="icon-svg">${svgIcons[platform]}</span>` : '•';
 }
 
+function normalizePlatformLabel(platform) {
+  const label = String(platform || '').trim().toLowerCase();
+  if (!label) return '';
+  if (label === 'windows' || label === 'win' || label === 'pc') return 'Windows';
+  if (label === 'android') return 'Android';
+  if (label === 'ios' || label === 'iphone' || label === 'ipad') return 'iOS';
+  if (label === 'macos' || label === 'mac os' || label === 'mac' || label === 'osx' || label === 'macosx') return 'macOS';
+  return String(platform || '').trim();
+}
+
 function createPlatformChips(platforms) {
   const wrap = document.createElement('div');
   wrap.className = 'platform-chips no-text-select';
 
   (platforms || []).forEach(platform => {
+    const normalizedPlatform = normalizePlatformLabel(platform);
+    if (!normalizedPlatform) return;
     const chip = document.createElement('span');
     chip.className = 'platform-chip';
-    chip.innerHTML = `<span class="platform-logo">${getPlatformLogo(platform)}</span><span>${escapeHtml(platform)}</span>`;
+    chip.innerHTML = `<span class="platform-logo">${getPlatformLogo(normalizedPlatform)}</span><span>${escapeHtml(normalizedPlatform)}</span>`;
     wrap.appendChild(chip);
   });
 
