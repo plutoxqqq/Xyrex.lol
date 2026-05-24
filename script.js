@@ -712,6 +712,7 @@ function normalizeWeaoEntry(rawEntry) {
     multiInstance: source?.multiInstance ?? source?.multiinstance,
     comment: source?.comment || source?.notes || source?.detectionNote || source?.detectionNotes || source?.detectionReason || '',
     detectionReason: source?.detectionReason || '',
+    detectionNarrative: source?.slug?.fullDescription || source?.fullDescription || '',
     hasIssues: source?.hasIssues,
     unknown: source?.unknown,
   };
@@ -720,35 +721,36 @@ function normalizeWeaoEntry(rawEntry) {
 function normalizeDetectionFromWeao(statusEntry) {
   if (!statusEntry) return 'Unknown';
 
+  const narrativeText = [statusEntry.detectionNarrative, statusEntry.comment, statusEntry.detectionReason]
+    .map(value => String(value || '').toLowerCase())
+    .join(' ');
+
+  if (/this\s+exploit\s+bypasses?/.test(narrativeText)) {
+    if (/might\s+be\s+detected|use\s+at\s+your\s+own\s+risk|banwave|ban\s*wave/.test(narrativeText)) return 'Detected';
+    if (/reported\s+as\s+undetected|no\s*bans?|observed\s+no\s+bans/.test(narrativeText)) return 'Undetected';
+  }
+
+  if (statusEntry.unknown === true) return 'Unknown';
+  if (statusEntry.detected === true) return 'Detected';
+  if (statusEntry.detected === false) return 'Undetected';
+
   const implicitText = [
-    statusEntry.comment,
-    statusEntry.detectionReason,
     statusEntry.status,
     statusEntry.state,
+    statusEntry.comment,
+    statusEntry.detectionReason,
+    statusEntry.detectionNarrative,
   ]
     .map(value => String(value || '').toLowerCase())
     .join(' ');
 
-  const hasBanwaveSignal = /banwave|ban\s*wave|last\s*banwave|use at your own risk/.test(implicitText);
-  const hasUndetectedSignal = /undetected|not\s*detected|no\s*bans?|no\s*ban\s*reports?|observed no bans|safe/.test(implicitText);
-  const hasDetectedSignal = /\bdetected\b|\bflagged\b|unsafe|ban\s*reports?\s*(active|confirmed)|bans?\s*(seen|reported|observed|active)/.test(implicitText);
-
-  if (statusEntry.detected === true) return 'Detected';
-  if (statusEntry.detected === false) {
-    if (hasBanwaveSignal) return 'Undetected (banwave risk)';
-    return 'Undetected';
-  }
-
-  if (hasUndetectedSignal) {
-    if (hasBanwaveSignal) return 'Undetected (banwave risk)';
-    return 'Undetected';
-  }
-
-  if (hasDetectedSignal) return 'Detected';
-  if (statusEntry.unknown === true || /unknown|no\s*data|n\/?a/.test(implicitText)) return 'Unknown';
+  if (/\bdetected\b|\bflagged\b|\bunsafe\b|active\s*ban/.test(implicitText)) return 'Detected';
+  if (/\bundetected\b|not\s*detected|no\s*bans?|observed\s+no\s+bans|safe/.test(implicitText)) return 'Undetected';
+  if (/\bunknown\b|no\s*data|n\/?a/.test(implicitText)) return 'Unknown';
 
   return 'Unknown';
 }
+
 
 function buildWeaoFeatureList(match, currentFeatures) {
   const existing = new Set(Array.isArray(currentFeatures) ? currentFeatures.filter(Boolean) : []);
