@@ -788,6 +788,28 @@ function getWeaoDetectionMessage(statusEntry) {
   return 'No detection information is currently available.';
 }
 
+function getWeaoLastBanwave(statusEntry) {
+  if (!statusEntry) return '';
+  const sourceText = [
+    statusEntry.detectionReason,
+    statusEntry.comment,
+    statusEntry.detectionNarrative,
+  ]
+    .map(value => String(value || ''))
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!sourceText) return '';
+
+  const lastBanwaveMatch = sourceText.match(/last\s*banwave\s*:\s*([^.!\n\r]+)/i);
+  if (lastBanwaveMatch) return lastBanwaveMatch[1].trim();
+
+  const genericBanwaveMatch = sourceText.match(/banwave[^.!\n\r]*/i);
+  if (genericBanwaveMatch) return genericBanwaveMatch[0].trim();
+
+  return '';
+}
+
 
 function buildWeaoFeatureList(match, currentFeatures) {
   const existing = new Set(Array.isArray(currentFeatures) ? currentFeatures.filter(Boolean) : []);
@@ -897,6 +919,7 @@ function applyWeaoStatuses(rawEntries) {
 
     product.detection = normalizeDetectionFromWeao(match);
     product.detectionMessage = getWeaoDetectionMessage(match);
+    product.lastBanwave = getWeaoLastBanwave(match);
 
     const freeValue = typeof match.free === 'string' ? match.free.toLowerCase() : match.free;
     const confirmedFree = freeValue === true || freeValue === 'true' || freeValue === 'free';
@@ -935,6 +958,7 @@ function applyWeaoStatuses(rawEntries) {
       detectionReason: match.detectionReason || '',
       detectionNarrative: match.detectionNarrative || '',
       detectionMessage: product.detectionMessage || '',
+      lastBanwave: product.lastBanwave || '',
       updatedDate: match.updatedDate || '',
       comment: match.comment || '',
       hidden: Boolean(match.hidden),
@@ -2659,6 +2683,7 @@ function createProductCard(product, index) {
     <div class="status-line"><strong>Last Updated:</strong> ${escapeHtml(getStatusLastUpdated(product.weaoStatus))}</div>
     <div class="status-line"><strong>Detection Risk:</strong> ${escapeHtml(product.detection || getDetectionStatusLabel(product.weaoStatus))}</div>
     <div class="status-line"><strong>Reason:</strong> ${escapeHtml(product.detectionMessage || getWeaoDetectionMessage(product.weaoStatus))}</div>
+    <div class="status-line"><strong>Last Banwave:</strong> ${escapeHtml(product.lastBanwave || getWeaoLastBanwave(product.weaoStatus) || 'Not provided')}</div>
   `;
 
   const toggleStatusDetails = () => {
