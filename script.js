@@ -710,26 +710,42 @@ function normalizeWeaoEntry(rawEntry) {
     decompiler: source?.decompiler,
     raknet: source?.raknet,
     multiInstance: source?.multiInstance ?? source?.multiinstance,
-    comment: source?.comment || source?.notes || source?.detectionNote || source?.detectionNotes || '',
+    comment: source?.comment || source?.notes || source?.detectionNote || source?.detectionNotes || source?.detectionReason || '',
+    detectionReason: source?.detectionReason || '',
+    hasIssues: source?.hasIssues,
+    unknown: source?.unknown,
   };
 }
 
 function normalizeDetectionFromWeao(statusEntry) {
   if (!statusEntry) return 'Unknown';
-  const text = [statusEntry.comment, statusEntry.status, statusEntry.state]
+
+  const implicitText = [
+    statusEntry.comment,
+    statusEntry.detectionReason,
+    statusEntry.status,
+    statusEntry.state,
+  ]
     .map(value => String(value || '').toLowerCase())
     .join(' ');
 
-  if (statusEntry.detected === true) return 'Detected';
-  if (statusEntry.detected === false) return 'Undetected';
+  const hasBanwaveSignal = /banwave|ban\s*wave|last\s*banwave|use at your own risk/.test(implicitText);
+  const hasUndetectedSignal = /undetected|not\s*detected|no\s*bans?|no\s*ban\s*reports?|observed no bans|safe/.test(implicitText);
+  const hasDetectedSignal = /detected|detection|flagged|bans?\s*(seen|reported|observed|active)|unsafe/.test(implicitText);
 
-  if (/undetected|not\s*detected|safe/.test(text)) {
-    if (/banwave|ban\s*wave|risk|use at your own risk/.test(text)) return 'Undetected (banwave risk)';
+  if (statusEntry.detected === true) return 'Detected';
+  if (statusEntry.detected === false) {
+    if (hasBanwaveSignal) return 'Undetected (banwave risk)';
     return 'Undetected';
   }
 
-  if (/detected|detection|flagged/.test(text)) return 'Detected';
-  if (/unknown|no\s*data|n\/?a/.test(text)) return 'Unknown';
+  if (hasUndetectedSignal) {
+    if (hasBanwaveSignal) return 'Undetected (banwave risk)';
+    return 'Undetected';
+  }
+
+  if (hasDetectedSignal) return 'Detected';
+  if (statusEntry.unknown === true || /unknown|no\s*data|n\/?a/.test(implicitText)) return 'Unknown';
 
   return 'Unknown';
 }
