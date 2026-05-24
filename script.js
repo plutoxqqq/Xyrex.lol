@@ -707,7 +707,54 @@ function normalizeWeaoEntry(rawEntry) {
     rbxversion: source?.rbxversion,
     cost: source?.cost,
     extype: source?.extype,
+    decompiler: source?.decompiler,
+    raknet: source?.raknet,
+    multiInstance: source?.multiInstance ?? source?.multiinstance,
+    comment: source?.comment || source?.notes || source?.detectionNote || source?.detectionNotes || '',
   };
+}
+
+function normalizeDetectionFromWeao(statusEntry) {
+  if (!statusEntry) return 'Unknown';
+  const text = [statusEntry.comment, statusEntry.status, statusEntry.state]
+    .map(value => String(value || '').toLowerCase())
+    .join(' ');
+
+  if (text.includes('this exploit bypass client modification but potentially could cause bans in banwaves')) {
+    return 'Undetected (affected by banwaves)';
+  }
+  if (text.includes('this exploit is reported as undetected')) {
+    return 'Undetected';
+  }
+  if (text.includes('this exploit might be detected by hyperion, use at your own risk')) {
+    return 'Detected';
+  }
+
+  if (statusEntry.detected === true) return 'Detected';
+  if (statusEntry.detected === false) return 'Undetected';
+  return 'Unknown';
+}
+
+function buildWeaoFeatureList(match, currentFeatures) {
+  const existing = new Set(Array.isArray(currentFeatures) ? currentFeatures.filter(Boolean) : []);
+  const normalized = new Set(Array.from(existing).map(feature => String(feature).toLowerCase()));
+  const addFeature = (enabled, canonicalName, aliases = []) => {
+    if (!enabled) return;
+    const keys = [canonicalName, ...aliases].map(item => String(item).toLowerCase());
+    if (keys.some(key => normalized.has(key))) return;
+    existing.add(canonicalName);
+    normalized.add(canonicalName.toLowerCase());
+  };
+
+  const sourceText = [match.extype, match.status, match.state, match.comment]
+    .map(value => String(value || '').toLowerCase())
+    .join(' ');
+
+  addFeature(match.decompiler === true || /decompiler/.test(sourceText), 'Decompiler');
+  addFeature(match.raknet === true || /rak\s*net|raknet/.test(sourceText), 'RakNet');
+  addFeature(match.multiInstance === true || /multi[-\s]?instance/.test(sourceText), 'Multi-instance', ['multi instance']);
+
+  return Array.from(existing);
 }
 
 function getWeaoStatusState(statusEntry) {
@@ -736,10 +783,9 @@ function getStatusLastUpdated(statusEntry) {
 }
 
 function getDetectionStatusLabel(statusEntry) {
-  if (!statusEntry) return 'Unknown';
-  if (statusEntry.detected === true) return 'Detected';
-  if (statusEntry.detected === false) return 'Not detected';
-  return 'Unknown';
+  const normalized = normalizeDetectionFromWeao(statusEntry);
+  if (normalized === 'Undetected') return 'Not detected';
+  return normalized;
 }
 
 function applyWeaoStatuses(rawEntries) {
@@ -763,6 +809,8 @@ function applyWeaoStatuses(rawEntries) {
     product.weaoStatus = match || null;
 
     if (!match) return;
+
+    product.features = buildWeaoFeatureList(match, product.features);
 
     if (Number.isFinite(Number(match.suncPercentage))) {
       product.sunc = Number(match.suncPercentage);
@@ -792,6 +840,8 @@ function applyWeaoStatuses(rawEntries) {
     } else {
       product.status = 'Unknown';
     }
+
+    product.detection = normalizeDetectionFromWeao(match);
 
     const freeValue = typeof match.free === 'string' ? match.free.toLowerCase() : match.free;
     const confirmedFree = freeValue === true || freeValue === 'true' || freeValue === 'free';
@@ -828,6 +878,7 @@ function applyWeaoStatuses(rawEntries) {
       state: match.state || '',
       detected: match.detected,
       updatedDate: match.updatedDate || '',
+      comment: match.comment || '',
       hidden: Boolean(match.hidden),
       beta: Boolean(match.beta),
       title: match.title || '',
@@ -2787,6 +2838,9 @@ function openSuncSimulationModal(product) {
   const content = qs('#modalContent');
   setCompactModal(false);
   const targetScore = Number.isFinite(product.sunc) ? product.sunc : 0;
+  const uncScore = Number.isFinite(Number(product.weaoLiveData?.uncPercentage))
+    ? Number(product.weaoLiveData.uncPercentage)
+    : null;
   content.innerHTML = `
     <section class="sunc-sim-modal">
       <h2>sUNC Score</h2>
@@ -2794,6 +2848,12 @@ function openSuncSimulationModal(product) {
       <div class="sunc-sim-progress-wrap" aria-live="polite">
         <div id="suncSimBar" class="sunc-sim-progress-bar"><span id="suncSimFill" class="sunc-sim-progress-fill"></span></div>
         <div id="suncSimValue" class="sunc-sim-value">0%</div>
+      </div>
+      <h2>UNC Score</h2>
+      <p class="modal-headline">Running an UNC test for <strong>${escapeHtml(product.name)}</strong> using WEAO data.</p>
+      <div class="sunc-sim-progress-wrap" aria-live="polite">
+        <div id="uncSimBar" class="sunc-sim-progress-bar"><span id="uncSimFill" class="sunc-sim-progress-fill"></span></div>
+        <div id="uncSimValue" class="sunc-sim-value">0%</div>
       </div>
       <p class="settings-note">This test will not show UNC or functions passed/failed.</p>
     </section>`;
@@ -2804,6 +2864,8 @@ function openSuncSimulationModal(product) {
 
   const fill = qs('#suncSimFill');
   const value = qs('#suncSimValue');
+  const uncFill = qs('#uncSimFill');
+  const uncValue = qs('#uncSimValue');
   const durationMs = 1050;
   const startAt = performance.now();
 
@@ -2811,13 +2873,17 @@ function openSuncSimulationModal(product) {
     if (overlay.getAttribute('aria-hidden') === 'true') return;
     const progress = Math.min((now - startAt) / durationMs, 1);
     const current = Math.round(targetScore * progress);
+    const uncCurrent = Math.round((Number.isFinite(uncScore) ? uncScore : 0) * progress);
     fill.style.width = `${current}%`;
     value.textContent = `${current}%`;
+    uncFill.style.width = `${uncCurrent}%`;
+    uncValue.textContent = `${uncCurrent}%`;
     if (progress < 1) {
       requestAnimationFrame(step);
       return;
     }
     value.textContent = Number.isFinite(product.sunc) ? `${product.sunc}% confirmed` : 'No score available';
+    uncValue.textContent = Number.isFinite(uncScore) ? `${uncScore}% confirmed` : 'No score available';
   };
   requestAnimationFrame(step);
 }
