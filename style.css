@@ -655,7 +655,7 @@ body.easter-game-mode .xy-sidepanel{ max-height:min(56dvh, 560px); overflow-y:au
   .modal-layout{ grid-template-columns:1fr; }
   .info-grid{ grid-template-columns:1fr; }
   .status-panel{ order:-1; }
-  .page-layout{ grid-template-columns:1fr; margin-top:var(--nav-height); min-height:calc(100dvh - var(--nav-height)); height:auto; padding-block:12px; padding-inline:max(12px, env(safe-area-inset-left, 0px)) max(12px, env(safe-area-inset-right, 0px)); gap:12px; background: transparent; }
+  .page-layout{ grid-template-columns:1fr; margin-top:0; min-height:calc(100dvh - var(--nav-height)); height:auto; padding-block:8px; padding-inline:max(12px, env(safe-area-inset-left, 0px)) max(12px, env(safe-area-inset-right, 0px)); gap:12px; background: transparent; }
   .sidebar,.main-content{ padding:12px; backdrop-filter: blur(8px); }
   .sidebar{ max-height:40dvh; }
   .legend{ gap:8px; padding:8px; justify-content:flex-start; }
@@ -674,7 +674,7 @@ body.easter-game-mode .xy-sidepanel{ max-height:min(56dvh, 560px); overflow-y:au
 }
 
 @media (max-width: 900px) and (orientation: landscape){
-  .page-layout{ margin-top:var(--nav-height); min-height:calc(100dvh - var(--nav-height)); grid-template-columns:minmax(220px,30%) 1fr; gap:10px; padding-inline:max(12px, env(safe-area-inset-left, 0px)) max(12px, env(safe-area-inset-right, 0px)); }
+  .page-layout{ margin-top:0; min-height:calc(100dvh - var(--nav-height)); grid-template-columns:minmax(220px,30%) 1fr; gap:10px; padding-inline:max(12px, env(safe-area-inset-left, 0px)) max(12px, env(safe-area-inset-right, 0px)); }
   .sidebar{ max-height:none; }
   .legend-item{ flex:0 1 auto; }
 }

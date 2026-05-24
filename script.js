@@ -710,28 +710,43 @@ function normalizeWeaoEntry(rawEntry) {
     decompiler: source?.decompiler,
     raknet: source?.raknet,
     multiInstance: source?.multiInstance ?? source?.multiinstance,
-    comment: source?.comment || source?.notes || source?.detectionNote || source?.detectionNotes || '',
+    comment: source?.comment || source?.notes || source?.detectionNote || source?.detectionNotes || source?.detectionReason || '',
+    detectionReason: source?.detectionReason || '',
+    hasIssues: source?.hasIssues,
+    unknown: source?.unknown,
   };
 }
 
 function normalizeDetectionFromWeao(statusEntry) {
   if (!statusEntry) return 'Unknown';
-  const text = [statusEntry.comment, statusEntry.status, statusEntry.state]
+
+  const implicitText = [
+    statusEntry.comment,
+    statusEntry.detectionReason,
+    statusEntry.status,
+    statusEntry.state,
+  ]
     .map(value => String(value || '').toLowerCase())
     .join(' ');
 
-  if (text.includes('this exploit bypass client modification but potentially could cause bans in banwaves')) {
-    return 'Undetected (affected by banwaves)';
-  }
-  if (text.includes('this exploit is reported as undetected')) {
-    return 'Undetected';
-  }
-  if (text.includes('this exploit might be detected by hyperion, use at your own risk')) {
-    return 'Detected';
-  }
+  const hasBanwaveSignal = /banwave|ban\s*wave|last\s*banwave|use at your own risk/.test(implicitText);
+  const hasUndetectedSignal = /undetected|not\s*detected|no\s*bans?|no\s*ban\s*reports?|observed no bans|safe/.test(implicitText);
+  const hasDetectedSignal = /\bdetected\b|\bflagged\b|unsafe|ban\s*reports?\s*(active|confirmed)|bans?\s*(seen|reported|observed|active)/.test(implicitText);
 
   if (statusEntry.detected === true) return 'Detected';
-  if (statusEntry.detected === false) return 'Undetected';
+  if (statusEntry.detected === false) {
+    if (hasBanwaveSignal) return 'Undetected (banwave risk)';
+    return 'Undetected';
+  }
+
+  if (hasUndetectedSignal) {
+    if (hasBanwaveSignal) return 'Undetected (banwave risk)';
+    return 'Undetected';
+  }
+
+  if (hasDetectedSignal) return 'Detected';
+  if (statusEntry.unknown === true || /unknown|no\s*data|n\/?a/.test(implicitText)) return 'Unknown';
+
   return 'Unknown';
 }
 
@@ -784,9 +799,9 @@ function getStatusLastUpdated(statusEntry) {
 
 function getDetectionStatusLabel(statusEntry) {
   const normalized = normalizeDetectionFromWeao(statusEntry);
-  if (normalized === 'Undetected') return 'Not detected';
   return normalized;
 }
+
 
 function applyWeaoStatuses(rawEntries) {
   const entries = (Array.isArray(rawEntries) ? rawEntries : []).map(normalizeWeaoEntry).filter(entry => entry.title);
@@ -2570,6 +2585,8 @@ function createProductCard(product, index) {
   const name = document.createElement('div');
   name.className = 'product-name';
   name.textContent = product.name;
+  name.setAttribute('role', 'button');
+  name.setAttribute('tabindex', '0');
 
   left.appendChild(name);
   const right = document.createElement('div');
@@ -2600,10 +2617,16 @@ function createProductCard(product, index) {
     <div class="status-line"><strong>Detection:</strong> ${escapeHtml(getDetectionStatusLabel(product.weaoStatus))}</div>
   `;
 
-  card.addEventListener('click', event => {
-    if (event.target.closest('.info-btn, .sunc, a, button, input, textarea, select')) return;
+  const toggleStatusDetails = () => {
     statusDetails.hidden = !statusDetails.hidden;
     card.classList.toggle('card-expanded', !statusDetails.hidden);
+  };
+
+  name.addEventListener('click', toggleStatusDetails);
+  name.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    toggleStatusDetails();
   });
 
   const summary = document.createElement('p');
@@ -2844,13 +2867,13 @@ function openSuncSimulationModal(product) {
   content.innerHTML = `
     <section class="sunc-sim-modal">
       <h2>sUNC Score</h2>
-      <p class="modal-headline">Running a sUNC test for <strong>${escapeHtml(product.name)}</strong> based on listed executor data.</p>
+      <p class="modal-headline">Running a standardized sUNC test for <strong>${escapeHtml(product.name)}</strong> based on the latest listed executor data.</p>
       <div class="sunc-sim-progress-wrap" aria-live="polite">
         <div id="suncSimBar" class="sunc-sim-progress-bar"><span id="suncSimFill" class="sunc-sim-progress-fill"></span></div>
         <div id="suncSimValue" class="sunc-sim-value">0%</div>
       </div>
       <h2>UNC Score</h2>
-      <p class="modal-headline">Running an UNC test for <strong>${escapeHtml(product.name)}</strong> using WEAO data.</p>
+      <p class="modal-headline">Running an UNC test for <strong>${escapeHtml(product.name)}</strong> using the official live status feed.</p>
       <div class="sunc-sim-progress-wrap" aria-live="polite">
         <div id="uncSimBar" class="sunc-sim-progress-bar"><span id="uncSimFill" class="sunc-sim-progress-fill"></span></div>
         <div id="uncSimValue" class="sunc-sim-value">0%</div>
