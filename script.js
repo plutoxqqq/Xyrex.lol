@@ -713,6 +713,7 @@ function normalizeWeaoEntry(rawEntry) {
     comment: source?.comment || source?.notes || source?.detectionNote || source?.detectionNotes || source?.detectionReason || '',
     detectionReason: source?.detectionReason || '',
     detectionNarrative: source?.slug?.fullDescription || source?.fullDescription || '',
+    lastBanwave: source?.lastBanwave || source?.last_banwave || source?.banwave || source?.lastBan || source?.banWave || '',
     hasIssues: source?.hasIssues,
     unknown: source?.unknown,
   };
@@ -790,6 +791,10 @@ function getWeaoDetectionMessage(statusEntry) {
 
 function getWeaoLastBanwave(statusEntry) {
   if (!statusEntry) return '';
+
+  const explicitBanwave = String(statusEntry.lastBanwave || '').trim();
+  if (explicitBanwave) return explicitBanwave;
+
   const sourceText = [
     statusEntry.detectionReason,
     statusEntry.comment,
@@ -801,10 +806,13 @@ function getWeaoLastBanwave(statusEntry) {
     .trim();
   if (!sourceText) return '';
 
-  const lastBanwaveMatch = sourceText.match(/last\s*banwave\s*:\s*([^.!\n\r]+)/i);
-  if (lastBanwaveMatch) return lastBanwaveMatch[1].trim();
+  const labeledBanwaveMatch = sourceText.match(/(?:last\s*)?ban\s*wave\s*[:=-]\s*([^.!\n\r]+)/i);
+  if (labeledBanwaveMatch) return labeledBanwaveMatch[1].trim();
 
-  const genericBanwaveMatch = sourceText.match(/banwave[^.!\n\r]*/i);
+  const datedBanwaveMatch = sourceText.match(/(?:last\s*)?ban\s*wave[^\n\r]*?(\d{1,2}[\/.-]\d{1,2}(?:[\/.-]\d{2,4})?|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+\d{1,2}(?:,\s*\d{2,4})?)/i);
+  if (datedBanwaveMatch) return datedBanwaveMatch[1].trim();
+
+  const genericBanwaveMatch = sourceText.match(/(?:last\s*)?ban\s*wave[^.!\n\r]*/i);
   if (genericBanwaveMatch) return genericBanwaveMatch[0].trim();
 
   return '';
