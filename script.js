@@ -788,29 +788,6 @@ function getWeaoDetectionMessage(statusEntry) {
   return 'No detection information is currently available.';
 }
 
-function getWeaoLastBanwave(statusEntry) {
-  if (!statusEntry) return '';
-  const sourceText = [
-    statusEntry.detectionReason,
-    statusEntry.comment,
-    statusEntry.detectionNarrative,
-  ]
-    .map(value => String(value || ''))
-    .join(' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-  if (!sourceText) return '';
-
-  const lastBanwaveMatch = sourceText.match(/last\s*banwave\s*:\s*([^.!\n\r]+)/i);
-  if (lastBanwaveMatch) return lastBanwaveMatch[1].trim();
-
-  const genericBanwaveMatch = sourceText.match(/banwave[^.!\n\r]*/i);
-  if (genericBanwaveMatch) return genericBanwaveMatch[0].trim();
-
-  return '';
-}
-
-
 function buildWeaoFeatureList(match, currentFeatures) {
   const existing = new Set(Array.isArray(currentFeatures) ? currentFeatures.filter(Boolean) : []);
   const normalized = new Set(Array.from(existing).map(feature => String(feature).toLowerCase()));
@@ -895,9 +872,9 @@ function applyWeaoStatuses(rawEntries) {
     }
 
     if (Array.isArray(match.platform)) {
-      product.platform = match.platform.filter(Boolean);
+      product.platform = match.platform.map(normalizePlatformLabel).filter(Boolean);
     } else if (typeof match.platform === 'string' && match.platform.trim()) {
-      product.platform = match.platform.split(/[,/|]/).map(item => item.trim()).filter(Boolean);
+      product.platform = match.platform.split(/[,/|]/).map(item => normalizePlatformLabel(item)).filter(Boolean);
     }
 
     if (typeof match.keysystem === 'boolean') {
@@ -919,7 +896,6 @@ function applyWeaoStatuses(rawEntries) {
 
     product.detection = normalizeDetectionFromWeao(match);
     product.detectionMessage = getWeaoDetectionMessage(match);
-    product.lastBanwave = getWeaoLastBanwave(match);
 
     const freeValue = typeof match.free === 'string' ? match.free.toLowerCase() : match.free;
     const confirmedFree = freeValue === true || freeValue === 'true' || freeValue === 'free';
@@ -958,7 +934,6 @@ function applyWeaoStatuses(rawEntries) {
       detectionReason: match.detectionReason || '',
       detectionNarrative: match.detectionNarrative || '',
       detectionMessage: product.detectionMessage || '',
-      lastBanwave: product.lastBanwave || '',
       updatedDate: match.updatedDate || '',
       comment: match.comment || '',
       hidden: Boolean(match.hidden),
@@ -2598,14 +2573,26 @@ function getPlatformLogo(platform) {
   return svgIcons[platform] ? `<span class="icon-svg">${svgIcons[platform]}</span>` : '•';
 }
 
+function normalizePlatformLabel(platform) {
+  const label = String(platform || '').trim().toLowerCase();
+  if (!label) return '';
+  if (label === 'windows' || label === 'win' || label === 'pc') return 'Windows';
+  if (label === 'android') return 'Android';
+  if (label === 'ios' || label === 'iphone' || label === 'ipad') return 'iOS';
+  if (label === 'macos' || label === 'mac os' || label === 'mac' || label === 'osx' || label === 'macosx') return 'macOS';
+  return String(platform || '').trim();
+}
+
 function createPlatformChips(platforms) {
   const wrap = document.createElement('div');
   wrap.className = 'platform-chips no-text-select';
 
   (platforms || []).forEach(platform => {
+    const normalizedPlatform = normalizePlatformLabel(platform);
+    if (!normalizedPlatform) return;
     const chip = document.createElement('span');
     chip.className = 'platform-chip';
-    chip.innerHTML = `<span class="platform-logo">${getPlatformLogo(platform)}</span><span>${escapeHtml(platform)}</span>`;
+    chip.innerHTML = `<span class="platform-logo">${getPlatformLogo(normalizedPlatform)}</span><span>${escapeHtml(normalizedPlatform)}</span>`;
     wrap.appendChild(chip);
   });
 
@@ -2683,7 +2670,6 @@ function createProductCard(product, index) {
     <div class="status-line"><strong>Last Updated:</strong> ${escapeHtml(getStatusLastUpdated(product.weaoStatus))}</div>
     <div class="status-line"><strong>Detection Risk:</strong> ${escapeHtml(product.detection || getDetectionStatusLabel(product.weaoStatus))}</div>
     <div class="status-line"><strong>Reason:</strong> ${escapeHtml(product.detectionMessage || getWeaoDetectionMessage(product.weaoStatus))}</div>
-    <div class="status-line"><strong>Last Banwave:</strong> ${escapeHtml(product.lastBanwave || getWeaoLastBanwave(product.weaoStatus) || 'Not provided')}</div>
   `;
 
   const toggleStatusDetails = () => {
