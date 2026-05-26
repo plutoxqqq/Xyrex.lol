@@ -1,12 +1,13 @@
 (function () {
-  const THEME_KEY = 'xyrex_new_ui_theme';
+  const themeApi = window.XyrexTheme || null;
+  const THEME_KEY = themeApi?.THEME_KEY || 'xyrex_new_ui_theme';
   const AI_ENDPOINT = 'https://text.pollinations.ai/';
   const THEME_MODAL_ID = 'newUiThemeModal';
   const AI_REQUEST_TIMEOUT_MS = 14000;
   const AI_MAX_ATTEMPTS = 4;
   const AI_TOKEN_STORAGE_KEY = 'xyrex_ai_tokens_v1';
   const FREE_DAILY_AI_TOKENS = 5;
-  const themeDefaults = {
+  const themeDefaults = themeApi?.themeDefaults || {
     bg: '#06070d',
     bg2: '#0a0c14',
     panel: '#111426',
@@ -19,19 +20,6 @@
     success: '#5dd39e',
     warning: '#f0c36f'
   };
-  const themeFields = [
-    ['bg', '--bg'],
-    ['bg2', '--bg-2'],
-    ['panel', '--panel'],
-    ['panel2', '--panel-2'],
-    ['card', '--card'],
-    ['text', '--text'],
-    ['muted', '--muted'],
-    ['accent', '--periwinkle'],
-    ['accentSoft', '--periwinkle-2'],
-    ['success', '--accent-success'],
-    ['warning', '--accent-warning']
-  ];
   const pastelThemePresets = [
     {
       id: 'lavender-mist',
@@ -97,6 +85,7 @@
       .replace(/'/g, '&#39;');
   }
   function getThemeFromStorage() {
+    if (themeApi?.getCurrentTheme) return themeApi.getCurrentTheme();
     try {
       return JSON.parse(localStorage.getItem(THEME_KEY) || 'null');
     } catch {
@@ -122,23 +111,10 @@
     );
   }
   function applyTheme(theme) {
-    if (!theme || typeof theme !== 'object') return;
-    const root = document.documentElement;
-    const normalized = { ...themeDefaults, ...theme };
-    themeFields.forEach(([key, cssVar]) => {
-      const value = normalized[key];
-      if (typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value)) {
-        root.style.setProperty(cssVar, value);
-      }
-    });
-    window.dispatchEvent(new Event('xyrex:theme-updated'));
+    if (themeApi?.applyTheme) return themeApi.applyTheme(theme);
   }
   function clearThemeOverrides() {
-    const root = document.documentElement;
-    themeFields.forEach(([, cssVar]) => {
-      root.style.removeProperty(cssVar);
-    });
-    window.dispatchEvent(new Event('xyrex:theme-updated'));
+    if (themeApi?.loadSavedTheme) themeApi.loadSavedTheme();
   }
   function closeThemeModal() {
     const modal = document.getElementById(THEME_MODAL_ID);
