@@ -500,13 +500,6 @@ function getPriceLabel(product) {
   return product.freeOrPaid === 'free' ? 'Free' : 'Paid';
 }
 
-function buildExpandedExecutorDescription(product) {
-  const platformText = Array.isArray(product.platform) && product.platform.length ? product.platform.join(', ') : 'Unknown platforms';
-  const featureText = Array.isArray(product.features) && product.features.length ? product.features.join(', ') : 'No standout features listed';
-  const priceText = Array.isArray(product.pricingOptions) && product.pricingOptions.length ? product.pricingOptions.join(', ') : getPriceLabel(product);
-  return `${stripTrailingPeriod(product.description)}. It targets ${platformText}, includes ${featureText.toLowerCase()}, and is offered through ${priceText}.`;
-}
-
 function createProductCard(product, index) {
   const card = document.createElement('article');
   card.className = 'card';
@@ -583,7 +576,7 @@ function createProductCard(product, index) {
 
   const summary = document.createElement('p');
   summary.className = 'summary';
-  summary.textContent = buildExpandedExecutorDescription(product);
+  summary.textContent = stripTrailingPeriod(product.description);
 
   const price = document.createElement('div');
   price.className = 'price no-text-select';
