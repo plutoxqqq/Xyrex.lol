@@ -71,7 +71,7 @@
     }
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/new-ui.css?v=2.1.0';
+    link.href = '/new-ui.css?v=2.1.2';
     link.dataset.newUiCss = 'true';
     document.head.appendChild(link);
     cssLoaded = true;
@@ -114,7 +114,7 @@
     if (themeApi?.applyTheme) return themeApi.applyTheme(theme);
   }
   function clearThemeOverrides() {
-    if (themeApi?.loadSavedTheme) themeApi.loadSavedTheme();
+    if (themeApi?.resetThemeOverrides) themeApi.resetThemeOverrides();
   }
   function closeThemeModal() {
     const modal = document.getElementById(THEME_MODAL_ID);

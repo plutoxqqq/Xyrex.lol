@@ -112,6 +112,23 @@
     return applyTheme(theme);
   }
 
+  function resetThemeOverrides() {
+    const root = document.documentElement;
+    themeFields.forEach(([, cssVars]) => {
+      cssVars.forEach(cssVar => root.style.removeProperty(cssVar));
+    });
+    [
+      '--accent-hover',
+      '--accent-border',
+      '--accent-glow',
+      '--border',
+      '--border-strong',
+      '--shadow'
+    ].forEach(cssVar => root.style.removeProperty(cssVar));
+    window.dispatchEvent(new Event('xyrex:theme-updated'));
+    return { ...themeDefaults };
+  }
+
   window.XyrexTheme = {
     THEME_KEY,
     themeDefaults,
@@ -119,8 +136,7 @@
     applyTheme,
     applyCustomAccent,
     loadSavedTheme,
+    resetThemeOverrides,
     getCurrentTheme
   };
-
-  loadSavedTheme();
 })();

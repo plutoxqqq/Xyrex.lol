@@ -2030,7 +2030,7 @@ function loadNewUiModule() {
 
   return new Promise(resolve => {
     const script = document.createElement('script');
-    script.src = '/new-ui.js?v=2.1.0';
+    script.src = '/new-ui.js?v=2.1.2';
     script.defer = true;
     script.onload = () => resolve(Boolean(window.XyrexNewUI));
     script.onerror = () => resolve(false);
