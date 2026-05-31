@@ -349,20 +349,37 @@
     return true;
   }
   function productFromCard(card) {
+    const name = card.querySelector('.product-name')?.textContent?.trim() || 'Unknown Executor';
+    const catalogProduct = (Array.isArray(window.XYREX_EXECUTOR_PRODUCTS) ? window.XYREX_EXECUTOR_PRODUCTS : [])
+      .find(item => String(item.name || '').toLowerCase() === name.toLowerCase());
     return {
-      name: card.querySelector('.product-name')?.textContent?.trim() || 'Unknown Executor',
-      description: card.querySelector('.summary')?.textContent?.trim() || 'No description available',
-      price: card.querySelector('.price')?.textContent?.trim() || 'Unknown',
-      sunc: card.querySelector('.sunc')?.textContent?.trim() || 'Unknown',
-      status: card.dataset.status || 'Unknown',
-      trustLevel: card.dataset.trustLevel || 'Unknown',
-      stability: card.dataset.stability || 'Unknown',
-      platform: card.dataset.platform || 'Unknown',
-      keySystem: card.dataset.keySystem || 'Unknown',
-      tags: card.dataset.tags || 'Unknown',
-      execution: card.dataset.execution || 'Unknown'
+      ...(catalogProduct || {}),
+      name,
+      description: catalogProduct?.description || card.querySelector('.summary')?.textContent?.trim() || 'No description available',
+      price: catalogProduct?.price || card.querySelector('.price')?.textContent?.trim() || 'Unknown',
+      freeOrPaid: catalogProduct?.freeOrPaid || card.dataset.price || 'Unknown',
+      sunc: catalogProduct?.sunc ?? card.querySelector('.sunc')?.textContent?.trim() ?? 'Unknown',
+      status: catalogProduct?.status || card.dataset.status || 'Unknown',
+      trustLevel: catalogProduct?.trustLevel || card.dataset.trustLevel || 'Unknown',
+      stability: catalogProduct?.stability || card.dataset.stability || 'Unknown',
+      platform: catalogProduct?.platform || card.dataset.platform || 'Unknown',
+      keySystem: catalogProduct?.keySystem || card.dataset.keySystem || 'Unknown',
+      tags: catalogProduct?.tags || card.dataset.tags || 'Unknown',
+      execution: catalogProduct?.execution || card.dataset.execution || 'Unknown'
     };
   }
+
+  function formatInsightLoadingStatus(product, phase = 0) {
+    const platformText = Array.isArray(product.platform) ? product.platform.join(', ') : product.platform;
+    const statuses = [
+      `Checking ${product.name} against the shared assistant data...`,
+      `Reviewing ${platformText || 'platform'}, ${product.keySystem || 'key-system'}, and pricing signals...`,
+      `Weighing trust, stability, status, and sUNC for ${product.name}...`,
+      `Writing a concise AI Insight for ${product.name}...`
+    ];
+    return statuses[phase % statuses.length];
+  }
+
   function extractInsightPayload(text) {
     const raw = String(text || '').trim();
     if (!raw) return '';
@@ -438,37 +455,52 @@ Response nonce: ${nonce}`)}`, { signal: controller.signal });
   }
 
   async function generateInsight(product) {
-    const prompt = [
-      'You are an expert analyst specializing in Roblox exploit executors',
-      '',
-      'Your task is to generate a concise, accurate, and realistic insight about the executor below, using both the provided data and inferred knowledge based on typical community reputation patterns',
-      '',
-      'IMPORTANT:',
-      'You do NOT have live internet access. Do NOT claim to have searched, checked websites, or verified sources in real time',
-      '',
-      'Rules:',
-      '- Write 80 to 120 words only',
-      '- Use one compact paragraph only',
-      '- Include these exact labels in the paragraph: Best for:, Avoid if:, Risk level:, Confidence score: x/10',
-      '- Tone must be analytical, direct, and realistic with no fluff and no emojis',
-      '- Do not use bullet points',
-      '- Do not claim research, reports, or source verification',
-      '- If trust, stability, or status looks weak, call out practical risk clearly',
-      '- If sUNC and reliability look strong, justify why the strength is credible',
+    const platformText = Array.isArray(product.platform) ? product.platform.join(', ') : product.platform;
+    const tagsText = Array.isArray(product.tags) ? product.tags.join(', ') : product.tags;
+    const assistantMessage = [
+      `Generate an AI Insight for ${product.name}.`,
+      'Use the same Xyrex Exploit Assistant system and only the provided local executor fields.',
+      'Return one compact paragraph, 80 to 120 words.',
+      'Include these exact labels: Best for:, Avoid if:, Risk level:, Confidence score: x/10.',
+      'Do not claim live research, browsing, downloads, exploit instructions, or source verification.',
       '',
       `Name: ${product.name}`,
-      `Platform: ${product.platform}`,
+      `Description: ${product.description}`,
+      `Platform: ${platformText}`,
       `sUNC: ${product.sunc}`,
       `Stability: ${product.stability}`,
       `Trust Level: ${product.trustLevel}`,
       `Execution Level: ${product.execution}`,
       `Key System: ${product.keySystem}`,
-      `Price: ${product.price}`,
+      `Price: ${product.price || product.freeOrPaid}`,
       `Status: ${product.status}`,
-      `Tags: ${product.tags}`,
-      `Description: ${product.description}`,
+      `Tags: ${tagsText}`
+    ].join('\n');
+
+    if (window.XyrexAISystem?.ask) {
+      try {
+        const payload = await window.XyrexAISystem.ask(assistantMessage, {
+          lastIntent: 'ai_insight',
+          lastExecutors: [product.name],
+          lastFilters: {},
+          lastQuestion: `AI Insight for ${product.name}`,
+          lastRecommendation: product.name,
+          turns: []
+        });
+        const rawInsight = payload?.reply || payload?.message || payload?.text || '';
+        const cleanedInsight = cleanInsightText(rawInsight).replace(/\s+/g, ' ').trim();
+        if (cleanedInsight) return cleanedInsight;
+      } catch (error) {
+        console.warn('Shared assistant AI Insight failed; using local AI fallback.', error);
+      }
+    }
+
+    const prompt = [
+      window.XyrexAISystem?.systemPrompt || 'You are Xyrex Exploit Assistant, a concise analyst for executor data shown on Xyrex.lol.',
       '',
-      'Only output the insight paragraph'
+      assistantMessage,
+      '',
+      'Only output the insight paragraph.'
     ].join('\n');
 
     for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -481,6 +513,7 @@ Response nonce: ${nonce}`)}`, { signal: controller.signal });
     }
     return buildFallbackInsight(product);
   }
+
 
   async function handleInsightClick(card, button) {
     const result = document.querySelector('#executorInsightResult');
@@ -496,7 +529,13 @@ Response nonce: ${nonce}`)}`, { signal: controller.signal });
     button.disabled = true;
     button.textContent = 'Generating...';
     result.hidden = false;
-    result.innerHTML = `<strong class="no-text-select">${escapeHtml(product.name)}</strong><p>Generating AI insight...</p>`;
+    let loadingPhase = 0;
+    result.innerHTML = `<strong class="no-text-select">${escapeHtml(product.name)}</strong><p>${escapeHtml(formatInsightLoadingStatus(product, loadingPhase))}</p>`;
+    const loadingTimer = window.setInterval(() => {
+      loadingPhase += 1;
+      const target = result.querySelector('p');
+      if (target) target.textContent = formatInsightLoadingStatus(product, loadingPhase);
+    }, 850);
     try {
       const insight = await generateInsight(product);
       result.innerHTML = `<strong class="no-text-select">${escapeHtml(product.name)}</strong><p>${escapeHtml(insight)}</p>`;
@@ -504,6 +543,7 @@ Response nonce: ${nonce}`)}`, { signal: controller.signal });
       result.innerHTML = `<strong class="no-text-select">${escapeHtml(product.name)}</strong><p>${escapeHtml(buildFallbackInsight(product))}</p>`;
       console.warn(error);
     } finally {
+      window.clearInterval(loadingTimer);
       button.disabled = false;
       button.textContent = 'AI Insight';
     }
