@@ -1,9 +1,67 @@
 (function () {
+  const themeApi = window.XyrexTheme || null;
+  const THEME_KEY = themeApi?.THEME_KEY || 'xyrex_new_ui_theme';
   const AI_ENDPOINT = 'https://text.pollinations.ai/';
+  const THEME_MODAL_ID = 'newUiThemeModal';
   const AI_REQUEST_TIMEOUT_MS = 14000;
   const AI_MAX_ATTEMPTS = 4;
   const AI_TOKEN_STORAGE_KEY = 'xyrex_ai_tokens_v1';
   const FREE_DAILY_AI_TOKENS = 5;
+  const themeDefaults = themeApi?.themeDefaults || {
+    bg: '#06070d',
+    bg2: '#0a0c14',
+    panel: '#111426',
+    panel2: '#12172b',
+    card: '#12162a',
+    text: '#eef1ff',
+    muted: '#aeb5d6',
+    accent: '#8f9cff',
+    accentSoft: '#b2bcff',
+    success: '#5dd39e',
+    warning: '#f0c36f'
+  };
+  const pastelThemePresets = [
+    {
+      id: 'lavender-mist',
+      label: 'Lavender Mist',
+      colors: {
+        bg: '#191a29', bg2: '#21233a', panel: '#2a2d49', panel2: '#323556', card: '#3a3e66',
+        text: '#f8f4ff', muted: '#d5cde8', accent: '#c5b7ff', accentSoft: '#e2d8ff', success: '#9fe0bf', warning: '#ffd8a8'
+      }
+    },
+    {
+      id: 'mint-cloud',
+      label: 'Mint Cloud',
+      colors: {
+        bg: '#182324', bg2: '#223032', panel: '#2c3f41', panel2: '#355053', card: '#3f6064',
+        text: '#f2fffa', muted: '#c9e8dd', accent: '#9ddfd3', accentSoft: '#c5f1e8', success: '#a8eac8', warning: '#ffd9aa'
+      }
+    },
+    {
+      id: 'peach-haze',
+      label: 'Peach Haze',
+      colors: {
+        bg: '#2a1f1d', bg2: '#352724', panel: '#43312d', panel2: '#523a35', card: '#60443e',
+        text: '#fff5ef', muted: '#e8ccc2', accent: '#ffb8a6', accentSoft: '#ffd8cc', success: '#b7e5be', warning: '#ffe0a6'
+      }
+    },
+    {
+      id: 'powder-sky',
+      label: 'Powder Sky',
+      colors: {
+        bg: '#1a2230', bg2: '#232d3f', panel: '#2d3950', panel2: '#36445f', card: '#425373',
+        text: '#f1f7ff', muted: '#c8d8ec', accent: '#abcfff', accentSoft: '#d4e6ff', success: '#a7dfcf', warning: '#ffe0aa'
+      }
+    },
+    {
+      id: 'pink-bloom',
+      label: 'Pink Bloom',
+      colors: {
+        bg: '#2b1423', bg2: '#381a2d', panel: '#4a223c', panel2: '#5d2b4d', card: '#723760',
+        text: '#fff0fb', muted: '#efbfdc', accent: '#ff78c9', accentSoft: '#ffc4e8', success: '#a4e6c8', warning: '#ffd7ad'
+      }
+    }
+  ];
   let cssLoaded = false;
   let gridObserver = null;
   function loadCss() {
@@ -13,7 +71,7 @@
     }
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/new-ui.css?v=2.1.1';
+    link.href = '/new-ui.css?v=2.1.2';
     link.dataset.newUiCss = 'true';
     document.head.appendChild(link);
     cssLoaded = true;
@@ -25,6 +83,205 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
+  }
+  function getThemeFromStorage() {
+    if (themeApi?.getCurrentTheme) return themeApi.getCurrentTheme();
+    try {
+      return JSON.parse(localStorage.getItem(THEME_KEY) || 'null');
+    } catch {
+      return null;
+    }
+  }
+  function hexToRgb(hex) {
+    const match = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '');
+    if (!match) return null;
+    return { r: parseInt(match[1], 16), g: parseInt(match[2], 16), b: parseInt(match[3], 16) };
+  }
+  function rgbToHex(r, g, b) {
+    return `#${[r, g, b].map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('')}`;
+  }
+  function shiftRgb(rgb, amount) {
+    return rgbToHex(rgb.r + amount, rgb.g + amount, rgb.b + amount);
+  }
+  function mixRgb(a, b, ratio) {
+    return rgbToHex(
+      a.r * (1 - ratio) + b.r * ratio,
+      a.g * (1 - ratio) + b.g * ratio,
+      a.b * (1 - ratio) + b.b * ratio
+    );
+  }
+  function applyTheme(theme) {
+    if (themeApi?.applyTheme) return themeApi.applyTheme(theme);
+  }
+  function clearThemeOverrides() {
+    if (themeApi?.resetThemeOverrides) themeApi.resetThemeOverrides();
+  }
+  function closeThemeModal() {
+    const modal = document.getElementById(THEME_MODAL_ID);
+    if (!modal) return;
+    modal.setAttribute('aria-hidden', 'true');
+  }
+  function ensureThemeModal() {
+    if (document.getElementById(THEME_MODAL_ID)) return;
+    const modal = document.createElement('div');
+    modal.id = THEME_MODAL_ID;
+    modal.className = 'new-ui-theme-modal';
+    modal.setAttribute('aria-hidden', 'true');
+    modal.innerHTML = `
+      <section class="new-ui-theme-panel" role="dialog" aria-modal="true" aria-label="Theme Customizer">
+        <header class="new-ui-theme-head">
+          <div>
+            <h3>Theme Customizer</h3>
+            <p>Adjust the full site palette and mood, then apply it to reload with your selected theme</p>
+          </div>
+          <button type="button" class="new-ui-theme-close" aria-label="Close Theme Customizer">✕</button>
+        </header>
+        <div class="new-ui-theme-tabs" role="tablist" aria-label="Theme customizer mode">
+          <button type="button" class="new-ui-theme-tab is-active" role="tab" aria-selected="true" data-theme-tab-target="newUiThemeBasicPanel">Basic</button>
+          <button type="button" class="new-ui-theme-tab" role="tab" aria-selected="false" data-theme-tab-target="newUiThemeAdvancedPanel">Advanced</button>
+        </div>
+        <section id="newUiThemeBasicPanel" class="new-ui-theme-panel-block" role="tabpanel">
+          <p class="new-ui-theme-note">Choose a pastel preset</p>
+          <div id="newUiPresetSwatches" class="new-ui-preset-swatches"></div>
+        </section>
+        <section id="newUiThemeAdvancedPanel" class="new-ui-theme-panel-block" role="tabpanel" hidden>
+          <div class="new-ui-theme-grid">
+            <label>Background <input type="color" id="newUiBg" value="#06070d" /></label>
+            <label>Background 2 <input type="color" id="newUiBg2" value="#0a0c14" /></label>
+            <label>Panel <input type="color" id="newUiPanel" value="#111426" /></label>
+            <label>Panel 2 <input type="color" id="newUiPanel2" value="#12172b" /></label>
+            <label>Card <input type="color" id="newUiCard" value="#12162a" /></label>
+            <label>Text <input type="color" id="newUiText" value="#eef1ff" /></label>
+            <label>Muted Text <input type="color" id="newUiMuted" value="#aeb5d6" /></label>
+            <label>Primary Accent <input type="color" id="newUiAccent" value="#8f9cff" /></label>
+            <label>Secondary Accent <input type="color" id="newUiAccentSoft" value="#b2bcff" /></label>
+            <label>Success Accent <input type="color" id="newUiSuccess" value="#5dd39e" /></label>
+            <label>Warning Accent <input type="color" id="newUiWarning" value="#f0c36f" /></label>
+          </div>
+        </section>
+        <div class="new-ui-theme-preview" id="newUiThemePreview">
+          <strong id="newUiThemePreviewLabel">Pending theme: Current</strong>
+          <div class="new-ui-theme-preview-swatches" id="newUiThemePreviewSwatches"></div>
+        </div>
+        <div class="new-ui-theme-actions">
+          <button type="button" class="btn-primary" id="saveNewUiThemeBtn">Apply Theme</button>
+          <button type="button" class="btn-danger" id="resetNewUiThemeBtn">Reset</button>
+        </div>
+      </section>
+    `;
+    document.body.appendChild(modal);
+    const colorInputMap = {
+      bg: '#newUiBg',
+      bg2: '#newUiBg2',
+      panel: '#newUiPanel',
+      panel2: '#newUiPanel2',
+      card: '#newUiCard',
+      text: '#newUiText',
+      muted: '#newUiMuted',
+      accent: '#newUiAccent',
+      accentSoft: '#newUiAccentSoft',
+      success: '#newUiSuccess',
+      warning: '#newUiWarning'
+    };
+    const saved = { ...themeDefaults, ...(getThemeFromStorage() || {}) };
+    const presetWrap = modal.querySelector('#newUiPresetSwatches');
+    presetWrap.innerHTML = pastelThemePresets.map(preset => `
+      <button
+        type="button"
+        class="new-ui-preset-swatch"
+        title="${escapeHtml(preset.label)}"
+        aria-label="${escapeHtml(preset.label)}"
+        data-preset-id="${escapeHtml(preset.id)}"
+        style="background: radial-gradient(circle at 28% 22%, ${preset.colors.accentSoft}, ${preset.colors.accent} 44%, ${preset.colors.panel} 100%);"
+      ></button>
+    `).join('');
+    const setInputValues = palette => {
+      const merged = { ...themeDefaults, ...(palette || {}) };
+      Object.entries(colorInputMap).forEach(([key, selector]) => {
+        const input = modal.querySelector(selector);
+        if (!input) return;
+        input.value = merged[key] || themeDefaults[key];
+      });
+    };
+    const renderPendingPreview = (palette, labelText = 'Pending theme: Custom') => {
+      const merged = { ...themeDefaults, ...(palette || {}) };
+      const previewLabel = modal.querySelector('#newUiThemePreviewLabel');
+      const previewSwatches = modal.querySelector('#newUiThemePreviewSwatches');
+      if (previewLabel) previewLabel.textContent = labelText;
+      if (previewSwatches) {
+        previewSwatches.innerHTML = ['bg', 'panel', 'card', 'accent', 'accentSoft', 'text']
+          .map(key => `<span style="background:${merged[key] || themeDefaults[key]}"></span>`)
+          .join('');
+      }
+    };
+    const collectInputValues = () => {
+      const payload = {};
+      Object.entries(colorInputMap).forEach(([key, selector]) => {
+        const input = modal.querySelector(selector);
+        payload[key] = input?.value || themeDefaults[key];
+      });
+      return payload;
+    };
+    const setThemeTab = panelId => {
+      modal.querySelectorAll('.new-ui-theme-tab').forEach(tab => {
+        const active = tab.getAttribute('data-theme-tab-target') === panelId;
+        tab.classList.toggle('is-active', active);
+        tab.setAttribute('aria-selected', String(active));
+      });
+      modal.querySelectorAll('.new-ui-theme-panel-block').forEach(panel => {
+        panel.hidden = panel.id !== panelId;
+      });
+    };
+    setThemeTab('newUiThemeBasicPanel');
+    setInputValues(saved);
+    renderPendingPreview(saved, 'Pending theme: Current');
+    Object.values(colorInputMap).forEach(selector => {
+      modal.querySelector(selector)?.addEventListener('input', () => {
+        renderPendingPreview(collectInputValues(), 'Pending theme: Custom');
+        modal.querySelectorAll('.new-ui-preset-swatch').forEach(swatch => swatch.classList.remove('is-selected'));
+      });
+    });
+    modal.querySelectorAll('.new-ui-theme-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        setThemeTab(tab.getAttribute('data-theme-tab-target'));
+      });
+    });
+    presetWrap.addEventListener('click', event => {
+      const trigger = event.target.closest('[data-preset-id]');
+      if (!trigger) return;
+      const preset = pastelThemePresets.find(item => item.id === trigger.getAttribute('data-preset-id'));
+      if (!preset) return;
+      modal.querySelectorAll('.new-ui-preset-swatch').forEach(swatch => {
+        swatch.classList.toggle('is-selected', swatch === trigger);
+      });
+      setInputValues(preset.colors);
+      renderPendingPreview(preset.colors, `Pending theme: ${preset.label}`);
+    });
+    modal.querySelector('#saveNewUiThemeBtn').addEventListener('click', () => {
+      const payload = collectInputValues();
+      localStorage.setItem(THEME_KEY, JSON.stringify(payload));
+      window.location.reload();
+    });
+    modal.querySelector('#resetNewUiThemeBtn').addEventListener('click', () => {
+      Object.entries(colorInputMap).forEach(([key, selector]) => {
+        const input = modal.querySelector(selector);
+        if (input) input.value = themeDefaults[key];
+      });
+      localStorage.removeItem(THEME_KEY);
+      window.location.reload();
+    });
+    modal.querySelector('.new-ui-theme-close').addEventListener('click', closeThemeModal);
+    modal.addEventListener('click', event => {
+      if (event.target === modal) closeThemeModal();
+    });
+  }
+  function toggleThemeCustomizer() {
+    if (!document.body.classList.contains('new-ui-enabled')) return;
+    const modal = document.getElementById(THEME_MODAL_ID);
+    if (!modal) return;
+    const isHidden = modal.getAttribute('aria-hidden') !== 'false';
+    modal.setAttribute('aria-hidden', isHidden ? 'false' : 'true');
+    if (isHidden) modal.querySelector('.new-ui-theme-close')?.focus();
   }
   function ensureInsightsPanel() {
     const executorsPage = document.querySelector('#executorsPage');
@@ -306,22 +563,32 @@ Response nonce: ${nonce}`)}`, { signal: controller.signal });
   }
   function removeInjectedElements() {
     document.querySelectorAll('.new-ui-badge, .new-ui-panel').forEach(node => node.remove());
+    const modal = document.getElementById(THEME_MODAL_ID);
+    if (modal) modal.remove();
   }
   function enable() {
     loadCss();
     document.body.classList.add('new-ui-enabled');
+    ensureThemeModal();
     ensureInsightsPanel();
     enhanceCardsForNewUi();
     watchGridUpdates();
+    applyTheme(getThemeFromStorage());
   }
   function disable() {
     document.body.classList.remove('new-ui-enabled');
+    closeThemeModal();
     stopWatchingGridUpdates();
     restoreDefaultCardActions();
     removeInjectedElements();
+    clearThemeOverrides();
   }
   window.XyrexNewUI = {
     enable,
-    disable
+    disable,
+    toggleThemeCustomizer,
+    applyStoredTheme() {
+      applyTheme(getThemeFromStorage());
+    }
   };
 })();
