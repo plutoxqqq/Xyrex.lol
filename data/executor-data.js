@@ -53,7 +53,7 @@ window.XYREX_EXECUTOR_PRODUCTS = [
     description: 'Mixed-plan Windows executor with flexible free and paid usage',
     pros: ['Has a free tier', 'Flexible plans'],
     cons: ['Paid version needed for full power', 'Popularity has significantly dropped'],
-    pricingOptions: ['Free', '}.99 daily', '$9.99 monthly', '$34.99 lifetime'],
+    pricingOptions: ['Free', '$0.99 daily', '$9.99 monthly', '$34.99 lifetime'],
     freeOrPaid: 'both',
     stability: 'Mixed',
     trustLevel: 'Low',

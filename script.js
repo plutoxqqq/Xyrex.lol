@@ -51,6 +51,40 @@ const POPULAR_SCRIPT_CATEGORIES = [
 ];
 
 
+
+const HUB_TAB_MODULES = {
+  smartRankingsPanel: [
+    { title: 'Live Ranking Module', body: 'Shows the strongest executor picks from current Xyrex data, including free, safe, beginner, power, value, and mobile rankings.' },
+    { title: 'Safety Signals Module', body: 'Combines trust level, stability, status, and detection-risk signals so the ranking cards are never empty.' },
+    { title: 'Rotation Module', body: 'Cycles featured ranking cards while keeping every ranking category available to open manually.' }
+  ],
+  comparisonPanel: [
+    { title: 'Selector Module', body: 'Filter executors by platform, pricing, key system, and sUNC before choosing two or three entries.' },
+    { title: 'Comparison Table Module', body: 'Builds side-by-side rows for price, platform, sUNC, key system, stability, trust, and status.' },
+    { title: 'Verdict Module', body: 'Summarizes the strongest option after enough executors are selected.' }
+  ],
+  assistantPanel: [
+    { title: 'Recommendation Module', body: 'Answers executor questions using the same local data shown on the site.' },
+    { title: 'Risk Review Module', body: 'Can explain safety, stability, pricing, and platform trade-offs in plain language.' },
+    { title: 'Fallback Module', body: 'Uses local data when the remote assistant API is unavailable.' }
+  ],
+  popularScriptsPanel: [
+    { title: 'Category Module', body: 'Groups scripts by game or use case so every configured category has a visible module.' },
+    { title: 'Script Card Module', body: 'Shows description, executor guidance, platform badges, Discord availability, and copy controls.' },
+    { title: 'Empty Category Module', body: 'Displays a clean placeholder instead of leaving a tab blank when a category has no scripts yet.' }
+  ],
+  savedScriptsPanel: [
+    { title: 'Editor Module', body: 'Save reusable script titles and content locally in this browser.' },
+    { title: 'Library Module', body: 'Lists saved scripts immediately after saving and lets you reopen or delete them.' },
+    { title: 'Validation Module', body: 'Prevents blank saved-script entries by requiring both a title and content.' }
+  ],
+  recentChangesPanel: [
+    { title: 'Updates Module', body: 'Keeps the latest change notice visible inside the tab.' },
+    { title: 'Discord Module', body: 'Directs users to the official Discord server for the full changelog and support updates.' },
+    { title: 'Status Module', body: 'Avoids blank recent-change panels when no long changelog is published.' }
+  ]
+};
+
 const WEAO_STATUS_ENDPOINTS = [
   'https://weao.xyz/api/status/exploits',
   'https://api.weao.xyz/status/exploits',
@@ -433,13 +467,63 @@ const tagSymbolMap = {
 };
 
 const trustRiskMap = { High: 2, Medium: 5, Low: 8, Unknown: 7 };
-const stabilityScoreMap = { Stable: 9, High: 8, Mixed: 6, Basic: 4, Unstable: 3, Unknown: 4 };
+const stabilityScoreMap = { 'Very stable': 10, Stable: 9, High: 8, Mixed: 6, Basic: 4, Questionable: 3, Unstable: 3, Unknown: 4 };
 let lastModalTrigger = null;
 
 
 function escapeHtml(str) {
   if (!str) return '';
   return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
+
+function createHubModuleMarkup(panelId) {
+  const modules = HUB_TAB_MODULES[panelId] || [];
+  if (!modules.length) return '';
+  return `
+    <div class="hub-module-grid" data-hub-module-grid="${escapeHtml(panelId)}" aria-label="${escapeHtml(panelId.replace(/Panel$/, ''))} modules">
+      ${modules.map(module => `
+        <article class="hub-module-card">
+          <strong>${escapeHtml(module.title)}</strong>
+          <p>${escapeHtml(module.body)}</p>
+        </article>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderHubTabModules() {
+  Object.keys(HUB_TAB_MODULES).forEach(panelId => {
+    const panel = qs(`#${panelId}`);
+    if (!panel || panel.querySelector(':scope > .hub-module-grid')) return;
+    const heading = panel.querySelector('h3');
+    if (!heading) return;
+    heading.insertAdjacentHTML('afterend', createHubModuleMarkup(panelId));
+  });
+}
+
+function cleanupAetherCoreBranding() {
+  const candidates = qsa('.aethercore-logo, [data-aethercore-logo], img[alt*="AetherCore" i], img[title*="AetherCore" i], img[src*="aethercore" i]');
+  const seenKeys = new Set();
+
+  candidates.forEach(node => {
+    const keyParts = [
+      node.tagName,
+      node.getAttribute('src') || '',
+      node.getAttribute('alt') || '',
+      node.getAttribute('title') || '',
+      node.parentElement?.className || ''
+    ];
+    const key = keyParts.join('|').toLowerCase();
+    if (seenKeys.has(key)) {
+      node.remove();
+      return;
+    }
+    seenKeys.add(key);
+    node.classList.add('aethercore-logo-clean');
+    const logoShell = node.closest('.aethercore-logo-wrap, .aethercore-brand, .module-logo, .script-card-meta, .script-card-head');
+    if (logoShell) logoShell.classList.add('aethercore-logo-clean-shell');
+  });
 }
 
 function stripTrailingPeriod(value) {
@@ -1163,7 +1247,7 @@ function computeSmartRanking() {
   const clampScore = value => Math.max(0, Math.min(100, Math.round(value)));
   const mapValue = (value, map) => map[String(value || '').toLowerCase()] ?? 50;
   const trustScoreMap = { trusted: 96, caution: 68, risky: 36, unknown: 52 };
-  const stabilityScoreLabelMap = { high: 96, medium: 72, low: 46 };
+  const stabilityScoreLabelMap = { 'very stable': 100, stable: 92, high: 96, medium: 72, mixed: 62, basic: 48, questionable: 34, low: 46, unstable: 30, unknown: 42 };
 
   const safetyScore = product => clampScore(
     (mapValue(product.trustLevel, trustScoreMap) * 0.52)
@@ -1178,7 +1262,7 @@ function computeSmartRanking() {
   const beginnerScore = product => {
     const baseline = (safetyScore(product) * 0.36) + (mapValue(product.stability, stabilityScoreLabelMap) * 0.24);
     const freeBoost = ['free', 'both'].includes(product.freeOrPaid) ? 18 : 0;
-    const keyPenalty = String(product.keySystem || '').toLowerCase() === 'key' ? -10 : 8;
+    const keyPenalty = String(product.keySystem || '').toLowerCase() === 'keyed' ? -10 : 8;
     const desc = String(product.description || '').toLowerCase();
     const easeBoost = /(simple|easy|beginner|quick setup|user interface)/.test(desc) ? 12 : 0;
     return clampScore(baseline + freeBoost + keyPenalty + easeBoost);
@@ -1328,7 +1412,7 @@ function renderComparisonSystem() {
     if (comparisonFilter === 'mobile') return (product.platform || []).some(item => /(android|ios|mobile)/i.test(String(item)));
     if (comparisonFilter === 'free') return ['free', 'both'].includes(product.freeOrPaid);
     if (comparisonFilter === 'paid') return ['paid', 'both'].includes(product.freeOrPaid);
-    if (comparisonFilter === 'keyless') return String(product.keySystem || '').toLowerCase() !== 'key';
+    if (comparisonFilter === 'keyless') return String(product.keySystem || '').toLowerCase() === 'keyless';
     if (comparisonFilter === 'highsunc') return Number.isFinite(product.sunc) && product.sunc >= 90;
     return true;
   };
@@ -2353,9 +2437,12 @@ function injectLegendIcons() {
 }
 
 function initScriptsHub() {
+  renderHubTabModules();
+  cleanupAetherCoreBranding();
   renderSmartRankings();
   renderComparisonSystem();
   renderPopularScripts();
+  cleanupAetherCoreBranding();
   renderRecentChanges();
   renderSavedScriptsList();
   initExploitAssistant();
