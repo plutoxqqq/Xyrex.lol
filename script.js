@@ -1703,14 +1703,67 @@ function getAssistantKnowledgeText(product) {
   return `${product.name}: ${product.description} Platforms: ${platforms}. Features: ${features}. sUNC: ${Number.isFinite(product.sunc) ? `${product.sunc}%` : 'None'}. Stability: ${product.stability}. Risk: ${detectionRiskLabel(product)} (${detectionRiskScore(product)}/10). Price: ${price}.${site}`;
 }
 
-const assistantIntents = { COMPARE:'compare', RECOMMEND:'recommend', SAFETY:'safety', PRICE:'price', PLATFORM:'platform', SUNC:'sunc', BEGINNER:'beginner', DETAILS:'details', LORE:'lore', FILTER_SHOW:'filter_show', UNKNOWN:'unknown' };
-const assistantLoadingSteps = ['Reading Xyrex executor data...','Checking platform, price, and key system...','Comparing sUNC, trust, and stability...','Building a clear recommendation...'];
-let assistantContext = { lastIntent:null, lastExecutors:[], lastFilters:{}, lastQuestion:'', lastRecommendation:null };
+const assistantIntents = { COMPARE:'compare', RECOMMEND:'recommend', SAFETY:'safety', PRICE:'price', PLATFORM:'platform', SUNC:'sunc', BEGINNER:'beginner', DETAILS:'details', LORE:'lore', FILTER_SHOW:'filter_show', FOLLOW_UP:'follow_up', UNKNOWN:'unknown' };
+const assistantSystemPrompt = [
+  'You are Xyrex Exploit Assistant, a concise analyst for executor data shown on Xyrex.lol.',
+  'Use only the provided executor data and the conversation context. Do not claim live web access or external verification.',
+  'Answer the exact user question first, then add practical caveats about risk, stability, status, and token cost when relevant.',
+  'Support follow-up questions by resolving words like it, that one, compare them, cheaper, safer, or why to the previous executor or recommendation.',
+  'Prefer ranked, specific recommendations over generic statements. If data is missing, say what is missing and give the safest local-data answer.',
+  'Never provide exploit code, bypass instructions, download instructions, or steps that increase abuse. Keep the focus on comparison, safety, pricing, platforms, and site data.',
+  'Use short Markdown with headings and bullets when it improves readability.'
+].join('\n');
+const assistantLoadingProfiles = Object.freeze({
+  filter: ['Reading your filter request...', 'Matching filters to visible executor cards...', 'Refreshing the executor grid...'],
+  compare: ['Pulling both executor profiles...', 'Checking price, platform, trust, and sUNC side by side...', 'Writing a clear verdict...'],
+  safety: ['Reviewing trust and status signals...', 'Checking stability and detection-risk notes...', 'Prioritizing the lowest-risk answer...'],
+  price: ['Checking free, paid, and key-system fields...', 'Balancing cost against reliability...', 'Summarizing the best value picks...'],
+  platform: ['Reading your platform target...', 'Filtering support across executor cards...', 'Ranking compatible options...'],
+  sunc: ['Sorting execution and sUNC data...', 'Checking whether high scores match stable signals...', 'Preparing the strongest technical picks...'],
+  follow_up: ['Reading your follow-up in context...', 'Reusing the previous executor shortlist...', 'Updating the recommendation...'],
+  default: ['Reading current Xyrex executor data...', 'Checking platform, price, key system, and risk...', 'Comparing sUNC, trust, and stability...', 'Building a tailored recommendation...']
+});
+let assistantContext = { lastIntent:null, lastExecutors:[], lastFilters:{}, lastQuestion:'', lastRecommendation:null, turns:[] };
+
+
+
+function isAssistantFollowUp(input) {
+  return /\b(it|that|this|they|them|those|one|same|previous|last|why|what about|how about|cheaper|safer|better|worse|compare them|which of those)\b/i.test(input)
+    && (assistantContext.lastExecutors.length || assistantContext.lastRecommendation);
+}
+
+function resolveAssistantFollowUpEntities(input, entities) {
+  if (entities.length || !isAssistantFollowUp(input)) return entities;
+  return [...new Set([...(assistantContext.lastExecutors || []), assistantContext.lastRecommendation].filter(Boolean))];
+}
+
+function mergeAssistantFilters(filters) {
+  const previous = assistantContext.lastFilters || {};
+  return {
+    platform: filters.platform?.length ? filters.platform : (previous.platform || []),
+    price: filters.price || previous.price || null,
+    keySystem: filters.keySystem || previous.keySystem || null,
+    cheatType: filters.cheatType || previous.cheatType || null,
+    safety: filters.safety || previous.safety || null,
+    suncMinimum: filters.suncMinimum || previous.suncMinimum || null
+  };
+}
+
+function getAssistantLoadingSteps(intentData) {
+  if (intentData.wantsFilterAction) return assistantLoadingProfiles.filter;
+  if (intentData.isFollowUp) return assistantLoadingProfiles.follow_up;
+  if (intentData.intent === assistantIntents.COMPARE) return assistantLoadingProfiles.compare;
+  if (intentData.intent === assistantIntents.SAFETY || intentData.intent === assistantIntents.BEGINNER) return assistantLoadingProfiles.safety;
+  if (intentData.intent === assistantIntents.PRICE) return assistantLoadingProfiles.price;
+  if (intentData.intent === assistantIntents.PLATFORM) return assistantLoadingProfiles.platform;
+  if (intentData.intent === assistantIntents.SUNC) return assistantLoadingProfiles.sunc;
+  return assistantLoadingProfiles.default;
+}
 
 function detectAssistantIntent(message) {
   const raw = String(message || '').trim();
   const input = raw.toLowerCase();
-  const entities = products.filter(item => input.includes(item.name.toLowerCase())).map(item => item.name);
+  let entities = products.filter(item => input.includes(item.name.toLowerCase())).map(item => item.name);
   const wantsFilterAction = /(show|filter|display|only show|hide everything except|show me|list only)/i.test(input);
   const filters = { platform: [], price: null, keySystem: null, cheatType: null, safety: null, suncMinimum: null };
   if (/(windows|pc)/i.test(input)) filters.platform.push('Windows');
@@ -1734,7 +1787,11 @@ function detectAssistantIntent(message) {
   else if (/(\blore\b|archive|fragment|protocol 1\.337|null|terminal command|how.*unlock)/i.test(input)) intent = assistantIntents.LORE;
   else if (beginner) intent = assistantIntents.BEGINNER;
   else if (entities.length) intent = assistantIntents.DETAILS;
-  return { intent, entities, filters, beginner, wantsFilterAction };
+  const isFollowUp = isAssistantFollowUp(input);
+  entities = resolveAssistantFollowUpEntities(input, entities);
+  if (isFollowUp && intent === assistantIntents.UNKNOWN) intent = assistantIntents.FOLLOW_UP;
+  const effectiveFilters = isFollowUp ? mergeAssistantFilters(filters) : filters;
+  return { intent, entities, filters: effectiveFilters, explicitFilters: filters, beginner, wantsFilterAction, isFollowUp }; 
 }
 
 function recommendationScore(product, userIntent = {}) {
@@ -1846,27 +1903,71 @@ function setAssistantMessageMarkdown(messageElement, markdownText) {
 }
 
 
+function formatExecutorBullet(product, intentData = {}) {
+  const reasonParts = [];
+  if (Number.isFinite(product.sunc)) reasonParts.push(`sUNC ${product.sunc}%`);
+  if (product.trustLevel && product.trustLevel !== 'Unknown') reasonParts.push(`trust ${product.trustLevel}`);
+  if (product.stability && product.stability !== 'Unknown') reasonParts.push(`${product.stability} stability`);
+  if (product.status && product.status !== 'Unknown') reasonParts.push(`status ${product.status}`);
+  const platformText = (product.platform || []).join(', ') || 'Unknown platform';
+  const score = Math.round(recommendationScore(product, intentData));
+  return `- **${product.name}** — ${platformText}; ${product.freeOrPaid}; ${product.keySystem}; ${reasonParts.join(', ') || 'limited public fields'}; fit score ${score}.`;
+}
+
+function buildAssistantComparisonReply(pair, intentData) {
+  const firstScore = recommendationScore(pair[0], intentData);
+  const secondScore = recommendationScore(pair[1], intentData);
+  const winner = firstScore >= secondScore ? pair[0] : pair[1];
+  return `### ${pair[0].name} vs ${pair[1].name}
+
+| Category | ${pair[0].name} | ${pair[1].name} |
+| --- | --- | --- |
+| Price | ${pair[0].freeOrPaid} | ${pair[1].freeOrPaid} |
+| Platform | ${(pair[0].platform || []).join(', ') || 'Unknown'} | ${(pair[1].platform || []).join(', ') || 'Unknown'} |
+| Key system | ${pair[0].keySystem} | ${pair[1].keySystem} |
+| sUNC | ${Number.isFinite(pair[0].sunc) ? `${pair[0].sunc}%` : 'None'} | ${Number.isFinite(pair[1].sunc) ? `${pair[1].sunc}%` : 'None'} |
+| Trust | ${pair[0].trustLevel} | ${pair[1].trustLevel} |
+| Stability | ${pair[0].stability} | ${pair[1].stability} |
+| Status | ${pair[0].status} | ${pair[1].status} |
+
+**Verdict:** ${winner.name} currently looks stronger for this question because it has the better combined local score for trust, stability, status, sUNC, and your filters.
+
+**Follow-up ideas:** ask “why?”, “which is safer?”, or “show only compatible ones” and I will keep this comparison in context.
+
+**Confidence:** ${getAssistantConfidence(pair)} — based only on current Xyrex local data.`;
+}
+
 function buildLocalRecommendationReply(intentData) {
   const ranked = getRankedExecutors(intentData || {}).map(item => item.product);
-  const best = ranked[0];
+  const mentionedProducts = (intentData?.entities || []).map(name => products.find(product => product.name === name)).filter(Boolean);
+  if (intentData?.intent === assistantIntents.COMPARE && mentionedProducts.length >= 2) return buildAssistantComparisonReply(mentionedProducts.slice(0, 2), intentData);
+  if (intentData?.intent === assistantIntents.DETAILS && mentionedProducts.length) {
+    return `### ${mentionedProducts[0].name} overview
+
+${getAssistantKnowledgeText(mentionedProducts[0])}
+
+**Best follow-up:** ask me to compare it with another executor, check safer alternatives, or filter the page to matching options.
+
+**Confidence:** ${getAssistantConfidence(mentionedProducts[0])} — based only on current Xyrex local data.`;
+  }
+  const candidates = mentionedProducts.length ? mentionedProducts : ranked;
+  const best = candidates[0];
   if (!best) return getLocalAssistantFallback('');
-  return `### Recommended pick: ${best.name}
+  const heading = intentData?.isFollowUp ? 'Updated recommendation' : intentData?.intent === assistantIntents.SAFETY || intentData?.intent === assistantIntents.BEGINNER ? 'Safer recommended picks' : intentData?.intent === assistantIntents.SUNC ? 'Strongest sUNC-focused picks' : intentData?.intent === assistantIntents.PRICE ? 'Best value picks' : 'Recommended pick';
+  const topList = candidates.slice(0, 4).map(item => formatExecutorBullet(item, intentData)).join('\n');
+  const caveat = detectionRiskScore(best) >= 7 || /down|patched|detected|risky|unstable/i.test(`${best.status} ${best.stability}`)
+    ? 'Important: the top local match still has risk signals, so treat it cautiously and re-check status before relying on it.'
+    : 'The top local match has comparatively stronger visible trust, stability, status, and compatibility signals.';
 
-Why:
-- Strong overall score from local trust, stability, status, and sUNC fields
-- Better aligned with your request filters and intent
+  return `### ${heading}: ${best.name}
 
-Based on Xyrex data:
-- Executor: ${best.name}
-- Platform: ${(best.platform || []).join(', ') || 'Unknown'}
-- Price: ${best.freeOrPaid}
-- Key System: ${best.keySystem}
-- sUNC: ${Number.isFinite(best.sunc) ? `${best.sunc}%` : 'None'}
-- Trust: ${best.trustLevel}
-- Stability: ${best.stability}
-- Status: ${best.status}
+${topList}
 
-Confidence: ${getAssistantConfidence(best)} — Based on current local Xyrex data and may change over time.`;
+**Why this answer fits:** I weighted your request against platform, pricing, key system, sUNC, trust, stability, and current status fields. ${caveat}
+
+**Useful next questions:** “why?”, “compare it with another executor”, “which is safer?”, or “filter the page to these options”.
+
+**Confidence:** ${getAssistantConfidence(candidates.slice(0, 3))} — based only on current Xyrex local data.`;
 }
 
 
@@ -1900,8 +2001,20 @@ function isLikelyCannedAssistantReply(replyText) {
   return cannedIndicators.filter(token => normalized.includes(token)).length >= 2;
 }
 
-async function askExploitAssistant(message) {
-  const payload = JSON.stringify({ message, executors: products });
+async function askExploitAssistant(message, context = assistantContext) {
+  const payload = JSON.stringify({
+    message,
+    executors: products,
+    system: assistantSystemPrompt,
+    context: {
+      lastIntent: context?.lastIntent || null,
+      lastExecutors: context?.lastExecutors || [],
+      lastFilters: context?.lastFilters || {},
+      lastQuestion: context?.lastQuestion || '',
+      lastRecommendation: context?.lastRecommendation || null,
+      recentTurns: (context?.turns || []).slice(-6)
+    }
+  });
   const errors = [];
 
   for (const apiUrl of EXPLOIT_ASSISTANT_APIS) {
@@ -1940,7 +2053,7 @@ function initExploitAssistant() {
   const appendMessage = (role, text, badges = []) => {
     const bubble = document.createElement('article');
     bubble.className = `assistant-message ${role === 'user' ? 'assistant-user' : 'assistant-bot'}`;
-    const visibleBadges = role === 'bot' && Array.isArray(badges) ? badges.filter(badge => badge !== 'Local Data') : [];
+    const visibleBadges = role === 'bot' && Array.isArray(badges) ? badges.filter(badge => badge && badge !== 'Local Data') : [];
     if (visibleBadges.length) {
       const badgeWrap = document.createElement('div'); badgeWrap.className = 'assistant-badges';
       visibleBadges.forEach(badge => { const el = document.createElement('span'); el.className = 'assistant-badge'; el.textContent = badge; badgeWrap.appendChild(el); });
@@ -1970,10 +2083,15 @@ function initExploitAssistant() {
     input.disabled = true;
     sendBtn.disabled = true;
     const intentData = detectAssistantIntent(userMessage);
-    const loadingMessage = appendMessage('bot', intentData.wantsFilterAction ? 'Reading your filter request...' : assistantLoadingSteps[0], [intentData.wantsFilterAction ? 'Filter Mode' : 'Local Data']);
+    const loadingSteps = getAssistantLoadingSteps(intentData);
+    const loadingMessage = appendMessage('bot', loadingSteps[0], [intentData.wantsFilterAction ? 'Filter Mode' : intentData.isFollowUp ? 'Follow-up' : '']);
     let loadIndex = 0;
     if (loadingInterval) clearInterval(loadingInterval);
-    loadingInterval = setInterval(() => { loadIndex = (loadIndex + 1) % assistantLoadingSteps.length; loadingMessage.lastChild.textContent = intentData.wantsFilterAction ? ['Reading your filter request...','Updating executor filters...','Refreshing visible executors...'][loadIndex % 3] : assistantLoadingSteps[loadIndex]; }, 750);
+    loadingInterval = setInterval(() => {
+      loadIndex = (loadIndex + 1) % loadingSteps.length;
+      const target = loadingMessage.lastChild;
+      if (target) target.textContent = loadingSteps[loadIndex];
+    }, 750);
 
     try {
       let replyText = '';
@@ -1984,11 +2102,11 @@ function initExploitAssistant() {
         replyText = `### Filter Mode\nI filtered the page to show: ${filterLabel}\n\nMatching executors: ${matchCount}\n\n${matchCount ? 'Done — I filtered the page based on your request.' : 'I applied the filter, but no matching executors were found in the current Xyrex data.'}`;
       } else if (intentData.intent === assistantIntents.COMPARE && intentData.entities.length >= 2) {
         const pair = intentData.entities.slice(0, 2).map(n => products.find(p => p.name === n)).filter(Boolean);
-        replyText = `### ${pair[0].name} vs ${pair[1].name}\n\nCategory comparison:\n- Price: ${pair[0].freeOrPaid} vs ${pair[1].freeOrPaid}\n- Platform: ${(pair[0].platform || []).join(', ')} vs ${(pair[1].platform || []).join(', ')}\n- Key System: ${pair[0].keySystem} vs ${pair[1].keySystem}\n- sUNC: ${pair[0].sunc ?? 'None'} vs ${pair[1].sunc ?? 'None'}\n- Trust: ${pair[0].trustLevel} vs ${pair[1].trustLevel}\n- Stability: ${pair[0].stability} vs ${pair[1].stability}\n- Status: ${pair[0].status} vs ${pair[1].status}\n\nVerdict:\nBased on Xyrex data, ${recommendationScore(pair[0], intentData) >= recommendationScore(pair[1], intentData) ? pair[0].name : pair[1].name} currently looks stronger overall.\n\nConfidence:\n${getAssistantConfidence(pair)} — This comparison is based on local Xyrex fields and may change over time.`;
+        replyText = buildAssistantComparisonReply(pair, intentData);
       } else if (intentData.intent === assistantIntents.LORE) {
         replyText = buildLoreAccessGuide();
       } else {
-        const apiPayload = await askExploitAssistant(userMessage);
+        const apiPayload = await askExploitAssistant(userMessage, assistantContext);
         const apiReply = String(apiPayload?.reply || apiPayload?.message || '').trim();
         if (!apiReply) throw new Error('Exploit Assistant API returned an empty reply.');
         replyText = isLikelyCannedAssistantReply(apiReply) ? buildLocalRecommendationReply(intentData) : apiReply;
@@ -1999,7 +2117,14 @@ function initExploitAssistant() {
         clearBtn.addEventListener('click', () => { qsa('.filter-checkbox, .price-checkbox').forEach(cb => { cb.checked = false; }); applyAllFilters(); });
         loadingMessage.appendChild(clearBtn);
       }
-      assistantContext = { lastIntent: intentData.intent, lastExecutors: intentData.entities, lastFilters: intentData.filters, lastQuestion: userMessage, lastRecommendation: intentData.entities[0] || null };
+      assistantContext = {
+        lastIntent: intentData.intent,
+        lastExecutors: intentData.entities,
+        lastFilters: intentData.filters,
+        lastQuestion: userMessage,
+        lastRecommendation: intentData.entities[0] || getRankedExecutors(intentData)[0]?.product?.name || null,
+        turns: [...(assistantContext.turns || []), { role: 'user', content: userMessage }, { role: 'assistant', content: replyText.slice(0, 1200) }].slice(-8)
+      };
     } catch (error) {
       setAssistantMessageMarkdown(loadingMessage, `Live research is temporarily unavailable (${(error && error.message) ? error.message : 'unknown error'}). I’ll continue using stored Xyrex data.\n\n${intentData.intent === assistantIntents.LORE ? buildLoreAccessGuide() : getLocalAssistantFallback(userMessage)}`);
     } finally {
@@ -2010,6 +2135,14 @@ function initExploitAssistant() {
     }
   });
 }
+
+window.XyrexAISystem = Object.freeze({
+  ask: askExploitAssistant,
+  buildLocalRecommendationReply,
+  buildFallback: getLocalAssistantFallback,
+  systemPrompt: assistantSystemPrompt,
+  endpoints: EXPLOIT_ASSISTANT_APIS
+});
 
 const savedScriptsStorageKey = 'xyrex_saved_scripts_v1';
 let currentSavedScriptId = null;
