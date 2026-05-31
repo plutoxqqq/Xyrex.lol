@@ -1021,9 +1021,7 @@ function openSettingsModal() {
         <h3>Interface</h3>
         <div class="settings-actions">
           <button id="settingsUiModeBtn" class="btn-primary settings-action-btn" type="button">${isNewUiMode ? 'Switch to Default UI' : 'Switch to New UI'}</button>
-          <button id="settingsThemeCustomizerBtn" class="btn-primary settings-action-btn" type="button" ${isNewUiMode ? '' : 'disabled'}>Theme Customizer</button>
         </div>
-        <p class="settings-note">Theme Customizer is available when New UI mode is active</p>
       </div>
       <div class="settings-group">
         <h3>AI Usage</h3>
@@ -1060,12 +1058,6 @@ function openSettingsModal() {
   updateCooldownNote();
   settingsCooldownTimerId = window.setInterval(updateCooldownNote, 1000);
   earnTokensBtn?.addEventListener('click', openEarnTokensModal);
-
-  const themeBtn = qs('#settingsThemeCustomizerBtn');
-  themeBtn?.addEventListener('click', () => {
-    if (!isNewUiMode || !window.XyrexNewUI?.toggleThemeCustomizer) return;
-    window.XyrexNewUI.toggleThemeCustomizer();
-  });
 
   qs('#modalCloseBtn').focus();
 }
@@ -2030,7 +2022,7 @@ function loadNewUiModule() {
 
   return new Promise(resolve => {
     const script = document.createElement('script');
-    script.src = '/new-ui.js?v=2.1.0';
+    script.src = '/new-ui.js?v=2.1.1';
     script.defer = true;
     script.onload = () => resolve(Boolean(window.XyrexNewUI));
     script.onerror = () => resolve(false);
