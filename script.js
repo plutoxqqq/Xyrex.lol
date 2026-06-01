@@ -54,34 +54,34 @@ const POPULAR_SCRIPT_CATEGORIES = [
 
 const HUB_TAB_MODULES = {
   smartRankingsPanel: [
-    { title: 'Live Ranking Module', body: 'Shows the strongest executor picks from current Xyrex data, including free, safe, beginner, power, value, and mobile rankings.' },
-    { title: 'Safety Signals Module', body: 'Combines trust level, stability, status, and detection-risk signals so the ranking cards are never empty.' },
-    { title: 'Rotation Module', body: 'Cycles featured ranking cards while keeping every ranking category available to open manually.' }
+    { title: 'Live Ranking Module', body: 'Shows the strongest executor picks from current Xyrex data, including free, safe, beginner, power, value, and mobile rankings' },
+    { title: 'Safety Signals Module', body: 'Combines trust level, stability, status, and detection-risk signals so the ranking cards are never empty' },
+    { title: 'Rotation Module', body: 'Cycles featured ranking cards while keeping every ranking category available to open manually' }
   ],
   comparisonPanel: [
-    { title: 'Selector Module', body: 'Filter executors by platform, pricing, key system, and sUNC before choosing two or three entries.' },
-    { title: 'Comparison Table Module', body: 'Builds side-by-side rows for price, platform, sUNC, key system, stability, trust, and status.' },
-    { title: 'Verdict Module', body: 'Summarizes the strongest option after enough executors are selected.' }
+    { title: 'Selector Module', body: 'Filter executors by platform, pricing, key system, and sUNC before choosing two or three entries' },
+    { title: 'Comparison Table Module', body: 'Builds side-by-side rows for price, platform, sUNC, key system, stability, trust, and status' },
+    { title: 'Verdict Module', body: 'Summarizes the strongest option after enough executors are selected' }
   ],
   assistantPanel: [
-    { title: 'Recommendation Module', body: 'Answers executor questions using the same local data shown on the site.' },
-    { title: 'Risk Review Module', body: 'Can explain safety, stability, pricing, and platform trade-offs in plain language.' },
-    { title: 'Fallback Module', body: 'Uses local data when the remote assistant API is unavailable.' }
+    { title: 'Recommendation Module', body: 'Answers executor questions using the same local data shown on the site' },
+    { title: 'Risk Review Module', body: 'Can explain safety, stability, pricing, and platform trade-offs in plain language' },
+    { title: 'Fallback Module', body: 'Uses local data when the remote assistant API is unavailable' }
   ],
   popularScriptsPanel: [
-    { title: 'Category Module', body: 'Groups scripts by game or use case so every configured category has a visible module.' },
-    { title: 'Script Card Module', body: 'Shows description, executor guidance, platform badges, Discord availability, and copy controls.' },
-    { title: 'Empty Category Module', body: 'Displays a clean placeholder instead of leaving a tab blank when a category has no scripts yet.' }
+    { title: 'Category Module', body: 'Groups scripts by game or use case so every configured category has a visible module' },
+    { title: 'Script Card Module', body: 'Shows description, executor guidance, platform badges, Discord availability, and copy controls' },
+    { title: 'Empty Category Module', body: 'Displays a clean placeholder instead of leaving a tab blank when a category has no scripts yet' }
   ],
   savedScriptsPanel: [
-    { title: 'Editor Module', body: 'Save reusable script titles and content locally in this browser.' },
-    { title: 'Library Module', body: 'Lists saved scripts immediately after saving and lets you reopen or delete them.' },
-    { title: 'Validation Module', body: 'Prevents blank saved-script entries by requiring both a title and content.' }
+    { title: 'Editor Module', body: 'Save reusable script titles and content locally in this browser' },
+    { title: 'Library Module', body: 'Lists saved scripts immediately after saving and lets you reopen or delete them' },
+    { title: 'Validation Module', body: 'Prevents blank saved-script entries by requiring both a title and content' }
   ],
   recentChangesPanel: [
-    { title: 'Updates Module', body: 'Keeps the latest change notice visible inside the tab.' },
-    { title: 'Discord Module', body: 'Directs users to the official Discord server for the full changelog and support updates.' },
-    { title: 'Status Module', body: 'Avoids blank recent-change panels when no long changelog is published.' }
+    { title: 'Updates Module', body: 'Keeps the latest change notice visible inside the tab' },
+    { title: 'Discord Module', body: 'Directs users to the official Discord server for the full changelog and support updates' },
+    { title: 'Status Module', body: 'Avoids blank recent-change panels when no long changelog is published' }
   ]
 };
 
@@ -527,7 +527,13 @@ function cleanupAetherCoreBranding() {
 }
 
 function stripTrailingPeriod(value) {
-  return String(value ?? '').replace(/\.+$/g, '').trim();
+  const text = String(value ?? '').trim();
+  if (/\.\.\.$/.test(text)) return text;
+  return text.replace(/\.(?=\s*$)/, '').trim();
+}
+
+function cleanMalformedPriceText(value) {
+  return String(value ?? '').replace(/\$\s*\{\s*\.(\d{1,2})/g, '$$1.$1');
 }
 
 function createTagSymbols(product) {
@@ -664,7 +670,7 @@ function createProductCard(product, index) {
 
   const price = document.createElement('div');
   price.className = 'price no-text-select';
-  price.textContent = getPriceLabel(product);
+  price.textContent = cleanMalformedPriceText(getPriceLabel(product));
 
   body.appendChild(header);
   body.appendChild(statusDetails);
@@ -844,7 +850,7 @@ function openModal(product) {
       <div>
         <div class="modal-section"><strong>Pros</strong><ul>${product.pros.map(f => `<li>${escapeHtml(f)}</li>`).join('')}</ul></div>
         ${consMarkup}
-        <div class="modal-section"><strong>Pricing</strong><ul>${product.pricingOptions.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul></div>
+        <div class="modal-section"><strong>Pricing</strong><ul>${product.pricingOptions.map(item => `<li>${escapeHtml(cleanMalformedPriceText(item))}</li>`).join('')}</ul></div>
       </div>
       <aside class="status-panel">
         <h3>Status</h3>
@@ -907,7 +913,7 @@ function openSuncSimulationModal(product) {
         <div id="uncSimBar" class="sunc-sim-progress-bar"><span id="uncSimFill" class="sunc-sim-progress-fill"></span></div>
         <div id="uncSimValue" class="sunc-sim-value">0%</div>
       </div>
-      <p class="settings-note">This test will not show UNC or functions passed/failed.</p>
+      <p class="settings-note">This test will not show UNC or functions passed/failed</p>
     </section>`;
 
   overlay.classList.remove('is-closing');
@@ -1044,7 +1050,7 @@ function openEarnTokensModal() {
     <section class="discord-unavailable-modal" aria-live="polite">
       <div class="discord-unavailable-icon ai-token-unavailable-icon" aria-hidden="true"><span>+</span></div>
       <h2>Earn Free Tokens</h2>
-      <p class="modal-headline">Choose a whole number from ${FREE_TOKEN_SHOP.minClaim} to ${FREE_TOKEN_SHOP.maxClaim}. Higher amounts apply a longer cooldown. Claiming ${FREE_TOKEN_SHOP.maxClaim} tokens sets a 1 week cooldown.</p>
+      <p class="modal-headline">Choose a whole number from ${FREE_TOKEN_SHOP.minClaim} to ${FREE_TOKEN_SHOP.maxClaim}. Higher amounts apply a longer cooldown. Claiming ${FREE_TOKEN_SHOP.maxClaim} tokens sets a 1 week cooldown</p>
       <label class="settings-note" for="earnTokensAmountInput">Token amount</label>
       <input id="earnTokensAmountInput" type="number" min="${FREE_TOKEN_SHOP.minClaim}" max="${FREE_TOKEN_SHOP.maxClaim}" step="1" value="${FREE_TOKEN_SHOP.minClaim}" class="xy-amount-input">
       <div class="settings-actions settings-actions-centered">
@@ -1115,7 +1121,7 @@ function openSettingsModal() {
         <div class="settings-actions settings-earn-tokens-action">
           <button id="settingsEarnTokensBtn" class="btn-primary settings-action-btn" type="button">Earn Tokens</button>
         </div>
-        <p class="settings-note">Claim 1-30 free tokens. Higher amounts apply a longer cooldown.</p>
+        <p class="settings-note">Claim 1-30 free tokens. Higher amounts apply a longer cooldown</p>
         <p class="settings-note" id="settingsCooldownNote"></p>
       </div>
       <footer class="settings-credit">Made by plutoxqq and slick012</footer>
@@ -1519,7 +1525,7 @@ function renderPopularScripts() {
   const groupedScripts = groupScriptsByCategory(scripts);
   const categories = getPopularScriptCategories(groupedScripts);
   if (!categories.length) {
-    wrap.innerHTML = '<div class="script-empty-state"><p>No scripts found.</p><p>Try a different search or category.</p></div>';
+    wrap.innerHTML = '<div class="script-empty-state"><p>No scripts found</p><p>Try a different search or category</p></div>';
     return;
   }
   const defaultOpenCategory = null;
@@ -1700,18 +1706,18 @@ function getAssistantKnowledgeText(product) {
     ? product.pricingOptions.join(', ')
     : product.freeOrPaid;
   const site = product.officialSite ? ` Official site: ${product.officialSite}.` : ' Official site: Not listed.';
-  return `${product.name}: ${product.description} Platforms: ${platforms}. Features: ${features}. sUNC: ${Number.isFinite(product.sunc) ? `${product.sunc}%` : 'None'}. Stability: ${product.stability}. Risk: ${detectionRiskLabel(product)} (${detectionRiskScore(product)}/10). Price: ${price}.${site}`;
+  return `${product.name}: ${stripTrailingPeriod(product.description)}. Platforms: ${platforms}. Features: ${features}. sUNC: ${Number.isFinite(product.sunc) ? `${product.sunc}%` : 'Missing'}. Stability: ${product.stability || 'Unknown'}. Risk: ${detectionRiskLabel(product)} (${detectionRiskScore(product)}/10). Price: ${cleanMalformedPriceText(price)}.${site}`;
 }
 
 const assistantIntents = { COMPARE:'compare', RECOMMEND:'recommend', SAFETY:'safety', PRICE:'price', PLATFORM:'platform', SUNC:'sunc', BEGINNER:'beginner', DETAILS:'details', LORE:'lore', FILTER_SHOW:'filter_show', FOLLOW_UP:'follow_up', UNKNOWN:'unknown' };
 const assistantSystemPrompt = [
-  'You are Xyrex Exploit Assistant, a concise analyst for executor data shown on Xyrex.lol.',
-  'Use only the provided executor data and the conversation context. Do not claim live web access or external verification.',
-  'Answer the exact user question first, then add practical caveats about risk, stability, status, and token cost when relevant.',
-  'Support follow-up questions by resolving words like it, that one, compare them, cheaper, safer, or why to the previous executor or recommendation.',
-  'Prefer ranked, specific recommendations over generic statements. If data is missing, say what is missing and give the safest local-data answer.',
-  'Never provide exploit code, bypass instructions, download instructions, or steps that increase abuse. Keep the focus on comparison, safety, pricing, platforms, and site data.',
-  'Use short Markdown with headings and bullets when it improves readability.'
+  'You are Xyrex Exploit Assistant, a concise chat assistant for executor questions on Xyrex.lol.',
+  'Use local executor metadata first and use the current conversation context to resolve follow-ups.',
+  'Answer only the user’s actual question. Do not add unrelated recommendations or separate insight sections.',
+  'Avoid recommendation wording unless the user explicitly asks for a recommendation.',
+  'Do not invent executor claims. If local metadata does not confirm something, clearly say it is not confirmed by the available Xyrex data.',
+  'Keep responses direct with bold labels, short sections, and bullets. Avoid tables unless the user specifically asks for a comparison table.',
+  'Never provide exploit code, bypass instructions, download instructions, or steps that increase abuse.'
 ].join('\n');
 const assistantLoadingProfiles = Object.freeze({
   filter: ['Reading your filter request...', 'Matching filters to visible executor cards...', 'Refreshing the executor grid...'],
@@ -1719,22 +1725,40 @@ const assistantLoadingProfiles = Object.freeze({
   safety: ['Reviewing trust and status signals...', 'Checking stability and detection-risk notes...', 'Prioritizing the lowest-risk answer...'],
   price: ['Checking free, paid, and key-system fields...', 'Balancing cost against reliability...', 'Summarizing the best value picks...'],
   platform: ['Reading your platform target...', 'Filtering support across executor cards...', 'Ranking compatible options...'],
-  sunc: ['Sorting execution and sUNC data...', 'Checking whether high scores match stable signals...', 'Preparing the strongest technical picks...'],
+  sunc: ['Sorting execution and sUNC data...', 'Checking exact sUNC values from local metadata...', 'Preparing the requested sUNC answer...'],
   follow_up: ['Reading your follow-up in context...', 'Reusing the previous executor shortlist...', 'Updating the recommendation...'],
-  default: ['Reading current Xyrex executor data...', 'Checking platform, price, key system, and risk...', 'Comparing sUNC, trust, and stability...', 'Building a tailored recommendation...']
+  default: ['Reading current Xyrex executor data...', 'Checking platform, price, key system, and risk...', 'Using the current chat context...', 'Preparing a direct answer...']
 });
 let assistantContext = { lastIntent:null, lastExecutors:[], lastFilters:{}, lastQuestion:'', lastRecommendation:null, turns:[] };
 
 
 
+function getAssistantConversationExecutors() {
+  const names = [];
+  const pushName = name => {
+    if (name && !names.includes(name)) names.push(name);
+  };
+  (assistantContext.lastExecutors || []).forEach(pushName);
+  pushName(assistantContext.lastRecommendation);
+  [...(assistantContext.turns || [])].reverse().forEach(turn => {
+    const content = String(turn?.content || '').toLowerCase();
+    products.forEach(product => {
+      if (content.includes(product.name.toLowerCase())) pushName(product.name);
+    });
+  });
+  return names;
+}
+
 function isAssistantFollowUp(input) {
-  return /\b(it|that|this|they|them|those|one|same|previous|last|why|what about|how about|cheaper|safer|better|worse|compare them|which of those)\b/i.test(input)
-    && (assistantContext.lastExecutors.length || assistantContext.lastRecommendation);
+  return /\b(it|that|this|they|them|those|one|same|previous|last|why|what about|how about|cheaper|safer|better|worse|lower|higher|lowest|highest|free|compare them|which of those|that one)\b/i.test(input)
+    && getAssistantConversationExecutors().length > 0;
 }
 
 function resolveAssistantFollowUpEntities(input, entities) {
-  if (entities.length || !isAssistantFollowUp(input)) return entities;
-  return [...new Set([...(assistantContext.lastExecutors || []), assistantContext.lastRecommendation].filter(Boolean))];
+  if (!isAssistantFollowUp(input)) return entities;
+  const currentEntities = entities || [];
+  if (currentEntities.length && !/(compare|vs|versus|better than|safer|cheaper|lower|higher)/i.test(input)) return currentEntities;
+  return [...new Set([...currentEntities, ...getAssistantConversationExecutors()].filter(Boolean))];
 }
 
 function mergeAssistantFilters(filters) {
@@ -1783,7 +1807,7 @@ function detectAssistantIntent(message) {
   else if (/(safe|safest|trusted|risk|detected|undetected)/i.test(input)) intent = assistantIntents.SAFETY;
   else if (/(free|paid|cost|keyless|keyed)/i.test(input)) intent = assistantIntents.PRICE;
   else if (/(windows|mac|android|ios|mobile|pc)/i.test(input)) intent = assistantIntents.PLATFORM;
-  else if (/(sunc|score|percentage|highest unc|highest sunc)/i.test(input)) intent = assistantIntents.SUNC;
+  else if (/(sunc|unc|score|percentage|highest unc|highest sunc|lowest sunc|lower sunc)/i.test(input)) intent = assistantIntents.SUNC;
   else if (/(\blore\b|archive|fragment|protocol 1\.337|null|terminal command|how.*unlock)/i.test(input)) intent = assistantIntents.LORE;
   else if (beginner) intent = assistantIntents.BEGINNER;
   else if (entities.length) intent = assistantIntents.DETAILS;
@@ -1791,7 +1815,11 @@ function detectAssistantIntent(message) {
   entities = resolveAssistantFollowUpEntities(input, entities);
   if (isFollowUp && intent === assistantIntents.UNKNOWN) intent = assistantIntents.FOLLOW_UP;
   const effectiveFilters = isFollowUp ? mergeAssistantFilters(filters) : filters;
-  return { intent, entities, filters: effectiveFilters, explicitFilters: filters, beginner, wantsFilterAction, isFollowUp }; 
+  const asksLowest = /\b(lowest|lower|least|minimum|min)\b/i.test(input);
+  const asksHighest = /\b(highest|higher|most|maximum|max|top)\b/i.test(input);
+  const asksCheapest = /\b(cheapest|lowest price|least expensive)\b/i.test(input);
+  const wantsTable = /\b(table|chart|grid)\b/i.test(input);
+  return { intent, entities, filters: effectiveFilters, explicitFilters: filters, beginner, wantsFilterAction, isFollowUp, asksLowest, asksHighest, asksCheapest, wantsTable };
 }
 
 function recommendationScore(product, userIntent = {}) {
@@ -1910,32 +1938,93 @@ function formatExecutorBullet(product, intentData = {}) {
   if (product.stability && product.stability !== 'Unknown') reasonParts.push(`${product.stability} stability`);
   if (product.status && product.status !== 'Unknown') reasonParts.push(`status ${product.status}`);
   const platformText = (product.platform || []).join(', ') || 'Unknown platform';
-  const score = Math.round(recommendationScore(product, intentData));
-  return `- **${product.name}** — ${platformText}; ${product.freeOrPaid}; ${product.keySystem}; ${reasonParts.join(', ') || 'limited public fields'}; fit score ${score}.`;
+  return `- **${product.name}** — ${platformText}; ${product.freeOrPaid}; ${product.keySystem}; ${reasonParts.join(', ') || 'limited public fields'}`;
+}
+
+
+function getAssistantProductsFromNames(names = []) {
+  return [...new Set(names)].map(name => products.find(product => product.name === name)).filter(Boolean);
+}
+
+function formatSuncValue(product) {
+  return Number.isFinite(product?.sunc) ? `${product.sunc}%` : 'Missing';
+}
+
+function formatPricingValue(product) {
+  const options = Array.isArray(product?.pricingOptions) && product.pricingOptions.length ? product.pricingOptions : [product?.freeOrPaid || 'Unknown'];
+  return cleanMalformedPriceText(options.join(', '));
+}
+
+function getFiniteSuncProducts(sourceProducts = products) {
+  return sourceProducts.filter(product => Number.isFinite(product.sunc));
+}
+
+function buildSuncAnswer(intentData) {
+  const scoped = getAssistantProductsFromNames(intentData.entities || []);
+  const finite = getFiniteSuncProducts(scoped.length >= 2 ? scoped : products);
+  if (!finite.length) return '**sUNC:** Missing\n\n- **Reason:** The current Xyrex metadata does not list confirmed sUNC values for this request';
+  const direction = intentData.asksLowest ? 'lowest' : 'highest';
+  const sorted = [...finite].sort((a, b) => direction === 'lowest' ? a.sunc - b.sunc : b.sunc - a.sunc);
+  const targetValue = sorted[0].sunc;
+  const ties = sorted.filter(product => product.sunc === targetValue);
+  const label = direction === 'lowest' ? 'Lowest sUNC' : 'Highest sUNC';
+  const scopeText = scoped.length >= 2 ? 'among the executors being compared' : 'in the current Xyrex metadata';
+  return `**${label}:** ${ties.map(product => product.name).join(', ')}\n\n${ties.map(product => `- **${product.name}**: ${formatSuncValue(product)}`).join('\n')}\n- **Reason:** This is the ${direction} listed sUNC value ${scopeText}`;
+}
+
+function buildPriceAnswer(intentData) {
+  const mentioned = getAssistantProductsFromNames(intentData.entities || []);
+  if (mentioned.length) {
+    return mentioned.map(product => `**${product.name} pricing**\n\n- **Type:** ${product.freeOrPaid || 'Unknown'}\n- **Listed price:** ${formatPricingValue(product)}\n- **Key system:** ${product.keySystem || 'Unknown'}`).join('\n\n');
+  }
+  if (/free/i.test(assistantContext.lastQuestion || '') && intentData.isFollowUp) {
+    const previous = getAssistantProductsFromNames(getAssistantConversationExecutors()).slice(0, 1);
+    if (previous.length) return buildPriceAnswer({ ...intentData, entities: [previous[0].name] });
+  }
+  if (intentData.asksCheapest || intentData.filters?.price === 'free') {
+    const free = products.filter(product => product.freeOrPaid === 'free' || product.freeOrPaid === 'both');
+    return `**Free availability**\n\n${free.map(product => `- **${product.name}**: ${product.freeOrPaid === 'both' ? 'Free + paid plans' : 'Free'}; listed price ${formatPricingValue(product)}`).join('\n') || '- No free executors are listed in the current Xyrex metadata'}`;
+  }
+  return `**Pricing data**\n\n- The available Xyrex metadata can confirm pricing only for listed executors\n- Ask about a specific executor, for example: **is Solara free?**`;
+}
+
+function buildDetailsAnswer(product) {
+  return `**${product.name}**\n\n- **Description:** ${stripTrailingPeriod(product.description || 'No description listed')}\n- **Platform:** ${(product.platform || []).join(', ') || 'Unknown'}\n- **Price:** ${formatPricingValue(product)}\n- **Key system:** ${product.keySystem || 'Unknown'}\n- **sUNC:** ${formatSuncValue(product)}\n- **Stability:** ${product.stability || 'Unknown'}\n- **Trust:** ${product.trustLevel || 'Unknown'}\n- **Status:** ${product.status || 'Unknown'}`;
+}
+
+function buildSafetyAnswer(intentData) {
+  const mentioned = getAssistantProductsFromNames(intentData.entities || []);
+  const pool = mentioned.length ? mentioned : products;
+  const ranked = [...pool].sort((a, b) => detectionRiskScore(a) - detectionRiskScore(b) || (Number.isFinite(b.sunc) ? b.sunc : -1) - (Number.isFinite(a.sunc) ? a.sunc : -1));
+  if (!ranked.length) return '**Safety:** Missing\n\n- **Reason:** The available Xyrex metadata does not confirm safety for this request';
+  const heading = mentioned.length >= 2 ? 'Lower visible risk' : 'Lower-risk listed options';
+  return `**${heading}:** ${ranked[0].name}\n\n${ranked.slice(0, mentioned.length >= 2 ? mentioned.length : 4).map(product => `- **${product.name}**: ${detectionRiskLabel(product)} risk (${detectionRiskScore(product)}/10), trust ${product.trustLevel || 'Unknown'}, stability ${product.stability || 'Unknown'}, status ${product.status || 'Unknown'}`).join('\n')}\n- **Note:** This does not prove any executor is safe; it only reflects the visible Xyrex metadata`;
 }
 
 function buildAssistantComparisonReply(pair, intentData) {
-  const firstScore = recommendationScore(pair[0], intentData);
-  const secondScore = recommendationScore(pair[1], intentData);
-  const winner = firstScore >= secondScore ? pair[0] : pair[1];
-  return `### ${pair[0].name} vs ${pair[1].name}
-
-| Category | ${pair[0].name} | ${pair[1].name} |
-| --- | --- | --- |
-| Price | ${pair[0].freeOrPaid} | ${pair[1].freeOrPaid} |
-| Platform | ${(pair[0].platform || []).join(', ') || 'Unknown'} | ${(pair[1].platform || []).join(', ') || 'Unknown'} |
-| Key system | ${pair[0].keySystem} | ${pair[1].keySystem} |
-| sUNC | ${Number.isFinite(pair[0].sunc) ? `${pair[0].sunc}%` : 'None'} | ${Number.isFinite(pair[1].sunc) ? `${pair[1].sunc}%` : 'None'} |
-| Trust | ${pair[0].trustLevel} | ${pair[1].trustLevel} |
-| Stability | ${pair[0].stability} | ${pair[1].stability} |
-| Status | ${pair[0].status} | ${pair[1].status} |
-
-**Verdict:** ${winner.name} currently looks stronger for this question because it has the better combined local score for trust, stability, status, sUNC, and your filters.
-
-**Follow-up ideas:** ask “why?”, “which is safer?”, or “show only compatible ones” and I will keep this comparison in context.
-
-**Confidence:** ${getAssistantConfidence(pair)} — based only on current Xyrex local data.`;
+  if (!pair || pair.length < 2) return '**Comparison:** Missing\n\n- **Reason:** I need two listed executors to compare';
+  if (intentData?.intent === assistantIntents.SUNC || /sunc/i.test(assistantContext.lastQuestion || '')) {
+    return buildSuncAnswer({ ...intentData, entities: pair.map(product => product.name), asksLowest: intentData?.asksLowest !== false });
+  }
+  if (intentData?.wantsTable) {
+    return `| Category | ${pair[0].name} | ${pair[1].name} |\n| --- | --- | --- |\n| Price | ${pair[0].freeOrPaid} | ${pair[1].freeOrPaid} |\n| Platform | ${(pair[0].platform || []).join(', ') || 'Unknown'} | ${(pair[1].platform || []).join(', ') || 'Unknown'} |\n| Key system | ${pair[0].keySystem || 'Unknown'} | ${pair[1].keySystem || 'Unknown'} |\n| sUNC | ${formatSuncValue(pair[0])} | ${formatSuncValue(pair[1])} |\n| Trust | ${pair[0].trustLevel || 'Unknown'} | ${pair[1].trustLevel || 'Unknown'} |\n| Stability | ${pair[0].stability || 'Unknown'} | ${pair[1].stability || 'Unknown'} |\n| Status | ${pair[0].status || 'Unknown'} | ${pair[1].status || 'Unknown'} |`;
+  }
+  return `**${pair[0].name} vs ${pair[1].name}**\n\n- **${pair[0].name}:** ${pair[0].freeOrPaid}; ${(pair[0].platform || []).join(', ') || 'Unknown platform'}; ${pair[0].keySystem || 'Unknown'}; sUNC ${formatSuncValue(pair[0])}; trust ${pair[0].trustLevel || 'Unknown'}; status ${pair[0].status || 'Unknown'}\n- **${pair[1].name}:** ${pair[1].freeOrPaid}; ${(pair[1].platform || []).join(', ') || 'Unknown platform'}; ${pair[1].keySystem || 'Unknown'}; sUNC ${formatSuncValue(pair[1])}; trust ${pair[1].trustLevel || 'Unknown'}; status ${pair[1].status || 'Unknown'}\n- **Note:** Ask for a specific metric like **lower sUNC**, **safer**, **cheaper**, or **best for Windows** for a direct verdict`;
 }
+
+function buildDirectAssistantReply(userMessage, intentData) {
+  if (intentData.wantsFilterAction) return '';
+  const mentioned = getAssistantProductsFromNames(intentData.entities || []);
+  if (intentData.intent === assistantIntents.LORE) return buildLoreAccessGuide();
+  if (intentData.intent === assistantIntents.SUNC) return buildSuncAnswer(intentData);
+  if (intentData.intent === assistantIntents.PRICE || intentData.asksCheapest) return buildPriceAnswer(intentData);
+  if (intentData.intent === assistantIntents.SAFETY || /\bsafer\b/i.test(userMessage)) return buildSafetyAnswer(intentData);
+  if (intentData.intent === assistantIntents.COMPARE && mentioned.length >= 2) return buildAssistantComparisonReply(mentioned.slice(0, 2), intentData);
+  if (mentioned.length === 1 || (intentData.intent === assistantIntents.FOLLOW_UP && mentioned.length)) return buildDetailsAnswer(mentioned[0]);
+  if (intentData.intent === assistantIntents.RECOMMEND || intentData.intent === assistantIntents.BEGINNER || intentData.intent === assistantIntents.PLATFORM) return buildLocalRecommendationReply(intentData);
+  return `**Not confirmed**\n\n- The available Xyrex metadata does not confirm an answer to that exact question\n- Ask about a listed executor, platform, price, sUNC value, status, trust, or stability`;
+}
+
 
 function buildLocalRecommendationReply(intentData) {
   const ranked = getRankedExecutors(intentData || {}).map(item => item.product);
@@ -1953,7 +2042,7 @@ ${getAssistantKnowledgeText(mentionedProducts[0])}
   const candidates = mentionedProducts.length ? mentionedProducts : ranked;
   const best = candidates[0];
   if (!best) return getLocalAssistantFallback('');
-  const heading = intentData?.isFollowUp ? 'Updated recommendation' : intentData?.intent === assistantIntents.SAFETY || intentData?.intent === assistantIntents.BEGINNER ? 'Safer recommended picks' : intentData?.intent === assistantIntents.SUNC ? 'Strongest sUNC-focused picks' : intentData?.intent === assistantIntents.PRICE ? 'Best value picks' : 'Recommended pick';
+  const heading = intentData?.isFollowUp ? 'Updated answer' : intentData?.intent === assistantIntents.SAFETY || intentData?.intent === assistantIntents.BEGINNER ? 'Lower-risk listed picks' : intentData?.intent === assistantIntents.SUNC ? 'sUNC-focused picks' : intentData?.intent === assistantIntents.PRICE ? 'Value picks' : 'Recommended pick';
   const topList = candidates.slice(0, 4).map(item => formatExecutorBullet(item, intentData)).join('\n');
   const caveat = detectionRiskScore(best) >= 7 || /down|patched|detected|risky|unstable/i.test(`${best.status} ${best.stability}`)
     ? 'Important: the top local match still has risk signals, so treat it cautiously and re-check status before relying on it.'
@@ -1963,9 +2052,7 @@ ${getAssistantKnowledgeText(mentionedProducts[0])}
 
 ${topList}
 
-**Why this answer fits:** I weighted your request against platform, pricing, key system, sUNC, trust, stability, and current status fields. ${caveat}
-
-**Useful next questions:** “why?”, “compare it with another executor”, “which is safer?”, or “filter the page to these options”.
+**Why this answer fits:** I matched your request against platform, pricing, key system, sUNC, trust, stability, and current status fields. ${caveat}
 
 **Confidence:** ${getAssistantConfidence(candidates.slice(0, 3))} — based only on current Xyrex local data.`;
 }
@@ -2012,7 +2099,7 @@ async function askExploitAssistant(message, context = assistantContext) {
       lastFilters: context?.lastFilters || {},
       lastQuestion: context?.lastQuestion || '',
       lastRecommendation: context?.lastRecommendation || null,
-      recentTurns: (context?.turns || []).slice(-6)
+      recentTurns: (context?.turns || []).slice(-12)
     }
   });
   const errors = [];
@@ -2100,16 +2187,8 @@ function initExploitAssistant() {
         const matchCount = qs('#productGrid')?.children?.length || 0;
         const filterLabel = [intentData.filters.price, ...(intentData.filters.platform || []), intentData.filters.keySystem].filter(Boolean).join(' + ') || 'requested filters';
         replyText = `### Filter Mode\nI filtered the page to show: ${filterLabel}\n\nMatching executors: ${matchCount}\n\n${matchCount ? 'Done — I filtered the page based on your request.' : 'I applied the filter, but no matching executors were found in the current Xyrex data.'}`;
-      } else if (intentData.intent === assistantIntents.COMPARE && intentData.entities.length >= 2) {
-        const pair = intentData.entities.slice(0, 2).map(n => products.find(p => p.name === n)).filter(Boolean);
-        replyText = buildAssistantComparisonReply(pair, intentData);
-      } else if (intentData.intent === assistantIntents.LORE) {
-        replyText = buildLoreAccessGuide();
       } else {
-        const apiPayload = await askExploitAssistant(userMessage, assistantContext);
-        const apiReply = String(apiPayload?.reply || apiPayload?.message || '').trim();
-        if (!apiReply) throw new Error('Exploit Assistant API returned an empty reply.');
-        replyText = isLikelyCannedAssistantReply(apiReply) ? buildLocalRecommendationReply(intentData) : apiReply;
+        replyText = buildDirectAssistantReply(userMessage, intentData);
       }
       setAssistantMessageMarkdown(loadingMessage, replyText);
       if (intentData.wantsFilterAction) {
@@ -2122,11 +2201,11 @@ function initExploitAssistant() {
         lastExecutors: intentData.entities,
         lastFilters: intentData.filters,
         lastQuestion: userMessage,
-        lastRecommendation: intentData.entities[0] || getRankedExecutors(intentData)[0]?.product?.name || null,
-        turns: [...(assistantContext.turns || []), { role: 'user', content: userMessage }, { role: 'assistant', content: replyText.slice(0, 1200) }].slice(-8)
+        lastRecommendation: intentData.entities[0] || getAssistantConversationExecutors()[0] || getRankedExecutors(intentData)[0]?.product?.name || null,
+        turns: [...(assistantContext.turns || []), { role: 'user', content: userMessage }, { role: 'assistant', content: replyText.slice(0, 1200) }]
       };
     } catch (error) {
-      setAssistantMessageMarkdown(loadingMessage, `Live research is temporarily unavailable (${(error && error.message) ? error.message : 'unknown error'}). I’ll continue using stored Xyrex data.\n\n${intentData.intent === assistantIntents.LORE ? buildLoreAccessGuide() : getLocalAssistantFallback(userMessage)}`);
+      setAssistantMessageMarkdown(loadingMessage, `**Not confirmed**\n\n- The available Xyrex metadata could not answer that request because an assistant error occurred\n- ${(error && error.message) ? escapeHtml(error.message) : 'Unknown error'}`);
     } finally {
       if (loadingInterval) { clearInterval(loadingInterval); loadingInterval = null; }
       input.disabled = false;
@@ -2297,27 +2376,27 @@ const SEO_PATH_META = {
   },
   '/scripthub': {
     title: 'Xyrex Script Hub | Rankings, Comparisons, and Script Discovery',
-    description: 'Explore the Xyrex Script Hub for executor rankings, trusted comparisons, popular scripts, saved scripts, and real-time Roblox script discovery updates.'
+    description: 'Explore the Xyrex Script Hub for executor rankings, trusted comparisons, popular scripts, saved scripts, and real-time Roblox script discovery updates'
   },
   '/scripthub/comparison': {
     title: 'Executor Comparison | Xyrex Script Hub',
-    description: 'Compare Roblox executors side by side with pricing, stability, trust level, and platform support in the Xyrex Script Hub.'
+    description: 'Compare Roblox executors side by side with pricing, stability, trust level, and platform support in the Xyrex Script Hub'
   },
   '/scripthub/popularscripts': {
     title: 'Popular Roblox Scripts | Xyrex Script Hub',
-    description: 'Browse trending and popular Roblox scripts on Xyrex with clean discovery tools and organized script insights.'
+    description: 'Browse trending and popular Roblox scripts on Xyrex with clean discovery tools and organized script insights'
   },
   '/scripthub/assistant': {
     title: 'Exploit Assistant | Xyrex Script Hub',
-    description: 'Use the Xyrex Exploit Assistant to quickly find Roblox executor and script details from current hub data.'
+    description: 'Use the Xyrex Exploit Assistant to quickly find Roblox executor and script details from current hub data'
   },
   '/scripthub/savedscripts': {
     title: 'Saved Scripts Manager | Xyrex Script Hub',
-    description: 'Store, manage, and revisit your Roblox scripts with the Xyrex saved scripts manager in the Script Hub.'
+    description: 'Store, manage, and revisit your Roblox scripts with the Xyrex saved scripts manager in the Script Hub'
   },
   '/scripthub/recentchanges': {
     title: 'Recent Updates | Xyrex Script Hub',
-    description: 'Track real-time executor and script hub updates, changes, and improvements on Xyrex.'
+    description: 'Track real-time executor and script hub updates, changes, and improvements on Xyrex'
   }
 };
 

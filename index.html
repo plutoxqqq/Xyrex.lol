@@ -120,8 +120,11 @@
 </head>
 <body>
   <div id="appLoadingOverlay" class="app-loading-overlay" aria-live="polite" aria-busy="true">
-    <div class="app-loading-spinner" aria-hidden="true"></div>
-    <p class="app-loading-label">Loading Xyrex...</p>
+    <div class="app-loading-brand" aria-label="Xyrex Exploit Directory">
+      <span style="--word-index:0">Xyrex</span>
+      <span style="--word-index:1">Exploit</span>
+      <span style="--word-index:2">Directory</span>
+    </div>
   </div>
 
   <header class="topnav">
@@ -256,7 +259,7 @@
 
         <section id="comparisonPanel" class="subtab-panel" role="tabpanel" hidden>
           <h3>Executor Comparison</h3>
-          <p class="comparison-note">Select 2 to 3 executors to compare reliability, pricing, and risk at a glance.</p>
+          <p class="comparison-note">Select 2 to 3 executors to compare reliability, pricing, and risk at a glance</p>
           <input id="comparisonSearchInput" class="comparison-search-input" type="text" placeholder="Search executors..." aria-label="Search executors for comparison" />
           <div id="comparisonFilterChips" class="comparison-filter-chips"></div>
           <div id="comparisonSelectedRow" class="comparison-selected-row" aria-live="polite"></div>
@@ -270,7 +273,7 @@
 
         <section id="assistantPanel" class="subtab-panel" role="tabpanel" hidden>
           <h3>Exploit Assistant</h3>
-          <p class="comparison-note">Ask about active executors, pricing, platforms, and risk. The assistant replies instantly using the latest executor data from this page.</p>
+          <p class="comparison-note">Ask about active executors, pricing, platforms, and risk. The assistant replies instantly using the latest executor data from this page</p>
           <div id="assistantStarter" class="assistant-starter">
           </div>
           <div id="assistantMessages" class="assistant-messages" aria-live="polite"></div>

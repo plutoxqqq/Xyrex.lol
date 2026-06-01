@@ -69,37 +69,59 @@ a { color: inherit; text-decoration: none; }
   inset:0;
   z-index:120;
   display:flex;
-  flex-direction:column;
   align-items:center;
   justify-content:center;
-  gap:14px;
-  background:color-mix(in srgb, var(--bg) 96%, transparent);
-  transition:opacity .24s ease;
+  padding:24px;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(143,156,255,.18), transparent 34%),
+    radial-gradient(circle at 50% 62%, rgba(111,107,255,.14), transparent 42%),
+    color-mix(in srgb, var(--bg) 97%, #111426 3%);
+  transition:opacity .24s ease, visibility .24s ease;
+  will-change:opacity;
 }
 
 .app-loading-overlay.is-hidden{
   opacity:0;
+  visibility:hidden;
   pointer-events:none;
 }
 
-.app-loading-spinner{
-  width:48px;
-  height:48px;
-  border-radius:50%;
-  border:4px solid color-mix(in srgb, var(--accent-soft) 20%, transparent);
-  border-top-color:var(--accent-soft);
-  animation:xyrexSpin .8s linear infinite;
+.app-loading-brand{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:center;
+  gap:clamp(8px, 2.6vw, 18px);
+  color:var(--text);
+  font-size:clamp(1.65rem, 6vw, 4.4rem);
+  font-weight:800;
+  letter-spacing:-0.055em;
+  text-align:center;
+  text-shadow:0 0 28px rgba(143,156,255,.36);
 }
 
-.app-loading-label{
-  margin:0;
-  color:var(--muted);
-  font-weight:700;
-  letter-spacing:.2px;
+.app-loading-brand span{
+  opacity:0;
+  transform:translate3d(0, 12px, 0);
+  animation:xyrexLoaderWord .52s cubic-bezier(.22, 1, .36, 1) forwards;
+  animation-delay:calc(var(--word-index) * .22s);
+  will-change:transform, opacity;
 }
 
-@keyframes xyrexSpin{
-  to{ transform:rotate(360deg); }
+.app-loading-brand span:first-child{
+  color:var(--periwinkle-2);
+}
+
+@keyframes xyrexLoaderWord{
+  to{
+    opacity:1;
+    transform:translate3d(0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .app-loading-overlay{ transition:opacity .12s ease, visibility .12s ease; }
+  .app-loading-brand span{ animation:none; opacity:1; transform:none; }
 }
 
 .no-text-select{

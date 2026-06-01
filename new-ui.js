@@ -293,7 +293,7 @@
         <h3>Executor Insights</h3>
         <span class="new-ui-chip no-text-select">AI Powered</span>
       </div>
-      <p class="modal-headline">Select <strong>AI Insight</strong> on any executor card to generate a focused recommendation and caution summary</p>
+      <p class="modal-headline">Select <strong>AI Insight</strong> on any executor card to generate a focused executor-specific research summary</p>
       <div id="executorInsightResult" class="ai-result" hidden></div>
     `;
     const grid = executorsPage.querySelector('#productGrid');
@@ -372,9 +372,9 @@
   function formatInsightLoadingStatus(product, phase = 0) {
     const platformText = Array.isArray(product.platform) ? product.platform.join(', ') : product.platform;
     const statuses = [
-      `Checking ${product.name} against the shared assistant data...`,
+      `Reading local Xyrex metadata for ${product.name}...`,
       `Reviewing ${platformText || 'platform'}, ${product.keySystem || 'key-system'}, and pricing signals...`,
-      `Weighing trust, stability, status, and sUNC for ${product.name}...`,
+      `Researching public context for ${product.name}...`,
       `Writing a concise AI Insight for ${product.name}...`
     ];
     return statuses[phase % statuses.length];
@@ -416,12 +416,32 @@
       .trim();
   }
   function renderInsightText(text) {
-    const cleaned = cleanInsightText(text).replace(/\s+/g, ' ').trim();
+    const cleaned = cleanInsightText(text).trim();
     return cleaned || buildFallbackInsight({ name: 'Executor' });
   }
 
-  function buildFallbackInsight(product) {
-    return `${product.name} has mixed public signals and should be treated with controlled caution. Best for: experienced users who can test in isolated environments and verify files before each update. Avoid if: you need predictable uptime, low-maintenance setup, or minimal detection exposure. Risk level: medium to high, based on uncertain trust and uneven operational consistency. Confidence score: 6/10.`;
+  function formatInsightList(values, fallback = 'Not listed in local Xyrex metadata') {
+    return Array.isArray(values) && values.length ? values.join(', ') : fallback;
+  }
+
+  function formatInsightPrice(product) {
+    const options = Array.isArray(product.pricingOptions) && product.pricingOptions.length ? product.pricingOptions : [product.price || product.freeOrPaid || 'Unknown'];
+    return options.join(', ').replace(/\$\s*\{\s*\.(\d{1,2})/g, '$$1.$1');
+  }
+
+  function buildFallbackInsight(product, researchNote = 'Research was limited or unavailable, so this uses local Xyrex metadata only') {
+    const sunc = Number.isFinite(product.sunc) ? `${product.sunc}%` : 'Missing';
+    const strengths = [
+      Array.isArray(product.pros) && product.pros.length ? product.pros.join('; ') : '',
+      Number.isFinite(product.sunc) ? `Listed sUNC is ${sunc}` : '',
+      product.keySystem ? `Key system: ${product.keySystem}` : ''
+    ].filter(Boolean);
+    const weaknesses = [
+      Array.isArray(product.cons) && product.cons.length ? product.cons.join('; ') : '',
+      product.trustLevel && product.trustLevel !== 'Unknown' ? `Trust level is listed as ${product.trustLevel}` : 'Trust level is not confirmed in local metadata',
+      product.status && product.status !== 'Unknown' ? `Status is listed as ${product.status}` : 'Current status is not confirmed in local metadata'
+    ].filter(Boolean);
+    return `**Overview**\n\n- ${product.name} appears to be ${String(product.description || 'an executor listed on Xyrex').replace(/\.(?=\s*$)/, '')}\n- Platforms: ${formatInsightList(product.platform, 'Unknown')}\n\n**Strengths**\n\n${(strengths.length ? strengths : ['No confirmed strengths beyond being listed in local metadata']).map(item => `- ${item}`).join('\n')}\n\n**Weaknesses / Risks**\n\n${weaknesses.map(item => `- ${item}`).join('\n')}\n\n**Best For**\n\n- Users specifically looking for ${formatInsightList(product.platform, 'the supported platform')} executors with ${product.freeOrPaid || 'unknown'} pricing\n\n**Watch Out For**\n\n- Verify official links, current status, pricing, and key-system requirements before relying on it\n- ${researchNote}\n\n**Quick Verdict**\n\n- Based on available evidence, ${product.name} is only as reliable as its listed Xyrex metadata confirms; missing fields should be treated as uncertainty`;
   }
 
   function pause(ms) {
@@ -454,64 +474,74 @@ Response nonce: ${nonce}`)}`, { signal: controller.signal });
     throw lastError || new Error('AI request failed');
   }
 
+  function renderInsightMarkdown(markdownText) {
+    const rawText = cleanInsightText(markdownText);
+    if (!window.marked || !window.DOMPurify) {
+      const fallback = document.createElement('div');
+      fallback.textContent = rawText;
+      return fallback;
+    }
+    const unsafeHtml = marked.parse(rawText.replace(/\n{3,}/g, '\n\n'));
+    const wrapper = document.createElement('div');
+    wrapper.className = 'ai-insight-markdown';
+    wrapper.innerHTML = DOMPurify.sanitize(unsafeHtml, { USE_PROFILES: { html: true } });
+    wrapper.querySelectorAll('table').forEach(table => table.remove());
+    wrapper.querySelectorAll('a').forEach(link => {
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+    });
+    return wrapper;
+  }
+
+  function setInsightResult(result, product, markdownText) {
+    result.textContent = '';
+    const title = document.createElement('strong');
+    title.className = 'no-text-select';
+    title.textContent = product.name;
+    result.appendChild(title);
+    result.appendChild(renderInsightMarkdown(markdownText));
+  }
+
   async function generateInsight(product) {
     const platformText = Array.isArray(product.platform) ? product.platform.join(', ') : product.platform;
     const tagsText = Array.isArray(product.tags) ? product.tags.join(', ') : product.tags;
-    const assistantMessage = [
-      `Generate an AI Insight for ${product.name}.`,
-      'Use the same Xyrex Exploit Assistant system and only the provided local executor fields.',
-      'Return one compact paragraph, 80 to 120 words.',
-      'Include these exact labels: Best for:, Avoid if:, Risk level:, Confidence score: x/10.',
-      'Do not claim live research, browsing, downloads, exploit instructions, or source verification.',
+    const prosText = Array.isArray(product.pros) ? product.pros.join('; ') : 'None listed';
+    const consText = Array.isArray(product.cons) ? product.cons.join('; ') : 'None listed';
+    const prompt = [
+      'You are generating an executor-specific AI Insight for Xyrex.lol, not a chat assistant reply.',
+      'Perform research using any public knowledge or research capability available to this API. If you cannot verify current public information, clearly state that research is limited.',
+      'Combine the provided local Xyrex metadata with researched context. Never invent facts, never fake sources, and never claim an executor is safe unless supported.',
+      'Focus only on the selected executor. Do not recommend unrelated executors. Do not include tables, graphs, code, download steps, or generic disclaimers.',
+      'Use exactly these bold headings: **Overview**, **Strengths**, **Weaknesses / Risks**, **Best For**, **Watch Out For**, **Quick Verdict**.',
+      'Use short paragraphs and bullet points only.',
       '',
+      'Local Xyrex metadata:',
       `Name: ${product.name}`,
       `Description: ${product.description}`,
-      `Platform: ${platformText}`,
-      `sUNC: ${product.sunc}`,
-      `Stability: ${product.stability}`,
-      `Trust Level: ${product.trustLevel}`,
-      `Execution Level: ${product.execution}`,
-      `Key System: ${product.keySystem}`,
-      `Price: ${product.price || product.freeOrPaid}`,
-      `Status: ${product.status}`,
-      `Tags: ${tagsText}`
+      `Platform: ${platformText || 'Unknown'}`,
+      `sUNC: ${Number.isFinite(product.sunc) ? `${product.sunc}%` : 'Missing'}`,
+      `Stability: ${product.stability || 'Unknown'}`,
+      `Trust Level: ${product.trustLevel || 'Unknown'}`,
+      `Execution Level: ${product.execution || 'Unknown'}`,
+      `Key System: ${product.keySystem || 'Unknown'}`,
+      `Price: ${formatInsightPrice(product)}`,
+      `Status: ${product.status || 'Unknown'}`,
+      `Tags: ${tagsText || 'Unknown'}`,
+      `Pros: ${prosText}`,
+      `Cons: ${consText}`,
+      `Official site: ${product.officialSite || 'Not listed'}`,
+      `Official Discord: ${product.officialDiscord || 'Not listed'}`
     ].join('\n');
 
-    if (window.XyrexAISystem?.ask) {
-      try {
-        const payload = await window.XyrexAISystem.ask(assistantMessage, {
-          lastIntent: 'ai_insight',
-          lastExecutors: [product.name],
-          lastFilters: {},
-          lastQuestion: `AI Insight for ${product.name}`,
-          lastRecommendation: product.name,
-          turns: []
-        });
-        const rawInsight = payload?.reply || payload?.message || payload?.text || '';
-        const cleanedInsight = cleanInsightText(rawInsight).replace(/\s+/g, ' ').trim();
-        if (cleanedInsight) return cleanedInsight;
-      } catch (error) {
-        console.warn('Shared assistant AI Insight failed; using local AI fallback.', error);
-      }
+    try {
+      const researched = await requestInsight(prompt);
+      const cleaned = cleanInsightText(researched).trim();
+      if (cleaned && /\*\*Overview\*\*/i.test(cleaned) && /\*\*Quick Verdict\*\*/i.test(cleaned)) return cleaned;
+    } catch (error) {
+      console.warn('AI Insight research request failed; using local fallback.', error);
+      return buildFallbackInsight(product, 'Research request failed, so this insight is based on local Xyrex metadata only');
     }
-
-    const prompt = [
-      window.XyrexAISystem?.systemPrompt || 'You are Xyrex Exploit Assistant, a concise analyst for executor data shown on Xyrex.lol.',
-      '',
-      assistantMessage,
-      '',
-      'Only output the insight paragraph.'
-    ].join('\n');
-
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      try {
-        const cleaned = await requestInsight(prompt);
-        if (cleaned) return cleaned;
-      } catch (error) {
-        if (attempt >= 2) throw error;
-      }
-    }
-    return buildFallbackInsight(product);
+    return buildFallbackInsight(product, 'Research output was incomplete, so this insight is based on local Xyrex metadata only');
   }
 
 
@@ -530,7 +560,7 @@ Response nonce: ${nonce}`)}`, { signal: controller.signal });
     button.textContent = 'Generating...';
     result.hidden = false;
     let loadingPhase = 0;
-    result.innerHTML = `<strong class="no-text-select">${escapeHtml(product.name)}</strong><p>${escapeHtml(formatInsightLoadingStatus(product, loadingPhase))}</p>`;
+    setInsightResult(result, product, formatInsightLoadingStatus(product, loadingPhase));
     const loadingTimer = window.setInterval(() => {
       loadingPhase += 1;
       const target = result.querySelector('p');
@@ -538,9 +568,9 @@ Response nonce: ${nonce}`)}`, { signal: controller.signal });
     }, 850);
     try {
       const insight = await generateInsight(product);
-      result.innerHTML = `<strong class="no-text-select">${escapeHtml(product.name)}</strong><p>${escapeHtml(insight)}</p>`;
+      setInsightResult(result, product, insight);
     } catch (error) {
-      result.innerHTML = `<strong class="no-text-select">${escapeHtml(product.name)}</strong><p>${escapeHtml(buildFallbackInsight(product))}</p>`;
+      setInsightResult(result, product, buildFallbackInsight(product, 'Research request failed, so this insight is based on local Xyrex metadata only'));
       console.warn(error);
     } finally {
       window.clearInterval(loadingTimer);

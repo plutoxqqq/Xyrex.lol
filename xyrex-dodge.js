@@ -22,32 +22,32 @@
   };
 
   const MODIFIERS = {
-    Balanced: { price: 0, description: 'Standard handling and balanced rewards. Best for learning patterns without drawbacks.', playerSpeed: 1, coinBonus: 1, pressure: 1, waveBonus: 1 },
-    Swift: { price: 125, description: 'Increases lane-change speed by 20% so you can correct mistakes faster.', playerSpeed: 1.2, coinBonus: 1, pressure: 1.08, waveBonus: 1 },
-    Fortune: { price: 180, description: 'Raises coin income by 35%, but wave pressure rises slightly during longer runs.', playerSpeed: 1, coinBonus: 1.35, pressure: 1.14, waveBonus: 1.08 },
-    Bulwark: { price: 220, description: 'Reduces incoming pressure for safer runs, but your ship changes lanes more slowly.', playerSpeed: 0.9, coinBonus: 0.92, pressure: 0.92, waveBonus: 0.95 },
-    Chaos: { price: 260, description: 'Greatly boosts score and coin potential, but hazard speed and density ramp up harder.', playerSpeed: 1.1, coinBonus: 1.6, pressure: 1.3, waveBonus: 1.2 },
+    Balanced: { price: 0, description: 'Standard handling and balanced rewards. Best for learning patterns without drawbacks', playerSpeed: 1, coinBonus: 1, pressure: 1, waveBonus: 1 },
+    Swift: { price: 125, description: 'Increases lane-change speed by 20% so you can correct mistakes faster', playerSpeed: 1.2, coinBonus: 1, pressure: 1.08, waveBonus: 1 },
+    Fortune: { price: 180, description: 'Raises coin income by 35%, but wave pressure rises slightly during longer runs', playerSpeed: 1, coinBonus: 1.35, pressure: 1.14, waveBonus: 1.08 },
+    Bulwark: { price: 220, description: 'Reduces incoming pressure for safer runs, but your ship changes lanes more slowly', playerSpeed: 0.9, coinBonus: 0.92, pressure: 0.92, waveBonus: 0.95 },
+    Chaos: { price: 260, description: 'Greatly boosts score and coin potential, but hazard speed and density ramp up harder', playerSpeed: 1.1, coinBonus: 1.6, pressure: 1.3, waveBonus: 1.2 },
   };
 
   const POWERUPS = {
-    None: { price: 0, description: 'No active powerup is equipped for this run.' },
-    Quickstep: { price: 200, description: 'Your ship snaps directly into the next lane instead of sliding across it.' },
-    'Shield Matrix': { price: 280, description: 'Each run starts with one extra life, letting you survive one additional collision.' },
-    'Lucky Drift': { price: 190, description: 'Raises coin rewards earned during the run by 20%.' },
-    'Time Bloom': { price: 320, description: 'Every 12 combo steps slightly slows active hazards for a short recovery window.' },
-    'Magnet Pulse': { price: 240, description: 'Nearby energy shards drift toward your lane, making pickups easier to secure.' },
+    None: { price: 0, description: 'No active powerup is equipped for this run' },
+    Quickstep: { price: 200, description: 'Your ship snaps directly into the next lane instead of sliding across it' },
+    'Shield Matrix': { price: 280, description: 'Each run starts with one extra life, letting you survive one additional collision' },
+    'Lucky Drift': { price: 190, description: 'Raises coin rewards earned during the run by 20%' },
+    'Time Bloom': { price: 320, description: 'Every 12 combo steps slightly slows active hazards for a short recovery window' },
+    'Magnet Pulse': { price: 240, description: 'Nearby energy shards drift toward your lane, making pickups easier to secure' },
   };
 
   const VISUAL_THEMES = {
-    Neon: { price: 0, description: 'Default high-contrast palette tuned for clarity.', accent: '#6ce5ff', accent2: '#8d84ff', danger: '#ff6f9f', track: '#10213d' },
-    Amethyst: { price: 180, description: 'Purple-forward palette with softer hazard contrast.', accent: '#c6a1ff', accent2: '#866dff', danger: '#ff92ce', track: '#1a1238' },
-    Obsidian: { price: 220, description: 'Dark tactical palette with crisp cyan lanes.', accent: '#7ae7ff', accent2: '#8da8ff', danger: '#ff7f8f', track: '#0d151f' },
-    Synthwave: { price: 260, description: 'High-energy neon blend with vivid lane and pickup glow.', accent: '#ff7cd2', accent2: '#8c7bff', danger: '#ff5f86', track: '#24143f' }
+    Neon: { price: 0, description: 'Default high-contrast palette tuned for clarity', accent: '#6ce5ff', accent2: '#8d84ff', danger: '#ff6f9f', track: '#10213d' },
+    Amethyst: { price: 180, description: 'Purple-forward palette with softer hazard contrast', accent: '#c6a1ff', accent2: '#866dff', danger: '#ff92ce', track: '#1a1238' },
+    Obsidian: { price: 220, description: 'Dark tactical palette with crisp cyan lanes', accent: '#7ae7ff', accent2: '#8da8ff', danger: '#ff7f8f', track: '#0d151f' },
+    Synthwave: { price: 260, description: 'High-energy neon blend with vivid lane and pickup glow', accent: '#ff7cd2', accent2: '#8c7bff', danger: '#ff5f86', track: '#24143f' }
   };
 
   const GAME_MODES = {
     Classic: {
-      description: 'Steady survival mode with predictable scaling and no special rule changes.',
+      description: 'Steady survival mode with predictable scaling and no special rule changes',
       speed: 1,
       interval: 1,
       pickups: 0.45,
@@ -55,7 +55,7 @@
       modeScore: 1,
     },
     Blitz: {
-      description: 'A faster ruleset with denser patterns, shorter gaps, and higher score payout.',
+      description: 'A faster ruleset with denser patterns, shorter gaps, and higher score payout',
       speed: 1.22,
       interval: 0.78,
       pickups: 0.35,
@@ -63,7 +63,7 @@
       modeScore: 1.35,
     },
     Gauntlet: {
-      description: 'Extended runs with harder formations that spike reward value as you stabilize.',
+      description: 'Extended runs with harder formations that spike reward value as you stabilize',
       speed: 1.08,
       interval: 0.92,
       pickups: 0.5,
@@ -71,7 +71,7 @@
       modeScore: 1.5,
     },
     Harvest: {
-      description: 'A lower-pressure route with more shard spawns and better farming potential.',
+      description: 'A lower-pressure route with more shard spawns and better farming potential',
       speed: 0.95,
       interval: 1.08,
       pickups: 0.82,
@@ -79,7 +79,7 @@
       modeScore: 0.95,
     },
     Story: {
-      description: 'Play through objective-based sectors with fixed goals and campaign rewards.',
+      description: 'Play through objective-based sectors with fixed goals and campaign rewards',
       speed: 1,
       interval: 1,
       pickups: 0.55,
@@ -119,10 +119,10 @@
   ];
 
   const DAILY_OBJECTIVES = [
-    { id: 'daily-run', title: 'Finish 1 run', description: 'Complete a full run in any mode.', reward: 90, type: 'run' },
-    { id: 'daily-shards', title: 'Collect 3 shards', description: 'Collect at least 3 energy shards in a single run.', reward: 90, type: 'pickups', target: 3 },
-    { id: 'daily-coins', title: 'Earn 25 coins', description: 'Finish one run with at least 25 coins earned.', reward: 90, type: 'coins', target: 25 },
-    { id: 'daily-powerup', title: 'Score 20 with a powerup', description: 'Finish a run at 20 score or higher while an owned powerup is equipped.', reward: 90, type: 'powerupScore', target: 20 },
+    { id: 'daily-run', title: 'Finish 1 run', description: 'Complete a full run in any mode', reward: 90, type: 'run' },
+    { id: 'daily-shards', title: 'Collect 3 shards', description: 'Collect at least 3 energy shards in a single run', reward: 90, type: 'pickups', target: 3 },
+    { id: 'daily-coins', title: 'Earn 25 coins', description: 'Finish one run with at least 25 coins earned', reward: 90, type: 'coins', target: 25 },
+    { id: 'daily-powerup', title: 'Score 20 with a powerup', description: 'Finish a run at 20 score or higher while an owned powerup is equipped', reward: 90, type: 'powerupScore', target: 20 },
   ];
 
   const DEFAULT_DATA = {
@@ -547,7 +547,7 @@
             <div class="xy-dodge-heading">
               <span class="xy-dodge-kicker">Full features enabled</span>
               <h2>Xyrex Dodge</h2>
-              <p class="xy-dodge-hero-copy">Dodge is running with the full feature set enabled, including progression systems, missions, and responsive controls.</p>
+              <p class="xy-dodge-hero-copy">Dodge is running with the full feature set enabled, including progression systems, missions, and responsive controls</p>
               <div class="xy-dodge-stat-grid">
                 <div class="xy-dodge-chip"><span>Coins</span><strong id="xyBank">0</strong></div>
                 <div class="xy-dodge-chip"><span>Best</span><strong id="xyBest">0</strong></div>
