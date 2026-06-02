@@ -727,6 +727,26 @@ window.XYREX_EXECUTOR_PRODUCTS = [
     weaoSourceLink: 'https://weao.xyz/api/status/exploits',
     officialSite: 'https://discord.gg/opiumware',
     officialDiscord: 'https://discord.gg/opiumware',
+  },
+    {
+    name: 'Real',
+    featured: true,
+    platform: ['Windows'],
+    cheatType: 'Internal',
+    keySystem: 'Keyless',
+    tags: ['Internal', 'Trending'],
+    features: ['Decompiler', 'Multi-instance', 'Kernel'],
+    sunc: 100,
+    description: 'New executor which has gained a lot of popularity',
+    pros: ['Free Trial', 'High sUNC and UNC', 'Frequent big updates'],
+    cons: ['New'],
+    pricingOptions: ['Free Trial', 'Paid'],
+    freeOrPaid: 'both',
+    stability: 'Stable',
+    trustLevel: 'Medium',
+    status: 'Working',
+    weaoSourceLink: 'https://weao.xyz/api/status/exploits',
+    officialSite: 'https://projectreal.net/',
+    officialDiscord: 'discord.gg/projectreal',
   }
-
 ];
