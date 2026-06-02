@@ -484,7 +484,7 @@ window.XYREX_EXECUTOR_PRODUCTS = [
   },
   {
     name: 'Velocity',
-    featured: true,
+    featured: false,
     platform: ['Windows'],
     cheatType: 'Internal',
     keySystem: 'Keyless',
