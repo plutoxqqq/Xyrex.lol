@@ -103,15 +103,15 @@ window.XYREX_POPULAR_SCRIPTS = [
         buggy: false,
         status: 'Working',
         platform: ['PC', 'Mobile'],
-        discord: '...',
-        discordIcon: false
+        discord: 'discord.gg/catvape',
+        discordIcon: true
       }
     },
 
     {
-      name: 'Aero V4',
+      name: 'AeroV4',
       category: 'Bedwars',
-      description: 'Aero V4. A private, invite-only Bedwars script',
+      description: 'An invite-only Bedwars script, currently, their discord server has been nukes',
       script: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/poopparty/poopparty/main/NewMainScript.lua", true))()',
       stats: {
         price: 'Free',
@@ -120,10 +120,10 @@ window.XYREX_POPULAR_SCRIPTS = [
         bestExecutor: 'Any compatible executor',
         stability: 'Stable',
         buggy: false,
-        status: 'Working',
+        status: 'Buggy',
         platform: ['PC', 'Mobile'],
-        discord: '...',
-        discordIcon: false
+        discord: 'discord.gg/bestscript',
+        discordIcon: true
       }
     },
 
