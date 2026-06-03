@@ -148,3 +148,5 @@
   autoUnlock1337();
   if (state.corruptionLevel > 0) applyCorruptionLevel(Math.max(0, Math.min(3, state.corruptionLevel)));
 })();
+
+// yo bro i am NOT adding 9/11 simulator 🫩
