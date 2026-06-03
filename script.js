@@ -1,8 +1,9 @@
 const products = Array.isArray(window.XYREX_EXECUTOR_PRODUCTS) ? window.XYREX_EXECUTOR_PRODUCTS : [];
 
 const EXPLOIT_ASSISTANT_APIS = [
-  'https://xyres-ai-api.vercel.app/api/exploit-assistant',
-  'https://xyrex-ai-api.vercel.app/api/exploit-assistant'
+  '/api/exploit-assistant',
+  'https://xyrex-ai-api.vercel.app/api/exploit-assistant',
+  'https://xyres-ai-api.vercel.app/api/exploit-assistant'
 ];
 const AI_TOKEN_STORAGE_KEY = 'xyrex_ai_tokens_v1';
 const FREE_DAILY_AI_TOKENS = 5;
@@ -1667,7 +1668,8 @@ const assistantLoadingProfiles = Object.freeze({
   follow_up: ['Reading your follow-up in context...', 'Reusing the previous executor shortlist...', 'Updating the recommendation...'],
   default: ['Reading current Xyrex executor data...', 'Checking platform, price, key system, and risk...', 'Using the current chat context...', 'Preparing a direct answer...']
 });
-let assistantContext = { lastIntent:null, lastExecutors:[], lastFilters:{}, lastQuestion:'', lastRecommendation:null, turns:[] };
+let assistantContext = { lastIntent:null, lastExecutors:[], lastFilters:{}, lastQuestion:'', lastRecommendation:null, conversationFocus:null, turns:[] };
+let assistantReplyTarget = null;
 
 
 
@@ -1740,6 +1742,7 @@ function detectAssistantIntent(message) {
   const beginner = /(beginner|new|easy|simple|first executor)/i.test(input);
   let intent = assistantIntents.UNKNOWN;
   if (wantsFilterAction) intent = assistantIntents.FILTER_SHOW;
+  else if (/\bsunc\b/i.test(input) && /\bunc\b/i.test(input) && /(compare|comparison|\bvs\b|versus|difference|different)/i.test(input)) intent = assistantIntents.SUNC;
   else if (/(compare|\bvs\b|versus|better than|which is better)/i.test(input)) intent = assistantIntents.COMPARE;
   else if (/(best|recommend|what should i use|which one should i use)/i.test(input)) intent = assistantIntents.RECOMMEND;
   else if (/(safe|safest|trusted|risk|detected|undetected)/i.test(input)) intent = assistantIntents.SAFETY;
@@ -1898,6 +1901,16 @@ function getFiniteSuncProducts(sourceProducts = products) {
 }
 
 function buildSuncAnswer(intentData) {
+  if (/\bsunc\b/i.test(assistantContext.lastQuestion || '') && /\bunc\b/i.test(assistantContext.lastQuestion || '')) {
+    return `### sUNC vs UNC
+
+| Term | Meaning | Best use |
+| --- | --- | --- |
+| sUNC | A compatibility-style score used to describe script/API support coverage in parts of the executor ecosystem. | Estimating broad compatibility, not safety. |
+| UNC | A general executor compatibility coverage term for common functions and APIs. | Understanding function/API support, not trust. |
+
+**Important:** neither sUNC nor UNC proves that an executor is safe, undetected, or malware-free.`;
+  }
   const scoped = getAssistantProductsFromNames(intentData.entities || []);
   const finite = getFiniteSuncProducts(scoped.length >= 2 ? scoped : products);
   if (!finite.length) return '**sUNC:** Missing\n\n- **Reason:** The current Xyrex metadata does not list confirmed sUNC values for this request';
@@ -1952,6 +1965,9 @@ function buildAssistantComparisonReply(pair, intentData) {
 
 function buildDirectAssistantReply(userMessage, intentData) {
   if (intentData.wantsFilterAction) return '';
+  if (/\bsunc\b/i.test(userMessage) && /\bunc\b/i.test(userMessage) && /(compare|comparison|\bvs\b|versus|difference|different)/i.test(userMessage)) {
+    return `### sUNC vs UNC\n\n| Term | Meaning | Best use |\n| --- | --- | --- |\n| sUNC | A compatibility-style score used to describe script/API support coverage in parts of the executor ecosystem. | Estimating broad compatibility, not safety. |\n| UNC | A general executor compatibility coverage term for common functions and APIs. | Understanding function/API support, not trust. |\n\n**Important:** neither sUNC nor UNC proves that an executor is safe, undetected, or malware-free.`;
+  }
   const mentioned = getAssistantProductsFromNames(intentData.entities || []);
   if (intentData.intent === assistantIntents.LORE) return buildLoreAccessGuide();
   if (intentData.intent === assistantIntents.SUNC) return buildSuncAnswer(intentData);
@@ -2037,8 +2053,11 @@ async function askExploitAssistant(message, context = assistantContext) {
       lastFilters: context?.lastFilters || {},
       lastQuestion: context?.lastQuestion || '',
       lastRecommendation: context?.lastRecommendation || null,
+      conversationFocus: context?.conversationFocus || null,
+      replyTo: context?.replyTo || null,
       recentTurns: (context?.turns || []).slice(-12)
-    }
+    },
+    replyTo: context?.replyTo || null
   });
   const errors = [];
 
@@ -2065,6 +2084,59 @@ async function askExploitAssistant(message, context = assistantContext) {
   throw new Error(`Exploit Assistant API request failed on all endpoints. ${errors.join(' | ')}`);
 }
 
+function normalizeAssistantApiReply(data, fallbackText = '') {
+  if (!data || typeof data !== 'object') {
+    return {
+      reply: fallbackText || 'I could not generate a useful response for that question.',
+      badges: [],
+      followUps: [],
+      sources: [],
+      intent: 'unknown',
+      confidence: 'Low',
+      evidenceQuality: 'Weak',
+      resolvedExecutors: [],
+      conversationFocus: null,
+      usedFollowUpContext: false
+    };
+  }
+
+  return {
+    reply: String(data.answerMarkdown || data.reply || fallbackText || '').trim(),
+    badges: Array.isArray(data.badges) ? data.badges.filter(Boolean).slice(0, 5) : [data.mode, data.evidenceQuality ? `${data.evidenceQuality} Evidence` : ''].filter(Boolean),
+    followUps: Array.isArray(data.followUps) ? data.followUps.filter(Boolean).slice(0, 4) : [],
+    sources: Array.isArray(data.sources) ? data.sources.filter(source => source?.url && source?.title).slice(0, 4) : [],
+    intent: data.intent || data.mode || 'unknown',
+    confidence: data.confidence || 'Low',
+    evidenceQuality: data.evidenceQuality || 'Weak',
+    resolvedExecutors: Array.isArray(data.resolvedExecutors) ? data.resolvedExecutors.filter(Boolean) : [],
+    conversationFocus: data.conversationFocus || null,
+    safetyRefused: Boolean(data.safetyRefused),
+    usedFollowUpContext: Boolean(data.usedFollowUpContext)
+  };
+}
+
+function getAssistantSourceMarkdown(sources) {
+  const usableSources = Array.isArray(sources) ? sources.filter(source => source?.url && source?.title).slice(0, 4) : [];
+  if (!usableSources.length) return '';
+  const rows = usableSources.map((source, index) => {
+    const label = cleanAssistantSourceLabel(source.title, index + 1);
+    const trust = source.trust ? ` — ${source.trust}` : '';
+    const date = source.publishedDate ? `, ${source.publishedDate}` : '';
+    return `* [${label}](${source.url})${trust}${date}`;
+  });
+  return `\n\n### Sources\n${rows.join('\n')}`;
+}
+
+function cleanAssistantSourceLabel(value, index) {
+  const label = String(value || '').replace(/[\[\]\n\r]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return label.slice(0, 90) || `Source ${index}`;
+}
+
+function getAssistantBadgesFromApi(apiReply, fallbackBadges = []) {
+  const badges = Array.isArray(apiReply?.badges) && apiReply.badges.length ? apiReply.badges : fallbackBadges;
+  return [...new Set((badges || []).filter(Boolean).map(String))].slice(0, 5);
+}
+
 function initExploitAssistant() {
   const form = qs('#assistantForm');
   const input = qs('#assistantInput');
@@ -2075,26 +2147,127 @@ function initExploitAssistant() {
   form.dataset.apiIntegrated = 'true';
 
   let loadingInterval = null;
-  const appendMessage = (role, text, badges = []) => {
+  let assistantMessageCounter = 0;
+  const replyBanner = document.createElement('div');
+  replyBanner.className = 'assistant-reply-target';
+  replyBanner.hidden = true;
+  form.parentNode?.insertBefore(replyBanner, form);
+
+  const refreshReplyBanner = () => {
+    if (!assistantReplyTarget) {
+      replyBanner.hidden = true;
+      replyBanner.textContent = '';
+      input.placeholder = 'Example: Which executors are safest for beginners?';
+      return;
+    }
+
+    replyBanner.hidden = false;
+    replyBanner.textContent = '';
+    const label = document.createElement('span');
+    label.textContent = `Replying to: ${assistantReplyTarget.content.slice(0, 120)}${assistantReplyTarget.content.length > 120 ? '…' : ''}`;
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'assistant-reply-cancel';
+    cancel.textContent = 'Cancel';
+    cancel.addEventListener('click', () => {
+      assistantReplyTarget = null;
+      refreshReplyBanner();
+      input.focus();
+    });
+    replyBanner.append(label, cancel);
+    input.placeholder = 'Write a reply aimed at the selected assistant message...';
+  };
+
+  const appendMessage = (role, text, badges = [], options = {}) => {
     const bubble = document.createElement('article');
+    const messageId = options.id || `assistant-message-${Date.now()}-${assistantMessageCounter += 1}`;
     bubble.className = `assistant-message ${role === 'user' ? 'assistant-user' : 'assistant-bot'}`;
+    bubble.dataset.messageId = messageId;
     const visibleBadges = role === 'bot' && Array.isArray(badges) ? badges.filter(badge => badge && badge !== 'Local Data') : [];
     if (visibleBadges.length) {
-      const badgeWrap = document.createElement('div'); badgeWrap.className = 'assistant-badges';
-      visibleBadges.forEach(badge => { const el = document.createElement('span'); el.className = 'assistant-badge'; el.textContent = badge; badgeWrap.appendChild(el); });
+      const badgeWrap = document.createElement('div');
+      badgeWrap.className = 'assistant-badges';
+      visibleBadges.forEach(badge => {
+        const el = document.createElement('span');
+        el.className = 'assistant-badge';
+        el.textContent = badge;
+        badgeWrap.appendChild(el);
+      });
       bubble.appendChild(badgeWrap);
     }
-    const content = document.createElement('div'); content.textContent = text; bubble.appendChild(content);
+
+    const content = document.createElement('div');
+    content.className = 'assistant-message-content';
+    content.textContent = text;
+    bubble.appendChild(content);
     messages.appendChild(bubble);
     messages.scrollTop = messages.scrollHeight;
     return bubble;
   };
 
-  if (!messages.children.length) appendMessage('bot', 'Hello. I am your Exploit Assistant. Ask me about any active executor listed on this page.', ['Local Data']);
+  const setReplyTargetFromMessage = messageElement => {
+    const content = messageElement?.querySelector('.assistant-message-content, .assistant-markdown')?.textContent || messageElement?.textContent || '';
+    const cleaned = content.replace(/\s+/g, ' ').trim().slice(0, 900);
+    if (!cleaned) return;
+    assistantReplyTarget = {
+      id: messageElement.dataset.messageId || '',
+      role: 'assistant',
+      content: cleaned
+    };
+    refreshReplyBanner();
+    input.focus();
+  };
 
-  form.addEventListener('submit', async event => {
-    event.preventDefault();
-    const userMessage = input.value.trim();
+  const appendAssistantActions = (messageElement, apiReply, originalQuestion) => {
+    if (!messageElement) return;
+    messageElement.querySelector('.assistant-actions')?.remove();
+    const actions = document.createElement('div');
+    actions.className = 'assistant-actions';
+
+    const replyButton = document.createElement('button');
+    replyButton.type = 'button';
+    replyButton.className = 'assistant-reply-btn';
+    replyButton.textContent = 'Reply';
+    replyButton.setAttribute('aria-label', 'Reply directly to this assistant message');
+    replyButton.addEventListener('click', () => setReplyTargetFromMessage(messageElement));
+    actions.appendChild(replyButton);
+
+    const followUps = Array.isArray(apiReply?.followUps) ? apiReply.followUps.filter(Boolean).slice(0, 4) : [];
+    if (followUps.length) {
+      const followUpWrap = document.createElement('div');
+      followUpWrap.className = 'assistant-followups';
+      followUps.forEach(question => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'assistant-followup-chip';
+        chip.textContent = question;
+        chip.addEventListener('click', () => submitAssistantMessage(question));
+        followUpWrap.appendChild(chip);
+      });
+      actions.appendChild(followUpWrap);
+    }
+
+    messageElement.appendChild(actions);
+    if (originalQuestion) messageElement.dataset.originalQuestion = originalQuestion.slice(0, 260);
+  };
+
+  const updateAssistantContext = (userMessage, replyText, intentData, apiReply = {}) => {
+    const resolvedExecutors = Array.isArray(apiReply.resolvedExecutors) && apiReply.resolvedExecutors.length
+      ? apiReply.resolvedExecutors
+      : intentData.entities;
+    assistantContext = {
+      lastIntent: apiReply.intent || intentData.intent,
+      lastExecutors: resolvedExecutors,
+      lastFilters: intentData.filters,
+      lastQuestion: userMessage,
+      lastRecommendation: resolvedExecutors[0] || getAssistantConversationExecutors()[0] || getRankedExecutors(intentData)[0]?.product?.name || null,
+      conversationFocus: apiReply.conversationFocus || null,
+      turns: [...(assistantContext.turns || []), { role: 'user', content: userMessage }, { role: 'assistant', content: replyText.slice(0, 1200) }].slice(-16)
+    };
+  };
+
+  async function submitAssistantMessage(rawMessage) {
+    const userMessage = String(rawMessage || input.value || '').trim();
     if (!userMessage) return;
 
     if (!consumeAiTokenForAssistant()) {
@@ -2103,55 +2276,91 @@ function initExploitAssistant() {
       return;
     }
 
-    appendMessage('user', userMessage);
+    const activeReplyTarget = assistantReplyTarget;
+    const displayMessage = activeReplyTarget
+      ? `↪ ${activeReplyTarget.content.slice(0, 90)}${activeReplyTarget.content.length > 90 ? '…' : ''}\n${userMessage}`
+      : userMessage;
+    appendMessage('user', displayMessage);
     input.value = '';
+    assistantReplyTarget = null;
+    refreshReplyBanner();
     input.disabled = true;
     sendBtn.disabled = true;
+
     const intentData = detectAssistantIntent(userMessage);
     const loadingSteps = getAssistantLoadingSteps(intentData);
-    const loadingMessage = appendMessage('bot', loadingSteps[0], [intentData.wantsFilterAction ? 'Filter Mode' : intentData.isFollowUp ? 'Follow-up' : '']);
+    const loadingMessage = appendMessage('bot', loadingSteps[0], [intentData.wantsFilterAction ? 'Filter Mode' : intentData.isFollowUp || activeReplyTarget ? 'Follow-up' : '']);
     let loadIndex = 0;
     if (loadingInterval) clearInterval(loadingInterval);
     loadingInterval = setInterval(() => {
       loadIndex = (loadIndex + 1) % loadingSteps.length;
-      const target = loadingMessage.lastChild;
+      const target = loadingMessage.querySelector('.assistant-message-content') || loadingMessage.lastChild;
       if (target) target.textContent = loadingSteps[loadIndex];
     }, 750);
 
     try {
       let replyText = '';
+      let apiReply = null;
       if (intentData.wantsFilterAction) {
         applyAssistantFilters(intentData.filters);
         const matchCount = qs('#productGrid')?.children?.length || 0;
         const filterLabel = [intentData.filters.price, ...(intentData.filters.platform || []), intentData.filters.keySystem].filter(Boolean).join(' + ') || 'requested filters';
         replyText = `### Filter Mode\nI filtered the page to show: ${filterLabel}\n\nMatching executors: ${matchCount}\n\n${matchCount ? 'Done — I filtered the page based on your request.' : 'I applied the filter, but no matching executors were found in the current Xyrex data.'}`;
+        apiReply = normalizeAssistantApiReply({ reply: replyText, intent: 'filter_show', badges: ['Filter Mode'], followUps: ['Clear filters?', 'Compare visible executors?'] }, replyText);
       } else {
-        replyText = buildDirectAssistantReply(userMessage, intentData);
+        try {
+          const rawApiReply = await askExploitAssistant(userMessage, { ...assistantContext, replyTo: activeReplyTarget });
+          apiReply = normalizeAssistantApiReply(rawApiReply);
+          replyText = apiReply.reply || buildDirectAssistantReply(userMessage, intentData);
+          if (apiReply.sources.length) replyText += getAssistantSourceMarkdown(apiReply.sources);
+        } catch (apiError) {
+          replyText = `${buildDirectAssistantReply(userMessage, intentData)}\n\n### Connection Note\nThe live assistant API was unavailable, so I answered using local Xyrex page data only.`;
+          apiReply = normalizeAssistantApiReply({ reply: replyText, intent: intentData.intent, badges: ['Local Fallback'], confidence: 'Medium', evidenceQuality: 'Mixed', followUps: ['Try live research again?', 'Compare another executor?'] }, replyText);
+          console.warn('Exploit Assistant API fallback:', apiError);
+        }
       }
+
       setAssistantMessageMarkdown(loadingMessage, replyText);
+      appendAssistantActions(loadingMessage, apiReply, userMessage);
       if (intentData.wantsFilterAction) {
-        const clearBtn = document.createElement('button'); clearBtn.type = 'button'; clearBtn.className = 'assistant-clear-filters'; clearBtn.textContent = 'Clear filters';
-        clearBtn.addEventListener('click', () => { qsa('.filter-checkbox, .price-checkbox').forEach(cb => { cb.checked = false; }); applyAllFilters(); });
+        const clearBtn = document.createElement('button');
+        clearBtn.type = 'button';
+        clearBtn.className = 'assistant-clear-filters';
+        clearBtn.textContent = 'Clear filters';
+        clearBtn.addEventListener('click', () => {
+          qsa('.filter-checkbox, .price-checkbox').forEach(cb => { cb.checked = false; });
+          applyAllFilters();
+        });
         loadingMessage.appendChild(clearBtn);
       }
-      assistantContext = {
-        lastIntent: intentData.intent,
-        lastExecutors: intentData.entities,
-        lastFilters: intentData.filters,
-        lastQuestion: userMessage,
-        lastRecommendation: intentData.entities[0] || getAssistantConversationExecutors()[0] || getRankedExecutors(intentData)[0]?.product?.name || null,
-        turns: [...(assistantContext.turns || []), { role: 'user', content: userMessage }, { role: 'assistant', content: replyText.slice(0, 1200) }]
-      };
+      updateAssistantContext(userMessage, replyText, intentData, apiReply);
     } catch (error) {
-      setAssistantMessageMarkdown(loadingMessage, `**Not confirmed**\n\n- The available Xyrex metadata could not answer that request because an assistant error occurred\n- ${(error && error.message) ? escapeHtml(error.message) : 'Unknown error'}`);
+      const safeMessage = (error && error.message) ? escapeHtml(error.message) : 'Unknown error';
+      setAssistantMessageMarkdown(loadingMessage, `**Not confirmed**\n\n- The assistant could not answer that request because an error occurred.\n- ${safeMessage}`);
     } finally {
-      if (loadingInterval) { clearInterval(loadingInterval); loadingInterval = null; }
+      if (loadingInterval) {
+        clearInterval(loadingInterval);
+        loadingInterval = null;
+      }
       input.disabled = false;
       sendBtn.disabled = false;
       input.focus();
     }
+  }
+
+  if (!messages.children.length) {
+    const welcome = appendMessage('bot', 'Hello. I am your Exploit Assistant. Ask me about active executors, compatibility, platforms, pricing, risk, or terminology.', ['Local Data']);
+    appendAssistantActions(welcome, { followUps: ['What can you do?', 'Compare sUNC and UNC?', 'Which executors are safest for beginners?'] }, '');
+  }
+
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    submitAssistantMessage(input.value);
   });
+
+  refreshReplyBanner();
 }
+
 
 window.XyrexAISystem = Object.freeze({
   ask: askExploitAssistant,
