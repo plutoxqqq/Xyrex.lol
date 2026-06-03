@@ -980,36 +980,6 @@ body.new-ui-enabled .xy-cheat-item input[type="checkbox"]:checked {
 .status-text-unstable{ color:#f59e0b; }
 .status-text-unknown{ color:#9ca3af; }
 
-.hub-module-grid{
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:10px;
-  margin:12px 0;
-}
-
-.hub-module-card{
-  min-height:112px;
-  border:1px solid color-mix(in srgb, var(--periwinkle-2) 24%, transparent);
-  border-radius:12px;
-  background:linear-gradient(160deg, color-mix(in srgb, var(--panel) 86%, transparent), color-mix(in srgb, var(--panel-2) 72%, transparent));
-  box-shadow:0 10px 22px rgba(19, 24, 52, 0.22);
-  padding:12px;
-}
-
-.hub-module-card strong{
-  display:block;
-  color:var(--periwinkle-2);
-  font-size:.95rem;
-  margin-bottom:6px;
-}
-
-.hub-module-card p{
-  margin:0;
-  color:var(--muted);
-  font-size:.86rem;
-  line-height:1.45;
-}
-
 .aethercore-logo-clean,
 .aethercore-logo-clean-shell{
   background:transparent !important;
@@ -1020,8 +990,4 @@ body.new-ui-enabled .xy-cheat-item input[type="checkbox"]:checked {
 .aethercore-logo-clean{
   object-fit:contain;
   mix-blend-mode:normal;
-}
-
-@media (max-width: 900px){
-  .hub-module-grid{ grid-template-columns:1fr; }
 }

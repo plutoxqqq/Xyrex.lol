@@ -50,41 +50,6 @@ const POPULAR_SCRIPT_CATEGORIES = [
   '99 Nights in the Forest'
 ];
 
-
-
-const HUB_TAB_MODULES = {
-  smartRankingsPanel: [
-    { title: 'Live Ranking Module', body: 'Shows the strongest executor picks from current Xyrex data, including free, safe, beginner, power, value, and mobile rankings' },
-    { title: 'Safety Signals Module', body: 'Combines trust level, stability, status, and detection-risk signals so the ranking cards are never empty' },
-    { title: 'Rotation Module', body: 'Cycles featured ranking cards while keeping every ranking category available to open manually' }
-  ],
-  comparisonPanel: [
-    { title: 'Selector Module', body: 'Filter executors by platform, pricing, key system, and sUNC before choosing two or three entries' },
-    { title: 'Comparison Table Module', body: 'Builds side-by-side rows for price, platform, sUNC, key system, stability, trust, and status' },
-    { title: 'Verdict Module', body: 'Summarizes the strongest option after enough executors are selected' }
-  ],
-  assistantPanel: [
-    { title: 'Recommendation Module', body: 'Answers executor questions using the same local data shown on the site' },
-    { title: 'Risk Review Module', body: 'Can explain safety, stability, pricing, and platform trade-offs in plain language' },
-    { title: 'Fallback Module', body: 'Uses local data when the remote assistant API is unavailable' }
-  ],
-  popularScriptsPanel: [
-    { title: 'Category Module', body: 'Groups scripts by game or use case so every configured category has a visible module' },
-    { title: 'Script Card Module', body: 'Shows description, executor guidance, platform badges, Discord availability, and copy controls' },
-    { title: 'Empty Category Module', body: 'Displays a clean placeholder instead of leaving a tab blank when a category has no scripts yet' }
-  ],
-  savedScriptsPanel: [
-    { title: 'Editor Module', body: 'Save reusable script titles and content locally in this browser' },
-    { title: 'Library Module', body: 'Lists saved scripts immediately after saving and lets you reopen or delete them' },
-    { title: 'Validation Module', body: 'Prevents blank saved-script entries by requiring both a title and content' }
-  ],
-  recentChangesPanel: [
-    { title: 'Updates Module', body: 'Keeps the latest change notice visible inside the tab' },
-    { title: 'Discord Module', body: 'Directs users to the official Discord server for the full changelog and support updates' },
-    { title: 'Status Module', body: 'Avoids blank recent-change panels when no long changelog is published' }
-  ]
-};
-
 const WEAO_STATUS_ENDPOINTS = [
   'https://weao.xyz/api/status/exploits',
   'https://api.weao.xyz/status/exploits',
@@ -470,36 +435,9 @@ const trustRiskMap = { High: 2, Medium: 5, Low: 8, Unknown: 7 };
 const stabilityScoreMap = { 'Very stable': 10, Stable: 9, High: 8, Mixed: 6, Basic: 4, Questionable: 3, Unstable: 3, Unknown: 4 };
 let lastModalTrigger = null;
 
-
 function escapeHtml(str) {
   if (!str) return '';
   return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
-}
-
-
-function createHubModuleMarkup(panelId) {
-  const modules = HUB_TAB_MODULES[panelId] || [];
-  if (!modules.length) return '';
-  return `
-    <div class="hub-module-grid" data-hub-module-grid="${escapeHtml(panelId)}" aria-label="${escapeHtml(panelId.replace(/Panel$/, ''))} modules">
-      ${modules.map(module => `
-        <article class="hub-module-card">
-          <strong>${escapeHtml(module.title)}</strong>
-          <p>${escapeHtml(module.body)}</p>
-        </article>
-      `).join('')}
-    </div>
-  `;
-}
-
-function renderHubTabModules() {
-  Object.keys(HUB_TAB_MODULES).forEach(panelId => {
-    const panel = qs(`#${panelId}`);
-    if (!panel || panel.querySelector(':scope > .hub-module-grid')) return;
-    const heading = panel.querySelector('h3');
-    if (!heading) return;
-    heading.insertAdjacentHTML('afterend', createHubModuleMarkup(panelId));
-  });
 }
 
 function cleanupAetherCoreBranding() {
@@ -2649,7 +2587,6 @@ function injectLegendIcons() {
 }
 
 function initScriptsHub() {
-  renderHubTabModules();
   cleanupAetherCoreBranding();
   renderSmartRankings();
   renderComparisonSystem();
