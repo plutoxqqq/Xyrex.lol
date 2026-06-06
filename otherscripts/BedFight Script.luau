@@ -18,6 +18,7 @@ local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
+local SoundService = game:GetService("SoundService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local LocalPlayer = Players.LocalPlayer
@@ -1082,6 +1083,18 @@ local function rememberSoundVolume(sound)
 	if State.FocusMuteVolumes[sound] == nil then
 		State.FocusMuteVolumes[sound] = sound.Volume
 	end
+
+	local gui, label = createStatusLabel("XyrexSessionTimer", UDim2.new(1, -18, 0, 337), UDim2.fromOffset(245, 58))
+	trackInstance("SessionTimer", gui)
+	local startedAt = os.clock()
+
+	trackConnection(
+		"SessionTimer",
+		RunService.Heartbeat:Connect(function()
+			local elapsed = math.floor(os.clock() - startedAt)
+			label.Text = ("Session Timer\n%02d:%02d"):format(math.floor(elapsed / 60), elapsed % 60)
+		end)
+	)
 end
 
 local function muteAllSounds()
@@ -1092,6 +1105,21 @@ local function muteAllSounds()
 			object.Volume = math.min(object.Volume, 0.08)
 		end
 	end
+
+	State.OriginalVolume = SoundService.Volume
+	trackConnection(
+		"FocusMute",
+		UserInputService.WindowFocusReleased:Connect(function()
+			State.OriginalVolume = SoundService.Volume
+			SoundService.Volume = math.min(SoundService.Volume, 0.08)
+		end)
+	)
+	trackConnection(
+		"FocusMute",
+		UserInputService.WindowFocused:Connect(function()
+			SoundService.Volume = State.OriginalVolume or 1
+		end)
+	)
 end
 
 local function restoreAllSounds()
