@@ -62,7 +62,8 @@ local State = {
 	BaseWalkSpeed = 16,
 	BaseJumpPower = 50,
 	BaseJumpHeight = 7.2,
-	OriginalVolume = SoundService.Volume,
+	FocusMuteVolumes = {},
+	FocusMuteMuted = false,
 	OriginalFOV = Camera and Camera.FieldOfView or 70,
 	CachedBeds = {},
 	CachedResources = {},
@@ -1075,13 +1076,34 @@ local function setSessionTimer(enabled)
 	)
 end
 
-local function setFocusMute(enabled)
-	State.Features.FocusMute = enabled
-	clearBucket("FocusMute", false)
-	SoundService.Volume = State.OriginalVolume or SoundService.Volume
-
-	if not enabled then
+local function rememberSoundVolume(sound)
+	if typeof(sound) ~= "Instance" or not sound:IsA("Sound") then
 		return
+	end
+	if State.FocusMuteVolumes[sound] == nil then
+		State.FocusMuteVolumes[sound] = sound.Volume
+	end
+
+	local gui, label = createStatusLabel("XyrexSessionTimer", UDim2.new(1, -18, 0, 337), UDim2.fromOffset(245, 58))
+	trackInstance("SessionTimer", gui)
+	local startedAt = os.clock()
+
+	trackConnection(
+		"SessionTimer",
+		RunService.Heartbeat:Connect(function()
+			local elapsed = math.floor(os.clock() - startedAt)
+			label.Text = ("Session Timer\n%02d:%02d"):format(math.floor(elapsed / 60), elapsed % 60)
+		end)
+	)
+end
+
+local function muteAllSounds()
+	State.FocusMuteMuted = true
+	for _, object in ipairs(game:GetDescendants()) do
+		if object:IsA("Sound") then
+			rememberSoundVolume(object)
+			object.Volume = math.min(object.Volume, 0.08)
+		end
 	end
 
 	State.OriginalVolume = SoundService.Volume
@@ -1096,6 +1118,40 @@ local function setFocusMute(enabled)
 		"FocusMute",
 		UserInputService.WindowFocused:Connect(function()
 			SoundService.Volume = State.OriginalVolume or 1
+		end)
+	)
+end
+
+local function restoreAllSounds()
+	for sound, volume in pairs(State.FocusMuteVolumes) do
+		if typeof(sound) == "Instance" and sound.Parent then
+			pcall(function()
+				sound.Volume = volume
+			end)
+		end
+	end
+	table.clear(State.FocusMuteVolumes)
+	State.FocusMuteMuted = false
+end
+
+local function setFocusMute(enabled)
+	State.Features.FocusMute = enabled
+	clearBucket("FocusMute", false)
+	restoreAllSounds()
+
+	if not enabled then
+		return
+	end
+
+	trackConnection("FocusMute", UserInputService.WindowFocusReleased:Connect(muteAllSounds))
+	trackConnection("FocusMute", UserInputService.WindowFocused:Connect(restoreAllSounds))
+	trackConnection(
+		"FocusMute",
+		game.DescendantAdded:Connect(function(object)
+			if State.FocusMuteMuted and object:IsA("Sound") then
+				rememberSoundVolume(object)
+				object.Volume = math.min(object.Volume, 0.08)
+			end
 		end)
 	)
 end
