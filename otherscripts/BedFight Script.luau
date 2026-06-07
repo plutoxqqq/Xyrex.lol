@@ -35,6 +35,7 @@ local Config = {
 	Speed = 30,
 	KillAuraRange = 16,
 	KillAuraDelay = 0.12,
+	CombatReach = 18,
 	AutoClickerCPS = 10,
 	AutoWinDelay = 0.45,
 	SearchRefreshRate = 2.5,
@@ -79,6 +80,9 @@ local State = {
 	OriginalLighting = {},
 	LightingCaptured = false,
 	PerformanceRecords = {},
+	AutoSprintPressed = false,
+	LastToolEquipAt = 0,
+	LastSwingAt = 0,
 }
 
 --// General helpers
@@ -259,7 +263,8 @@ local function getEquippedTool()
 	return character and character:FindFirstChildOfClass("Tool") or nil
 end
 
-local function equipToolByKeywords(keywords)
+local function equipToolByKeywords(keywords, options)
+	options = options or {}
 	local character, humanoid = getCharacterParts()
 	if not character or not humanoid then
 		return nil
@@ -270,6 +275,16 @@ local function equipToolByKeywords(keywords)
 		return currentTool
 	end
 
+	if options.RespectManualSwitch and currentTool then
+		return nil
+	end
+
+	local now = os.clock()
+	local minimumInterval = options.MinimumInterval or 0.45
+	if not options.Force and now - (State.LastToolEquipAt or 0) < minimumInterval then
+		return nil
+	end
+
 	local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
 	if not backpack then
 		return currentTool
@@ -277,6 +292,7 @@ local function equipToolByKeywords(keywords)
 
 	for _, item in ipairs(backpack:GetChildren()) do
 		if item:IsA("Tool") and containsKeyword(item.Name, keywords) then
+			State.LastToolEquipAt = now
 			pcall(function()
 				humanoid:EquipTool(item)
 			end)
@@ -284,7 +300,7 @@ local function equipToolByKeywords(keywords)
 		end
 	end
 
-	return currentTool
+	return nil
 end
 
 local function activateTool(tool)
@@ -373,6 +389,44 @@ local function fireRemote(remote, ...)
 	return false
 end
 
+local function getLocalTeamTokens()
+	local tokens = {}
+	if LocalPlayer.Team then
+		table.insert(tokens, tostring(LocalPlayer.Team.Name):lower())
+	end
+	if LocalPlayer.TeamColor then
+		table.insert(tokens, tostring(LocalPlayer.TeamColor.Name):lower())
+	end
+	return tokens
+end
+
+local function isOwnBed(bed)
+	if not bed then
+		return false
+	end
+
+	local teamTokens = getLocalTeamTokens()
+	if #teamTokens == 0 then
+		return false
+	end
+
+	local object = bed
+	while object and object ~= Workspace do
+		local name = tostring(object.Name):lower()
+		for _, token in ipairs(teamTokens) do
+			if token ~= "" and name:find(token, 1, true) then
+				return true
+			end
+		end
+		object = object.Parent
+	end
+
+	local ok, brickColor = pcall(function()
+		return bed.BrickColor
+	end)
+	return ok and LocalPlayer.TeamColor and brickColor == LocalPlayer.TeamColor
+end
+
 local function getNearestBed()
 	scanWorkspace(false)
 	local _, _, rootPart = getCharacterParts()
@@ -383,7 +437,7 @@ local function getNearestBed()
 	local closestBed = nil
 	local closestDistance = math.huge
 	for _, bed in ipairs(State.CachedBeds) do
-		if bed.Parent then
+		if bed.Parent and not isOwnBed(bed) then
 			local distance = (bed.Position - rootPart.Position).Magnitude
 			if distance < closestDistance then
 				closestDistance = distance
@@ -416,6 +470,38 @@ local function getNearestOpponent(maxDistance)
 	return closestPlayer, closestDistance
 end
 
+local function getCombatTool()
+	local currentTool = getEquippedTool()
+	if currentTool and containsKeyword(currentTool.Name, { "sword", "blade", "dagger", "scythe", "hammer", "mace", "katana" }) then
+		return currentTool
+	end
+	return nil
+end
+
+local function equipCombatTool(options)
+	return equipToolByKeywords({ "sword", "blade", "dagger", "scythe", "hammer", "mace", "katana" }, options)
+end
+
+local function equipMiningTool(options)
+	return equipToolByKeywords({ "pickaxe", "drill", "hammer", "axe" }, options)
+end
+
+local function facePosition(position)
+	local _, _, rootPart = getCharacterParts()
+	if not rootPart or not position then
+		return false
+	end
+
+	local origin = rootPart.Position
+	local flatTarget = Vector3.new(position.X, origin.Y, position.Z)
+	if (flatTarget - origin).Magnitude < 0.1 then
+		return false
+	end
+
+	rootPart.CFrame = CFrame.lookAt(origin, flatTarget)
+	return true
+end
+
 local function teleportTo(position)
 	local _, _, rootPart = getCharacterParts()
 	if not rootPart then
@@ -429,30 +515,35 @@ end
 --// Feature implementations
 local function setNoKnockback(enabled)
 	State.Features.NoKnockback = enabled
-	clearBucket("NoKnockback", true)
+	clearBucket("NoKnockback", false)
 
 	if not enabled then
 		return
 	end
 
-	local _, _, rootPart = getCharacterParts()
-	if not rootPart then
-		return
-	end
+	trackConnection(
+		"NoKnockback",
+		RunService.Heartbeat:Connect(function()
+			local _, humanoid, rootPart = getCharacterParts()
+			if not State.Features.NoKnockback or not humanoid or humanoid.Health <= 0 or not rootPart then
+				return
+			end
 
-	local attachment = Instance.new("Attachment")
-	attachment.Name = "XyrexNoKnockbackAttachment"
-	attachment.Parent = rootPart
-	trackInstance("NoKnockback", attachment)
+			local velocity = rootPart.AssemblyLinearVelocity
+			local horizontal = Vector3.new(velocity.X, 0, velocity.Z)
+			local maxIntentionalSpeed = math.max(humanoid.WalkSpeed, State.BaseWalkSpeed or 16) + 10
+			if horizontal.Magnitude <= maxIntentionalSpeed then
+				return
+			end
 
-	local velocity = Instance.new("LinearVelocity")
-	velocity.Name = "XyrexNoKnockbackVelocity"
-	velocity.Attachment0 = attachment
-	velocity.MaxForce = 900000
-	velocity.VectorVelocity = Vector3.zero
-	velocity.RelativeTo = Enum.ActuatorRelativeTo.World
-	velocity.Parent = rootPart
-	trackInstance("NoKnockback", velocity)
+			local moveDirection = humanoid.MoveDirection
+			local correctedHorizontal = Vector3.zero
+			if moveDirection.Magnitude > 0.05 then
+				correctedHorizontal = moveDirection.Unit * math.min(horizontal.Magnitude, maxIntentionalSpeed)
+			end
+			rootPart.AssemblyLinearVelocity = Vector3.new(correctedHorizontal.X, velocity.Y, correctedHorizontal.Z)
+		end)
+	)
 end
 
 local function setSpeed(enabled)
@@ -509,7 +600,7 @@ local function setFly(enabled)
 		return
 	end
 
-	humanoid.PlatformStand = enabled
+	humanoid.AutoRotate = not enabled
 	for key in pairs(State.FlyKeys) do
 		State.FlyKeys[key] = false
 	end
@@ -526,7 +617,7 @@ local function setFly(enabled)
 	local velocity = Instance.new("LinearVelocity")
 	velocity.Name = "XyrexFlyVelocity"
 	velocity.Attachment0 = attachment
-	velocity.MaxForce = 900000
+	velocity.MaxForce = 65000
 	velocity.VectorVelocity = Vector3.zero
 	velocity.RelativeTo = Enum.ActuatorRelativeTo.World
 	velocity.Parent = rootPart
@@ -536,8 +627,8 @@ local function setFly(enabled)
 	gyro.Name = "XyrexFlyOrientation"
 	gyro.Attachment0 = attachment
 	gyro.Mode = Enum.OrientationAlignmentMode.OneAttachment
-	gyro.MaxTorque = 900000
-	gyro.Responsiveness = 18
+	gyro.MaxTorque = 65000
+	gyro.Responsiveness = 14
 	gyro.Parent = rootPart
 	trackInstance("Fly", gyro)
 
@@ -577,6 +668,7 @@ local function setFly(enabled)
 				return
 			end
 
+			currentHumanoid.AutoRotate = false
 			local direction = Vector3.zero
 			local look = Camera.CFrame.LookVector
 			local right = Camera.CFrame.RightVector
@@ -600,30 +692,44 @@ local function setFly(enabled)
 				direction = direction - Vector3.new(0, 1, 0)
 			end
 
-			if direction.Magnitude > 0 then
-				velocity.VectorVelocity = direction.Unit * Config.FlySpeed
-			else
-				velocity.VectorVelocity = Vector3.zero
-			end
+			velocity.VectorVelocity = direction.Magnitude > 0 and direction.Unit * Config.FlySpeed or Vector3.zero
 			gyro.CFrame = CFrame.lookAt(currentRoot.Position, currentRoot.Position + look)
 		end)
 	)
 end
 
-local function attackPlayer(player)
+local function attackPlayer(player, options)
+	options = options or {}
 	local character = player and player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local targetRoot = character and character:FindFirstChild("HumanoidRootPart")
 	if not character or not humanoid or humanoid.Health <= 0 then
 		return false
 	end
 
-	local sword = equipToolByKeywords({ "sword", "blade", "dagger", "scythe", "hammer", "axe" })
-	if activateTool(sword) then
+	if targetRoot then
+		facePosition(targetRoot.Position)
+	end
+
+	local sword = getCombatTool()
+	if not sword and options.AllowEquip then
+		sword = equipCombatTool({
+			Force = options.ForceEquip == true,
+			RespectManualSwitch = options.RespectManualSwitch ~= false,
+			MinimumInterval = options.EquipInterval or 0.75,
+		})
+	end
+
+	if sword and activateTool(sword) then
+		pcall(function()
+			VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+			VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+		end)
 		return true
 	end
 
 	local damageRemote = findLikelyRemote(DAMAGE_REMOTE_KEYWORDS)
-	return fireRemote(damageRemote, character, humanoid)
+	return fireRemote(damageRemote, character, humanoid, targetRoot)
 end
 
 local function setKillAura(enabled)
@@ -634,11 +740,12 @@ local function setKillAura(enabled)
 		return
 	end
 
+	equipCombatTool({ Force = true })
 	startThread("KillAura", function(isRunning)
 		while isRunning() do
 			local target = getNearestOpponent(Config.KillAuraRange)
 			if target then
-				attackPlayer(target)
+				attackPlayer(target, { AllowEquip = true, RespectManualSwitch = true, EquipInterval = 0.75 })
 			end
 			task.wait(math.max(Config.KillAuraDelay, 0.05))
 		end
@@ -666,24 +773,40 @@ local function setAutoClicker(enabled)
 	end)
 end
 
-local function breakBed(bed)
+local function breakNearbyBlocks(centerPart)
+	local miningTool = getEquippedTool() or equipMiningTool({ Force = true })
+	if miningTool then
+		activateTool(miningTool)
+	end
+
+	local blockRemote = findLikelyRemote({ "block", "mine", "break", "damage" })
+	if blockRemote and centerPart then
+		for _, object in ipairs(Workspace:GetPartBoundsInRadius(centerPart.Position, 7)) do
+			if object:IsA("BasePart") and object ~= centerPart and object.Parent then
+				fireRemote(blockRemote, object, object.Position)
+			end
+		end
+	end
+end
+
+local function breakBed(bed, isRunning)
 	if not bed or not bed.Parent then
 		return false
 	end
 
-	teleportTo(bed.Position + Vector3.new(0, 5, 0))
-	task.wait(0.12)
-
-	local pickaxe = equipToolByKeywords({ "pickaxe", "axe" })
+	equipMiningTool({ Force = true })
+	local bedRemote = findLikelyRemote(BED_REMOTE_KEYWORDS)
 	local startedAt = os.clock()
-	while State.Features.AutoWin and bed.Parent and os.clock() - startedAt < 4 do
+	while (not isRunning or isRunning()) and bed.Parent and os.clock() - startedAt < 12 do
+		teleportTo(bed.Position + Vector3.new(0, 4, 0))
+		facePosition(bed.Position)
+		breakNearbyBlocks(bed)
+		local pickaxe = getEquippedTool() or equipMiningTool({ MinimumInterval = 0.15 })
 		if pickaxe then
 			activateTool(pickaxe)
-		else
-			local bedRemote = findLikelyRemote(BED_REMOTE_KEYWORDS)
-			fireRemote(bedRemote, bed)
 		end
-		task.wait(0.15)
+		fireRemote(bedRemote, bed, bed.Position)
+		RunService.Heartbeat:Wait()
 	end
 
 	return bed.Parent == nil
@@ -697,41 +820,46 @@ local function setAutoWin(enabled)
 		return
 	end
 
-	notify("AutoWin", "Enabled. The script will target visible beds first, then opponents.")
+	notify("AutoWin", "Enabled. Targeting enemy beds first, then one opponent at a time.")
 	startThread("AutoWin", function(isRunning)
 		while isRunning() do
-			scanWorkspace(true)
-
-			for _, bed in ipairs(State.CachedBeds) do
-				if not isRunning() then
-					break
-				end
-				if bed.Parent then
-					breakBed(bed)
-					task.wait(Config.AutoWinDelay)
-				end
-			end
-
-			for _, player in ipairs(Players:GetPlayers()) do
-				if not isRunning() then
-					break
-				end
-				if isOpponent(player) and isAlive(player) then
-					local _, _, targetRoot = getCharacterParts(player)
-					if targetRoot then
-						teleportTo(targetRoot.Position + Vector3.new(0, 2, 2))
-						for _ = 1, 24 do
-							if not isRunning() or not isAlive(player) then
-								break
-							end
-							attackPlayer(player)
-							task.wait(0.08)
-						end
+			while isRunning() do
+				scanWorkspace(true)
+				local foundEnemyBed = false
+				for _, bed in ipairs(State.CachedBeds) do
+					if not isRunning() then
+						break
+					end
+					if bed.Parent and not isOwnBed(bed) then
+						foundEnemyBed = true
+						breakBed(bed, isRunning)
 					end
 				end
+				if not foundEnemyBed then
+					break
+				end
+				RunService.Heartbeat:Wait()
 			end
 
-			task.wait(math.max(Config.AutoWinDelay, 0.2))
+			equipCombatTool({ Force = true })
+			while isRunning() do
+				local target = getNearestOpponent(math.huge)
+				if not target then
+					break
+				end
+
+				while isRunning() and isAlive(target) do
+					local _, _, targetRoot = getCharacterParts(target)
+					if not targetRoot then
+						break
+					end
+					teleportTo(targetRoot.Position + (targetRoot.CFrame.LookVector * -2) + Vector3.new(0, 1.5, 0))
+					attackPlayer(target, { AllowEquip = true, ForceEquip = false, RespectManualSwitch = false, EquipInterval = 0.25 })
+					RunService.Heartbeat:Wait()
+				end
+			end
+
+			task.wait(math.max(Config.AutoWinDelay, 0.1))
 		end
 	end)
 end
@@ -796,7 +924,10 @@ local function setPlayerESP(enabled)
 	end
 
 	for _, player in ipairs(Players:GetPlayers()) do
-		markPlayer(player)
+		task.spawn(function()
+			task.wait(0.35)
+			markPlayer(player)
+		end)
 		trackConnection(
 			"PlayerESP",
 			player.CharacterAdded:Connect(function()
@@ -1275,32 +1406,31 @@ local function updateLowGravity(value)
 	end
 end
 
+local function sendSprintInput(pressed)
+	if State.AutoSprintPressed == pressed then
+		return
+	end
+	State.AutoSprintPressed = pressed
+	pcall(function()
+		VirtualInputManager:SendKeyEvent(pressed, Enum.KeyCode.LeftShift, false, game)
+	end)
+end
+
 local function setAutoSprint(enabled)
 	State.Features.AutoSprint = enabled
 	clearBucket("AutoSprint", false)
 
 	if not enabled then
-		if not State.Features.Speed then
-			local _, humanoid = getCharacterParts()
-			if humanoid then
-				humanoid.WalkSpeed = State.BaseWalkSpeed or 16
-			end
-		end
+		sendSprintInput(false)
 		return
 	end
 
 	trackConnection(
 		"AutoSprint",
 		RunService.Heartbeat:Connect(function()
-			if State.Features.Speed then
-				return
-			end
 			local _, humanoid = getCharacterParts()
-			if humanoid and humanoid.Health > 0 and humanoid.MoveDirection.Magnitude > 0.05 then
-				humanoid.WalkSpeed = math.max(Config.Speed, State.BaseWalkSpeed or 16)
-			elseif humanoid then
-				humanoid.WalkSpeed = State.BaseWalkSpeed or 16
-			end
+			local shouldSprint = humanoid and humanoid.Health > 0 and humanoid.MoveDirection.Magnitude > 0.05
+			sendSprintInput(shouldSprint == true)
 		end)
 	)
 end
@@ -1342,7 +1472,7 @@ local function setFullbright(enabled)
 		lighting.Brightness = 2
 		lighting.ClockTime = 14
 		lighting.FogEnd = 100000
-		lighting.GlobalShadows = false
+		lighting.GlobalShadows = true
 		lighting.OutdoorAmbient = Color3.fromRGB(210, 210, 210)
 	end
 
@@ -1480,6 +1610,86 @@ local function setMatchDashboard(enabled)
 	)
 end
 
+local function setTriggerBot(enabled)
+	State.Features.TriggerBot = enabled
+	clearBucket("TriggerBot", false)
+
+	if not enabled then
+		return
+	end
+
+	trackConnection(
+		"TriggerBot",
+		RunService.Heartbeat:Connect(function()
+			refreshCamera()
+			if not Camera then
+				return
+			end
+
+			local mousePosition = UserInputService:GetMouseLocation()
+			local ray = Camera:ViewportPointToRay(mousePosition.X, mousePosition.Y)
+			local params = RaycastParams.new()
+			local character = LocalPlayer.Character
+			if character then
+				params.FilterDescendantsInstances = { character }
+				local ok = pcall(function()
+					params.FilterType = Enum.RaycastFilterType.Exclude
+				end)
+				if not ok then
+					params.FilterType = Enum.RaycastFilterType.Blacklist
+				end
+			end
+
+			local result = Workspace:Raycast(ray.Origin, ray.Direction * Config.CombatReach, params)
+			local hit = result and result.Instance
+			local model = hit and hit:FindFirstAncestorOfClass("Model")
+			local player = model and Players:GetPlayerFromCharacter(model)
+			if player and isOpponent(player) and isAlive(player) then
+				attackPlayer(player, { AllowEquip = false })
+			end
+		end)
+	)
+end
+
+local function setAutoSword(enabled)
+	State.Features.AutoSword = enabled
+	clearBucket("AutoSword", false)
+
+	if not enabled then
+		return
+	end
+
+	trackConnection(
+		"AutoSword",
+		RunService.Heartbeat:Connect(function()
+			local target = getNearestOpponent(Config.CombatReach)
+			if target and not getCombatTool() then
+				equipCombatTool({ RespectManualSwitch = true, MinimumInterval = 0.5 })
+			end
+		end)
+	)
+end
+
+local function setAimAssist(enabled)
+	State.Features.AimAssist = enabled
+	clearBucket("AimAssist", false)
+
+	if not enabled then
+		return
+	end
+
+	trackConnection(
+		"AimAssist",
+		RunService.RenderStepped:Connect(function()
+			local target = getNearestOpponent(Config.CombatReach)
+			local _, _, targetRoot = getCharacterParts(target)
+			if targetRoot then
+				facePosition(targetRoot.Position)
+			end
+		end)
+	)
+end
+
 local function saveWaypoint()
 	local _, _, rootPart = getCharacterParts()
 	if not rootPart then
@@ -1517,6 +1727,9 @@ local function panicDisable()
 	setInfiniteJump(false)
 	setFly(false)
 	setKillAura(false)
+	setTriggerBot(false)
+	setAutoSword(false)
+	setAimAssist(false)
 	setAutoClicker(false)
 	setAutoWin(false)
 	setPlayerESP(false)
@@ -1870,6 +2083,12 @@ trackConnection(
 makeCategory("Combat")
 makeToggle("No Knockback", false, setNoKnockback)
 makeToggle("Kill Aura", false, setKillAura)
+makeToggle("Trigger Bot", false, setTriggerBot)
+makeToggle("Auto Sword", false, setAutoSword)
+makeToggle("Aim Assist", false, setAimAssist)
+makeSlider("Combat Reach", 5, 30, Config.CombatReach, 1, function(value)
+	Config.CombatReach = value
+end)
 makeSlider("Kill Aura Range", 5, 30, Config.KillAuraRange, 1, function(value)
 	Config.KillAuraRange = value
 end)
@@ -1908,17 +2127,6 @@ makeToggle("Resource Beacon Overlay", false, setResourceBeacon)
 makeToggle("Threat Ring Highlights", false, setThreatHighlights)
 makeToggle("Fullbright", false, setFullbright)
 makeToggle("Performance Mode", false, setPerformanceMode)
-
-makeCategory("Match Utilities")
-makeToggle("Health Pulse Alerts", false, setHealthAlerts)
-makeToggle("Void Guard Ping", false, setVoidGuard)
-makeToggle("Teammate Radar HUD", false, setTeammateRadar)
-makeToggle("Lag Spike Watcher", false, setLagWatcher)
-makeToggle("Session Timer HUD", false, setSessionTimer)
-makeToggle("Match Dashboard HUD", false, setMatchDashboard)
-makeToggle("Anti-Idle Guard", false, setAntiIdle)
-makeToggle("Focus Mute Guard", false, setFocusMute)
-makeToggle("Camera Comfort Boost", false, setCameraComfort)
 
 makeCategory("Teleports")
 makeButton("Teleport to Nearest Bed", function()
@@ -2061,7 +2269,8 @@ trackConnection(
 			setSpeed(true)
 		end
 		if State.Features.Fly then
-			setFly(true)
+			State.Features.Fly = false
+			notify("Fly", "Disabled after respawn to prevent a reset loop.")
 		end
 		if State.Features.JumpBoost then
 			setJumpBoost(true)
