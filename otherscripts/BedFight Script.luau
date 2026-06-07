@@ -21,7 +21,7 @@ local CoreGui = game:GetService("CoreGui")
 local SoundService = game:GetService("SoundService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
-local LocalPlayer = Players.LocalPlayer
+local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 local Camera = Workspace.CurrentCamera
 
 if not LocalPlayer then
@@ -40,6 +40,11 @@ local Config = {
 	SearchRefreshRate = 2.5,
 	ThreatRange = 80,
 	MaxMarkers = 40,
+	JumpPower = 72,
+	LowGravity = 85,
+	SafeVoidY = 35,
+	PanicKey = Enum.KeyCode.End,
+	WaypointName = "Saved Position",
 }
 
 --// Runtime state
@@ -69,6 +74,11 @@ local State = {
 	CachedResources = {},
 	CachedRemotes = {},
 	LastWorkspaceScan = 0,
+	SavedWaypoint = nil,
+	OriginalGravity = Workspace.Gravity,
+	OriginalLighting = {},
+	LightingCaptured = false,
+	PerformanceRecords = {},
 }
 
 --// General helpers
@@ -171,7 +181,7 @@ local function notify(title, message)
 end
 
 local function getGuiParent()
-	local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+	local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui", 8)
 	if playerGui then
 		return playerGui
 	end
@@ -182,9 +192,52 @@ local function getGuiParent()
 	return ok and result or nil
 end
 
+local function safeParent(instance, parent)
+	if not instance or not parent then
+		return false
+	end
+
+	local ok = pcall(function()
+		instance.Parent = parent
+	end)
+	if ok then
+		return true
+	end
+
+	local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui", 5)
+	if playerGui and parent ~= playerGui then
+		return pcall(function()
+			instance.Parent = playerGui
+		end)
+	end
+
+	return false
+end
+
+local function roundNumber(value, decimals)
+	local multiplier = 10 ^ (decimals or 0)
+	return math.floor((value * multiplier) + 0.5) / multiplier
+end
+
+local function formatDistance(distance)
+	if not distance or distance == math.huge then
+		return "n/a"
+	end
+	return tostring(math.floor(distance + 0.5)) .. " studs"
+end
+
 local function setText(button, enabled)
 	button.Text = enabled and "ON" or "OFF"
 	button.BackgroundColor3 = enabled and Color3.fromRGB(56, 189, 122) or Color3.fromRGB(185, 58, 58)
+end
+
+local function runFeatureCallback(label, callback, ...)
+	local ok, result = xpcall(callback, debug.traceback, ...)
+	if not ok then
+		notify("Xyrex Error", ("%s failed. Check the console for details."):format(label))
+		warn(result)
+	end
+	return ok, result
 end
 
 local function startThread(name, callback)
@@ -829,7 +882,9 @@ local function createStatusLabel(name, position, size)
 	gui.Name = name
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
-	gui.Parent = getGuiParent()
+	if not safeParent(gui, getGuiParent()) then
+		error("Xyrex could not attach a status HUD to PlayerGui or CoreGui.")
+	end
 
 	local label = Instance.new("TextLabel")
 	label.Name = "Status"
@@ -1008,7 +1063,7 @@ local function setVoidGuard(enabled)
 			params.FilterType = Enum.RaycastFilterType.Exclude
 			params.FilterDescendantsInstances = { LocalPlayer.Character }
 			local hit = Workspace:Raycast(rootPart.Position, Vector3.new(0, -18, 0), params)
-			if rootPart.Position.Y < 35 or hit == nil then
+			if rootPart.Position.Y < Config.SafeVoidY or hit == nil then
 				lastWarn = now
 				notify("Void Guard", "No safe floor detected below you.")
 			end
@@ -1083,18 +1138,6 @@ local function rememberSoundVolume(sound)
 	if State.FocusMuteVolumes[sound] == nil then
 		State.FocusMuteVolumes[sound] = sound.Volume
 	end
-
-	local gui, label = createStatusLabel("XyrexSessionTimer", UDim2.new(1, -18, 0, 337), UDim2.fromOffset(245, 58))
-	trackInstance("SessionTimer", gui)
-	local startedAt = os.clock()
-
-	trackConnection(
-		"SessionTimer",
-		RunService.Heartbeat:Connect(function()
-			local elapsed = math.floor(os.clock() - startedAt)
-			label.Text = ("Session Timer\n%02d:%02d"):format(math.floor(elapsed / 60), elapsed % 60)
-		end)
-	)
 end
 
 local function muteAllSounds()
@@ -1186,6 +1229,317 @@ local function setCameraComfort(enabled)
 	)
 end
 
+local function setJumpBoost(enabled)
+	State.Features.JumpBoost = enabled
+	local _, humanoid = getCharacterParts()
+	if not humanoid then
+		return
+	end
+
+	if enabled then
+		State.BaseJumpPower = humanoid.JumpPower
+		State.BaseJumpHeight = humanoid.JumpHeight
+		humanoid.UseJumpPower = true
+		humanoid.JumpPower = Config.JumpPower
+	else
+		humanoid.JumpPower = State.BaseJumpPower or 50
+		humanoid.JumpHeight = State.BaseJumpHeight or 7.2
+	end
+end
+
+local function updateJumpPower(value)
+	Config.JumpPower = value
+	if State.Features.JumpBoost then
+		local _, humanoid = getCharacterParts()
+		if humanoid then
+			humanoid.UseJumpPower = true
+			humanoid.JumpPower = Config.JumpPower
+		end
+	end
+end
+
+local function setLowGravity(enabled)
+	State.Features.LowGravity = enabled
+	if enabled then
+		State.OriginalGravity = Workspace.Gravity
+		Workspace.Gravity = Config.LowGravity
+	else
+		Workspace.Gravity = State.OriginalGravity or 196.2
+	end
+end
+
+local function updateLowGravity(value)
+	Config.LowGravity = value
+	if State.Features.LowGravity then
+		Workspace.Gravity = Config.LowGravity
+	end
+end
+
+local function setAutoSprint(enabled)
+	State.Features.AutoSprint = enabled
+	clearBucket("AutoSprint", false)
+
+	if not enabled then
+		if not State.Features.Speed then
+			local _, humanoid = getCharacterParts()
+			if humanoid then
+				humanoid.WalkSpeed = State.BaseWalkSpeed or 16
+			end
+		end
+		return
+	end
+
+	trackConnection(
+		"AutoSprint",
+		RunService.Heartbeat:Connect(function()
+			if State.Features.Speed then
+				return
+			end
+			local _, humanoid = getCharacterParts()
+			if humanoid and humanoid.Health > 0 and humanoid.MoveDirection.Magnitude > 0.05 then
+				humanoid.WalkSpeed = math.max(Config.Speed, State.BaseWalkSpeed or 16)
+			elseif humanoid then
+				humanoid.WalkSpeed = State.BaseWalkSpeed or 16
+			end
+		end)
+	)
+end
+
+local function captureLighting()
+	if State.LightingCaptured then
+		return
+	end
+
+	local lighting = game:GetService("Lighting")
+	State.OriginalLighting = {
+		Brightness = lighting.Brightness,
+		ClockTime = lighting.ClockTime,
+		FogEnd = lighting.FogEnd,
+		GlobalShadows = lighting.GlobalShadows,
+		OutdoorAmbient = lighting.OutdoorAmbient,
+	}
+	State.LightingCaptured = true
+end
+
+local function setFullbright(enabled)
+	State.Features.Fullbright = enabled
+	clearBucket("Fullbright", false)
+	local lighting = game:GetService("Lighting")
+
+	if not enabled then
+		if State.LightingCaptured then
+			for property, value in pairs(State.OriginalLighting) do
+				pcall(function()
+					lighting[property] = value
+				end)
+			end
+		end
+		return
+	end
+
+	captureLighting()
+	local function applyLighting()
+		lighting.Brightness = 2
+		lighting.ClockTime = 14
+		lighting.FogEnd = 100000
+		lighting.GlobalShadows = false
+		lighting.OutdoorAmbient = Color3.fromRGB(210, 210, 210)
+	end
+
+	applyLighting()
+	trackConnection("Fullbright", lighting.Changed:Connect(applyLighting))
+end
+
+local function rememberPerformanceProperty(object, property)
+	State.PerformanceRecords[object] = State.PerformanceRecords[object] or {}
+	if State.PerformanceRecords[object][property] == nil then
+		local ok, value = pcall(function()
+			return object[property]
+		end)
+		if ok then
+			State.PerformanceRecords[object][property] = value
+		end
+	end
+end
+
+local function setPerformanceMode(enabled)
+	State.Features.PerformanceMode = enabled
+	clearBucket("PerformanceMode", false)
+
+	local terrain = Workspace:FindFirstChildOfClass("Terrain")
+	if not enabled then
+		for object, properties in pairs(State.PerformanceRecords) do
+			if typeof(object) == "Instance" and object.Parent then
+				for property, value in pairs(properties) do
+					pcall(function()
+						object[property] = value
+					end)
+				end
+			end
+		end
+		table.clear(State.PerformanceRecords)
+		return
+	end
+
+	local function optimizeObject(object)
+		if object:IsA("ParticleEmitter") or object:IsA("Trail") or object:IsA("Beam") then
+			rememberPerformanceProperty(object, "Enabled")
+			object.Enabled = false
+		elseif object:IsA("BasePart") then
+			rememberPerformanceProperty(object, "CastShadow")
+			pcall(function()
+				object.CastShadow = false
+			end)
+		end
+	end
+
+	if terrain then
+		rememberPerformanceProperty(terrain, "WaterWaveSize")
+		rememberPerformanceProperty(terrain, "WaterWaveSpeed")
+		rememberPerformanceProperty(terrain, "WaterReflectance")
+		rememberPerformanceProperty(terrain, "WaterTransparency")
+		terrain.WaterWaveSize = 0
+		terrain.WaterWaveSpeed = 0
+		terrain.WaterReflectance = 0
+		terrain.WaterTransparency = 0.85
+	end
+
+	for _, object in ipairs(Workspace:GetDescendants()) do
+		optimizeObject(object)
+	end
+
+	trackConnection("PerformanceMode", Workspace.DescendantAdded:Connect(optimizeObject))
+end
+
+local function setAntiIdle(enabled)
+	State.Features.AntiIdle = enabled
+	clearBucket("AntiIdle", false)
+
+	if not enabled then
+		return
+	end
+
+	trackConnection(
+		"AntiIdle",
+		LocalPlayer.Idled:Connect(function()
+			pcall(function()
+				VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.LeftShift, false, game)
+				VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.LeftShift, false, game)
+			end)
+			notify("Anti-Idle", "Sent a safe activity pulse to prevent idle removal.")
+		end)
+	)
+end
+
+local function setMatchDashboard(enabled)
+	State.Features.MatchDashboard = enabled
+	clearBucket("MatchDashboard", false)
+	clearBucket("MatchDashboard", true)
+
+	if not enabled then
+		return
+	end
+
+	local gui, label = createStatusLabel("XyrexMatchDashboard", UDim2.new(1, -18, 0, 404), UDim2.fromOffset(245, 118))
+	trackInstance("MatchDashboard", gui)
+
+	local lastUpdate = 0
+	trackConnection(
+		"MatchDashboard",
+		RunService.Heartbeat:Connect(function()
+			local now = os.clock()
+			if now - lastUpdate < 0.35 then
+				return
+			end
+			lastUpdate = now
+
+			scanWorkspace(false)
+			local _, humanoid, rootPart = getCharacterParts()
+			local nearestOpponent, opponentDistance = getNearestOpponent(math.huge)
+			local nearestBed, bedDistance = getNearestBed()
+			local healthText = "n/a"
+			if humanoid then
+				healthText = ("%d/%d"):format(math.floor(humanoid.Health + 0.5), math.floor(humanoid.MaxHealth + 0.5))
+			end
+
+			label.Text = table.concat({
+				"Match Dashboard",
+				("Health: %s"):format(healthText),
+				("Nearest opponent: %s (%s)"):format(
+					nearestOpponent and nearestOpponent.DisplayName or "none",
+					formatDistance(opponentDistance)
+				),
+				("Nearest bed: %s"):format(nearestBed and formatDistance(bedDistance) or "none"),
+				("Cached beds/resources: %d/%d"):format(#State.CachedBeds, #State.CachedResources),
+				("Position: %s"):format(
+					rootPart and ("%d, %d, %d"):format(rootPart.Position.X, rootPart.Position.Y, rootPart.Position.Z)
+						or "n/a"
+				),
+			}, "\n")
+		end)
+	)
+end
+
+local function saveWaypoint()
+	local _, _, rootPart = getCharacterParts()
+	if not rootPart then
+		notify("Waypoint", "No character position is available to save.")
+		return
+	end
+
+	State.SavedWaypoint = rootPart.CFrame
+	notify("Waypoint", Config.WaypointName .. " saved.")
+end
+
+local function teleportToWaypoint()
+	if not State.SavedWaypoint then
+		notify("Waypoint", "Save a waypoint before teleporting.")
+		return
+	end
+
+	local _, _, rootPart = getCharacterParts()
+	if not rootPart then
+		notify("Waypoint", "No character root part is available.")
+		return
+	end
+
+	rootPart.CFrame = State.SavedWaypoint + Vector3.new(0, 3, 0)
+end
+
+local function panicDisable()
+	for feature in pairs(State.Features) do
+		State.Features[feature] = false
+		stopThread(feature)
+	end
+
+	setNoKnockback(false)
+	setSpeed(false)
+	setInfiniteJump(false)
+	setFly(false)
+	setKillAura(false)
+	setAutoClicker(false)
+	setAutoWin(false)
+	setPlayerESP(false)
+	setBedBeacon(false)
+	setResourceBeacon(false)
+	setThreatHighlights(false)
+	setHealthAlerts(false)
+	setVoidGuard(false)
+	setTeammateRadar(false)
+	setLagWatcher(false)
+	setSessionTimer(false)
+	setFocusMute(false)
+	setCameraComfort(false)
+	setJumpBoost(false)
+	setLowGravity(false)
+	setAutoSprint(false)
+	setFullbright(false)
+	setPerformanceMode(false)
+	setAntiIdle(false)
+	setMatchDashboard(false)
+	notify("Panic", "All feature modules were disabled. Re-open the GUI toggles to enable them again.")
+end
+
 --// GUI construction
 local GuiParent = getGuiParent()
 if not GuiParent then
@@ -1201,7 +1555,9 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "XyrexBedFightSuite"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
-ScreenGui.Parent = GuiParent
+if not safeParent(ScreenGui, GuiParent) then
+	error("Xyrex BedFight could not attach the GUI to PlayerGui or CoreGui.")
+end
 trackInstance("Root", ScreenGui)
 
 local Main = Instance.new("Frame")
@@ -1250,7 +1606,7 @@ Subtitle.Name = "Subtitle"
 Subtitle.Size = UDim2.new(1, -92, 0, 16)
 Subtitle.Position = UDim2.fromOffset(15, 27)
 Subtitle.BackgroundTransparency = 1
-Subtitle.Text = "RightShift to toggle • rewritten with AetherCore-style utilities"
+Subtitle.Text = "RightShift toggles GUI • End disables all modules"
 Subtitle.TextColor3 = Color3.fromRGB(155, 166, 195)
 Subtitle.Font = Enum.Font.GothamMedium
 Subtitle.TextSize = 10
@@ -1355,11 +1711,13 @@ local function makeToggle(title, default, callback)
 	button.MouseButton1Click:Connect(function()
 		default = not default
 		setText(button, default)
-		callback(default)
+		runFeatureCallback(title, callback, default)
 	end)
 
 	if default then
-		task.defer(callback, true)
+		task.defer(function()
+			runFeatureCallback(title, callback, true)
+		end)
 	end
 
 	return button
@@ -1408,17 +1766,16 @@ local function makeSlider(title, minValue, maxValue, default, step, callback)
 	fillCorner.CornerRadius = UDim.new(0, 7)
 	fillCorner.Parent = fill
 
+	local decimalPlaces = step < 1 and math.max(1, math.ceil(-math.log10(step))) or 0
 	local function setFromFraction(fraction)
 		fraction = math.clamp(fraction, 0, 1)
 		local value = minValue + ((maxValue - minValue) * fraction)
 		value = math.floor((value / step) + 0.5) * step
 		value = math.clamp(value, minValue, maxValue)
-		if step < 1 then
-			value = math.floor(value * 10 + 0.5) / 10
-		end
+		value = roundNumber(value, decimalPlaces)
 		fill.Size = UDim2.new((value - minValue) / (maxValue - minValue), 0, 1, 0)
 		label.Text = ("%s: %s"):format(title, tostring(value))
-		callback(value)
+		runFeatureCallback(title, callback, value)
 	end
 
 	bar.InputBegan:Connect(function(input)
@@ -1464,7 +1821,9 @@ local function makeButton(title, callback)
 	buttonCorner.CornerRadius = UDim.new(0, 8)
 	buttonCorner.Parent = button
 
-	button.MouseButton1Click:Connect(callback)
+	button.MouseButton1Click:Connect(function()
+		runFeatureCallback(title, callback)
+	end)
 	return button
 end
 
@@ -1522,6 +1881,11 @@ makeCategory("Movement")
 makeToggle("Speed", false, setSpeed)
 makeSlider("Speed Value", 16, 200, Config.Speed, 1, updateSpeed)
 makeToggle("Infinite Jump", false, setInfiniteJump)
+makeToggle("Jump Boost", false, setJumpBoost)
+makeSlider("Jump Power", 50, 150, Config.JumpPower, 1, updateJumpPower)
+makeToggle("Low Gravity", false, setLowGravity)
+makeSlider("Gravity Value", 35, 196, Config.LowGravity, 1, updateLowGravity)
+makeToggle("Auto Sprint", false, setAutoSprint)
 makeToggle("Fly", false, setFly)
 makeSlider("Fly Speed", 20, 200, Config.FlySpeed, 5, function(value)
 	Config.FlySpeed = value
@@ -1542,6 +1906,8 @@ makeToggle("Player ESP", false, setPlayerESP)
 makeToggle("Bed Beacon Overlay", false, setBedBeacon)
 makeToggle("Resource Beacon Overlay", false, setResourceBeacon)
 makeToggle("Threat Ring Highlights", false, setThreatHighlights)
+makeToggle("Fullbright", false, setFullbright)
+makeToggle("Performance Mode", false, setPerformanceMode)
 
 makeCategory("Match Utilities")
 makeToggle("Health Pulse Alerts", false, setHealthAlerts)
@@ -1549,6 +1915,8 @@ makeToggle("Void Guard Ping", false, setVoidGuard)
 makeToggle("Teammate Radar HUD", false, setTeammateRadar)
 makeToggle("Lag Spike Watcher", false, setLagWatcher)
 makeToggle("Session Timer HUD", false, setSessionTimer)
+makeToggle("Match Dashboard HUD", false, setMatchDashboard)
+makeToggle("Anti-Idle Guard", false, setAntiIdle)
 makeToggle("Focus Mute Guard", false, setFocusMute)
 makeToggle("Camera Comfort Boost", false, setCameraComfort)
 
@@ -1570,17 +1938,23 @@ makeButton("Teleport to Nearest Opponent", function()
 		notify("Teleport", "No living opponent was found.")
 	end
 end)
+makeButton("Save Current Position", saveWaypoint)
+makeButton("Teleport to Saved Position", teleportToWaypoint)
 makeButton("Refresh Bed and Resource Cache", function()
 	scanWorkspace(true)
 	notify("Cache Refreshed", ("Beds: %d • Resources: %d"):format(#State.CachedBeds, #State.CachedResources))
 end)
 
 makeCategory("Settings")
+makeButton("Panic Disable All Features", panicDisable)
 makeButton("Change Toggle Key", function()
 	local promptGui = Instance.new("ScreenGui")
 	promptGui.Name = "XyrexKeyPrompt"
 	promptGui.ResetOnSpawn = false
-	promptGui.Parent = GuiParent
+	if not safeParent(promptGui, GuiParent) then
+		notify("Settings", "Could not attach the keybind prompt.")
+		return
+	end
 
 	local prompt = Instance.new("Frame")
 	prompt.Size = UDim2.fromOffset(280, 90)
@@ -1632,6 +2006,13 @@ local function destroySuite()
 	setSpeed(false)
 	setFocusMute(false)
 	setCameraComfort(false)
+	setJumpBoost(false)
+	setLowGravity(false)
+	setAutoSprint(false)
+	setFullbright(false)
+	setPerformanceMode(false)
+	setAntiIdle(false)
+	setMatchDashboard(false)
 
 	for bucketName in pairs(State.FeatureConnections) do
 		clearBucket(bucketName, false)
@@ -1654,6 +2035,8 @@ trackConnection(
 		if input.KeyCode == Config.ToggleKey then
 			State.GuiEnabled = not State.GuiEnabled
 			ScreenGui.Enabled = State.GuiEnabled
+		elseif input.KeyCode == Config.PanicKey then
+			panicDisable()
 		end
 	end)
 )
@@ -1679,6 +2062,12 @@ trackConnection(
 		end
 		if State.Features.Fly then
 			setFly(true)
+		end
+		if State.Features.JumpBoost then
+			setJumpBoost(true)
+		end
+		if State.Features.AutoSprint then
+			setAutoSprint(true)
 		end
 	end)
 )
