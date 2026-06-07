@@ -36,6 +36,9 @@ local Config = {
 	KillAuraRange = 16,
 	KillAuraDelay = 0.12,
 	CombatReach = 18,
+	ProjectileAimbotRange = 200,
+	ProjectileSpeed = 120,
+	ProjectileAimSmoothing = 0.3,
 	AutoClickerCPS = 10,
 	AutoWinDelay = 0.45,
 	SearchRefreshRate = 2.5,
@@ -83,6 +86,9 @@ local State = {
 	AutoSprintPressed = false,
 	LastToolEquipAt = 0,
 	LastSwingAt = 0,
+	CapturedDamageRemote = nil,
+	AutoWinPreviousFeatures = nil,
+	AutoWinManaging = false,
 }
 
 --// General helpers
@@ -323,6 +329,7 @@ end
 local BED_KEYWORDS = { "bed" }
 local RESOURCE_KEYWORDS = { "iron", "diamond", "emerald", "gold", "resource" }
 local DAMAGE_REMOTE_KEYWORDS = { "damage", "attack", "sword", "combat", "hit" }
+local PROJECTILE_KEYWORDS = { "bow", "crossbow", "snowball", "fireball", "egg", "trident", "pearl", "projectile" }
 local BED_REMOTE_KEYWORDS = { "bed", "break", "destroy" }
 
 local function scanWorkspace(force)
@@ -348,20 +355,35 @@ local function scanWorkspace(force)
 	end
 end
 
+local function cacheRemoteCandidate(object)
+	if object and (object:IsA("RemoteEvent") or object:IsA("RemoteFunction")) then
+		table.insert(State.CachedRemotes, object)
+		if containsKeyword(object.Name, DAMAGE_REMOTE_KEYWORDS) then
+			State.CapturedDamageRemote = State.CapturedDamageRemote or object
+		end
+		return true
+	end
+	return false
+end
+
 local function findLikelyRemote(keywords)
-	for _, cached in ipairs(State.CachedRemotes) do
-		if cached.Parent and containsKeyword(cached.Name, keywords) then
+	if State.CapturedDamageRemote and State.CapturedDamageRemote.Parent and containsKeyword(State.CapturedDamageRemote.Name, keywords) then
+		return State.CapturedDamageRemote
+	end
+
+	for index = #State.CachedRemotes, 1, -1 do
+		local cached = State.CachedRemotes[index]
+		if not cached.Parent then
+			table.remove(State.CachedRemotes, index)
+		elseif containsKeyword(cached.Name, keywords) then
 			return cached
 		end
 	end
 
 	table.clear(State.CachedRemotes)
 	for _, object in ipairs(ReplicatedStorage:GetDescendants()) do
-		if object:IsA("RemoteEvent") or object:IsA("RemoteFunction") then
-			table.insert(State.CachedRemotes, object)
-			if containsKeyword(object.Name, keywords) then
-				return object
-			end
+		if cacheRemoteCandidate(object) and containsKeyword(object.Name, keywords) then
+			return object
 		end
 	end
 
@@ -486,6 +508,98 @@ local function equipMiningTool(options)
 	return equipToolByKeywords({ "pickaxe", "drill", "hammer", "axe" }, options)
 end
 
+local function getSwordScore(tool)
+	if not tool or not tool:IsA("Tool") or not containsKeyword(tool.Name, { "sword", "blade", "dagger", "scythe", "katana" }) then
+		return nil
+	end
+
+	local attributeDamage = tonumber(tool:GetAttribute("Damage") or tool:GetAttribute("AttackDamage") or tool:GetAttribute("SwordDamage"))
+	if attributeDamage then
+		return attributeDamage
+	end
+
+	local numericDamage = tonumber(tostring(tool.Name):match("(%d+)"))
+	if numericDamage then
+		return numericDamage
+	end
+
+	local name = tostring(tool.Name):lower()
+	local materialScores = {
+		wood = 8,
+		stone = 12,
+		iron = 16,
+		diamond = 22,
+		emerald = 26,
+		netherite = 30,
+	}
+	for material, score in pairs(materialScores) do
+		if name:find(material, 1, true) then
+			return score
+		end
+	end
+
+	return 10
+end
+
+local function getBestSword()
+	local containers = {}
+	local character = LocalPlayer.Character
+	local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+	if character then
+		table.insert(containers, character)
+	end
+	if backpack then
+		table.insert(containers, backpack)
+	end
+
+	local bestTool = nil
+	local bestScore = -math.huge
+	for _, container in ipairs(containers) do
+		for _, item in ipairs(container:GetChildren()) do
+			local score = getSwordScore(item)
+			if score and score > bestScore then
+				bestTool = item
+				bestScore = score
+			end
+		end
+	end
+	return bestTool, bestScore
+end
+
+local function isHoldingProjectile()
+	local tool = getEquippedTool()
+	return tool ~= nil and containsKeyword(tool.Name, PROJECTILE_KEYWORDS)
+end
+
+local function predictProjectilePosition(targetRoot, targetVelocity, projectileSpeed, gravity, origin)
+	if not targetRoot or not origin or projectileSpeed <= 0 then
+		return nil
+	end
+
+	local relativePosition = targetRoot.Position - origin
+	local halfGravity = gravity * 0.5
+	local function travelError(time)
+		local x = relativePosition.X + targetVelocity.X * time
+		local z = relativePosition.Z + targetVelocity.Z * time
+		local y = relativePosition.Y + targetVelocity.Y * time - halfGravity * time * time
+		return Vector3.new(x, y, z).Magnitude - projectileSpeed * time
+	end
+
+	local lowTime = 0.05
+	local highTime = 5
+	for _ = 1, 18 do
+		local midTime = (lowTime + highTime) * 0.5
+		if travelError(midTime) > 0 then
+			lowTime = midTime
+		else
+			highTime = midTime
+		end
+	end
+
+	local time = (lowTime + highTime) * 0.5
+	return targetRoot.Position + (targetVelocity * time)
+end
+
 local function facePosition(position)
 	local _, _, rootPart = getCharacterParts()
 	if not rootPart or not position then
@@ -530,18 +644,20 @@ local function setNoKnockback(enabled)
 			end
 
 			local velocity = rootPart.AssemblyLinearVelocity
-			local horizontal = Vector3.new(velocity.X, 0, velocity.Z)
-			local maxIntentionalSpeed = math.max(humanoid.WalkSpeed, State.BaseWalkSpeed or 16) + 10
-			if horizontal.Magnitude <= maxIntentionalSpeed then
-				return
+			local moveDirection = humanoid.MoveDirection
+			local allowedHorizontal = Vector3.zero
+			if moveDirection.Magnitude > 0.05 then
+				local desiredSpeed = math.min(Vector3.new(velocity.X, 0, velocity.Z).Magnitude, humanoid.WalkSpeed + 5)
+				allowedHorizontal = moveDirection.Unit * desiredSpeed
 			end
 
-			local moveDirection = humanoid.MoveDirection
-			local correctedHorizontal = Vector3.zero
-			if moveDirection.Magnitude > 0.05 then
-				correctedHorizontal = moveDirection.Unit * math.min(horizontal.Magnitude, maxIntentionalSpeed)
+			local state = humanoid:GetState()
+			local verticalVelocity = 0
+			if state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall then
+				verticalVelocity = math.clamp(velocity.Y, -40, 40)
 			end
-			rootPart.AssemblyLinearVelocity = Vector3.new(correctedHorizontal.X, velocity.Y, correctedHorizontal.Z)
+
+			rootPart.AssemblyLinearVelocity = Vector3.new(allowedHorizontal.X, verticalVelocity, allowedHorizontal.Z)
 		end)
 	)
 end
@@ -700,23 +816,19 @@ end
 
 local function attackPlayer(player, options)
 	options = options or {}
-	local character = player and player.Character
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	local targetRoot = character and character:FindFirstChild("HumanoidRootPart")
-	if not character or not humanoid or humanoid.Health <= 0 then
+	local character, humanoid, targetRoot = getCharacterParts(player)
+	if not character or not humanoid or humanoid.Health <= 0 or not targetRoot then
 		return false
 	end
 
-	if targetRoot then
-		facePosition(targetRoot.Position)
-	end
+	facePosition(targetRoot.Position)
 
 	local sword = getCombatTool()
 	if not sword and options.AllowEquip then
 		sword = equipCombatTool({
 			Force = options.ForceEquip == true,
 			RespectManualSwitch = options.RespectManualSwitch ~= false,
-			MinimumInterval = options.EquipInterval or 0.75,
+			MinimumInterval = options.EquipInterval or 0.6,
 		})
 	end
 
@@ -728,7 +840,7 @@ local function attackPlayer(player, options)
 		return true
 	end
 
-	local damageRemote = findLikelyRemote(DAMAGE_REMOTE_KEYWORDS)
+	local damageRemote = State.CapturedDamageRemote or findLikelyRemote(DAMAGE_REMOTE_KEYWORDS)
 	return fireRemote(damageRemote, character, humanoid, targetRoot)
 end
 
@@ -742,12 +854,16 @@ local function setKillAura(enabled)
 
 	equipCombatTool({ Force = true })
 	startThread("KillAura", function(isRunning)
+		local lastSwing = 0
 		while isRunning() do
 			local target = getNearestOpponent(Config.KillAuraRange)
-			if target then
-				attackPlayer(target, { AllowEquip = true, RespectManualSwitch = true, EquipInterval = 0.75 })
+			local now = os.clock()
+			if target and now - lastSwing >= Config.KillAuraDelay then
+				if attackPlayer(target, { AllowEquip = true, ForceEquip = true, RespectManualSwitch = false, EquipInterval = 0.6 }) then
+					lastSwing = now
+				end
 			end
-			task.wait(math.max(Config.KillAuraDelay, 0.05))
+			task.wait(0.03)
 		end
 	end)
 end
@@ -815,53 +931,89 @@ end
 local function setAutoWin(enabled)
 	State.Features.AutoWin = enabled
 	stopThread("AutoWin")
+	clearBucket("AutoWin", false)
 
 	if not enabled then
+		if State.AutoWinManaging and State.AutoWinPreviousFeatures then
+			local previous = State.AutoWinPreviousFeatures
+			if not previous.KillAura then
+				setKillAura(false)
+			end
+			if not previous.AutoSword then
+				setAutoSword(false)
+			end
+			if not previous.Speed then
+				setSpeed(false)
+			end
+			if not previous.Fly then
+				setFly(false)
+			end
+		end
+		State.AutoWinManaging = false
+		State.AutoWinPreviousFeatures = nil
 		return
 	end
 
-	notify("AutoWin", "Enabled. Targeting enemy beds first, then one opponent at a time.")
+	State.AutoWinPreviousFeatures = {
+		KillAura = State.Features.KillAura == true,
+		AutoSword = State.Features.AutoSword == true,
+		Speed = State.Features.Speed == true,
+		Fly = State.Features.Fly == true,
+	}
+	State.AutoWinManaging = true
+	setKillAura(true)
+	setAutoSword(true)
+	setSpeed(true)
+	setFly(true)
+
+	notify("AutoWin", "Enabled. Prioritizing opponent elimination, then nearby enemy beds without forced teleporting.")
 	startThread("AutoWin", function(isRunning)
 		while isRunning() do
-			while isRunning() do
-				scanWorkspace(true)
-				local foundEnemyBed = false
-				for _, bed in ipairs(State.CachedBeds) do
-					if not isRunning() then
-						break
-					end
-					if bed.Parent and not isOwnBed(bed) then
-						foundEnemyBed = true
-						breakBed(bed, isRunning)
-					end
-				end
-				if not foundEnemyBed then
+			local opponentsAlive = false
+			for _, player in ipairs(Players:GetPlayers()) do
+				if isOpponent(player) and isAlive(player) then
+					opponentsAlive = true
 					break
 				end
-				RunService.Heartbeat:Wait()
 			end
 
-			equipCombatTool({ Force = true })
-			while isRunning() do
-				local target = getNearestOpponent(math.huge)
-				if not target then
-					break
-				end
-
-				while isRunning() and isAlive(target) do
-					local _, _, targetRoot = getCharacterParts(target)
-					if not targetRoot then
-						break
+			if opponentsAlive then
+				equipCombatTool({ Force = true, MinimumInterval = 0.4 })
+			else
+				scanWorkspace(true)
+				local bed, distance = getNearestBed()
+				local _, humanoid, rootPart = getCharacterParts()
+				if bed and rootPart and humanoid then
+					if distance and distance > Config.CombatReach then
+						humanoid:MoveTo(bed.Position + Vector3.new(0, 0, 3))
+					else
+						facePosition(bed.Position)
+						equipMiningTool({ Force = true, MinimumInterval = 0.25 })
+						breakNearbyBlocks(bed)
+						fireRemote(findLikelyRemote(BED_REMOTE_KEYWORDS), bed, bed.Position)
 					end
-					teleportTo(targetRoot.Position + (targetRoot.CFrame.LookVector * -2) + Vector3.new(0, 1.5, 0))
-					attackPlayer(target, { AllowEquip = true, ForceEquip = false, RespectManualSwitch = false, EquipInterval = 0.25 })
-					RunService.Heartbeat:Wait()
+				else
+					notify("AutoWin", "No living opponents or enemy beds are currently detected.")
+					task.wait(5)
 				end
 			end
 
 			task.wait(math.max(Config.AutoWinDelay, 0.1))
 		end
 	end)
+
+	trackConnection(
+		"AutoWin",
+		LocalPlayer.CharacterAdded:Connect(function()
+			if State.Features.AutoWin then
+				task.wait(0.6)
+				setKillAura(true)
+				setAutoSword(true)
+				setSpeed(true)
+				setFly(true)
+			end
+		end)
+	)
 end
 
 --// AetherCore-inspired visual and utility modules
@@ -1618,11 +1770,12 @@ local function setTriggerBot(enabled)
 		return
 	end
 
+	local lastAttack = 0
 	trackConnection(
 		"TriggerBot",
-		RunService.Heartbeat:Connect(function()
+		RunService.RenderStepped:Connect(function()
 			refreshCamera()
-			if not Camera then
+			if not Camera or not getCombatTool() or os.clock() - lastAttack < 0.15 then
 				return
 			end
 
@@ -1645,7 +1798,10 @@ local function setTriggerBot(enabled)
 			local model = hit and hit:FindFirstAncestorOfClass("Model")
 			local player = model and Players:GetPlayerFromCharacter(model)
 			if player and isOpponent(player) and isAlive(player) then
-				attackPlayer(player, { AllowEquip = false })
+				local sword = getCombatTool() or equipCombatTool({ Force = true, MinimumInterval = 0.2 })
+				if sword and activateTool(sword) then
+					lastAttack = os.clock()
+				end
 			end
 		end)
 	)
@@ -1662,9 +1818,15 @@ local function setAutoSword(enabled)
 	trackConnection(
 		"AutoSword",
 		RunService.Heartbeat:Connect(function()
-			local target = getNearestOpponent(Config.CombatReach)
-			if target and not getCombatTool() then
-				equipCombatTool({ RespectManualSwitch = true, MinimumInterval = 0.5 })
+			local bestSword = getBestSword()
+			local currentSword = getCombatTool()
+			if bestSword and bestSword ~= currentSword then
+				local _, humanoid = getCharacterParts()
+				if humanoid and bestSword.Parent ~= LocalPlayer.Character then
+					pcall(function()
+						humanoid:EquipTool(bestSword)
+					end)
+				end
 			end
 		end)
 	)
@@ -1681,10 +1843,71 @@ local function setAimAssist(enabled)
 	trackConnection(
 		"AimAssist",
 		RunService.RenderStepped:Connect(function()
+			refreshCamera()
+			if not Camera or not getCombatTool() then
+				return
+			end
+
 			local target = getNearestOpponent(Config.CombatReach)
 			local _, _, targetRoot = getCharacterParts(target)
-			if targetRoot then
-				facePosition(targetRoot.Position)
+			if not targetRoot then
+				return
+			end
+
+			local screenPosition, onScreen = Camera:WorldToViewportPoint(targetRoot.Position)
+			if not onScreen then
+				return
+			end
+
+			local movedMouse = false
+			local environment = getfenv and getfenv() or _G
+			local mouseMoveRelative = environment and environment.mousemoverel
+			if typeof(mouseMoveRelative) == "function" then
+				local deltaX = (screenPosition.X - (Camera.ViewportSize.X * 0.5)) * 0.25
+				local deltaY = (screenPosition.Y - (Camera.ViewportSize.Y * 0.5)) * 0.25
+				movedMouse = pcall(mouseMoveRelative, deltaX, deltaY)
+			end
+			if not movedMouse then
+				local aimCFrame = CFrame.lookAt(Camera.CFrame.Position, targetRoot.Position)
+				Camera.CFrame = Camera.CFrame:Lerp(aimCFrame, 0.3)
+			end
+		end)
+	)
+end
+
+local function setProjectileAimbot(enabled)
+	State.Features.ProjectileAimbot = enabled
+	clearBucket("ProjectileAimbot", false)
+
+	if not enabled then
+		return
+	end
+
+	trackConnection(
+		"ProjectileAimbot",
+		RunService.RenderStepped:Connect(function()
+			refreshCamera()
+			if not Camera or not isHoldingProjectile() then
+				return
+			end
+
+			local target = getNearestOpponent(Config.ProjectileAimbotRange)
+			local _, _, targetRoot = getCharacterParts(target)
+			local _, _, selfRoot = getCharacterParts()
+			if not targetRoot or not selfRoot then
+				return
+			end
+
+			local predictedPosition = predictProjectilePosition(
+				targetRoot,
+				targetRoot.AssemblyLinearVelocity,
+				Config.ProjectileSpeed,
+				Workspace.Gravity,
+				selfRoot.Position
+			)
+			if predictedPosition then
+				local aimCFrame = CFrame.lookAt(Camera.CFrame.Position, predictedPosition)
+				Camera.CFrame = Camera.CFrame:Lerp(aimCFrame, Config.ProjectileAimSmoothing)
 			end
 		end)
 	)
@@ -1730,6 +1953,7 @@ local function panicDisable()
 	setTriggerBot(false)
 	setAutoSword(false)
 	setAimAssist(false)
+	setProjectileAimbot(false)
 	setAutoClicker(false)
 	setAutoWin(false)
 	setPlayerESP(false)
@@ -2086,6 +2310,7 @@ makeToggle("Kill Aura", false, setKillAura)
 makeToggle("Trigger Bot", false, setTriggerBot)
 makeToggle("Auto Sword", false, setAutoSword)
 makeToggle("Aim Assist", false, setAimAssist)
+makeToggle("Projectile Aimbot", false, setProjectileAimbot)
 makeSlider("Combat Reach", 5, 30, Config.CombatReach, 1, function(value)
 	Config.CombatReach = value
 end)
@@ -2094,6 +2319,12 @@ makeSlider("Kill Aura Range", 5, 30, Config.KillAuraRange, 1, function(value)
 end)
 makeSlider("Kill Aura Delay", 0.05, 0.5, Config.KillAuraDelay, 0.05, function(value)
 	Config.KillAuraDelay = value
+end)
+makeSlider("Projectile Aimbot Range", 40, 350, Config.ProjectileAimbotRange, 10, function(value)
+	Config.ProjectileAimbotRange = value
+end)
+makeSlider("Projectile Speed", 40, 300, Config.ProjectileSpeed, 5, function(value)
+	Config.ProjectileSpeed = value
 end)
 
 makeCategory("Movement")
@@ -2250,6 +2481,7 @@ trackConnection(
 )
 
 trackConnection("Global", Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(refreshCamera))
+trackConnection("Global", ReplicatedStorage.DescendantAdded:Connect(cacheRemoteCandidate))
 
 trackConnection(
 	"Global",
@@ -2278,9 +2510,22 @@ trackConnection(
 		if State.Features.AutoSprint then
 			setAutoSprint(true)
 		end
+		if State.Features.KillAura then
+			setKillAura(true)
+		end
+		if State.Features.AutoSword then
+			setAutoSword(true)
+		end
+		if State.Features.AimAssist then
+			setAimAssist(true)
+		end
+		if State.Features.ProjectileAimbot then
+			setProjectileAimbot(true)
+		end
 	end)
 )
 
+findLikelyRemote(DAMAGE_REMOTE_KEYWORDS)
 scanWorkspace(true)
 updateCanvasSize()
 notify("Xyrex BedFight", "Loaded successfully. Press " .. Config.ToggleKey.Name .. " to toggle the GUI.")
