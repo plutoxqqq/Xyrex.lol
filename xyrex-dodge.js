@@ -1557,15 +1557,16 @@
   }
 
   function sanitizeData(data) {
-    if (!data || typeof data !== 'object') return {};
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return {};
     const now = Date.now();
-    return {
-      ...data,
+    const clean = {
+      aiTokenDate: /^\d{4}-\d{2}-\d{2}$/.test(String(data.aiTokenDate || '')) ? String(data.aiTokenDate) : '',
       aiPurchasedTokens: clampInt(data.aiPurchasedTokens, 0, MAX_PURCHASED_TOKENS),
       aiTokensUsedToday: clampInt(data.aiTokensUsedToday, 0, MAX_USED_TODAY),
       freeTokenCooldownUntil: clampInt(data.freeTokenCooldownUntil, 0, now + MAX_COOLDOWN_MS),
       freeTokenLastClaimAmount: clampInt(data.freeTokenLastClaimAmount, 0, 30),
     };
+    return clean;
   }
 
   function simpleHash(str) {
@@ -1721,7 +1722,7 @@
   startIntegrityPolling();
   writeWithHash(readWithHash());
 
-  window.XyrexDodge = {
+  const publicApi = Object.freeze({
     start() {
       ensureGame()?.start();
     },
@@ -1733,19 +1734,17 @@
       gameInstance = null;
     },
     getTokenSummary() {
-      return readTokenSummary();
-    },
-    consumeAiToken() {
-      return consumeAiToken();
-    },
-    addPurchasedTokens(amount) {
-      return addPurchasedTokens(amount);
-    },
-    applyFreeTokenClaim(amount, cooldownMs) {
-      return applyFreeTokenClaim(amount, cooldownMs);
+      return Object.freeze({ ...readTokenSummary() });
     },
     getTokenStateSnapshot() {
-      return getTokenStateSnapshot();
+      return Object.freeze({ ...getTokenStateSnapshot() });
     },
-  };
+  });
+
+  Object.defineProperty(window, 'XyrexDodge', {
+    value: publicApi,
+    writable: false,
+    configurable: false,
+    enumerable: true,
+  });
 })();
