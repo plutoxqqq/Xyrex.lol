@@ -1,6 +1,10 @@
 {
+  "spec": 1,
   "name": "Cherry Bomb One",
-  "fonts": {
+  "previewText": "Cherry Bomb One",
+  "main": {
+    "ABCGintoNord-ExtraBold": "https://raw.githubusercontent.com/plutoxqqq/Xyrex.lol/main/otherscripts/cherrybombone-regular.ttf",
+
     "ggsans-Normal": "https://raw.githubusercontent.com/plutoxqqq/Xyrex.lol/main/otherscripts/cherrybombone-regular.ttf",
     "ggsans-NormalItalic": "https://raw.githubusercontent.com/plutoxqqq/Xyrex.lol/main/otherscripts/cherrybombone-regular.ttf",
     "ggsans-Medium": "https://raw.githubusercontent.com/plutoxqqq/Xyrex.lol/main/otherscripts/cherrybombone-regular.ttf",
@@ -12,16 +16,13 @@
     "ggsans-ExtraBold": "https://raw.githubusercontent.com/plutoxqqq/Xyrex.lol/main/otherscripts/cherrybombone-regular.ttf",
     "ggsans-ExtraBoldItalic": "https://raw.githubusercontent.com/plutoxqqq/Xyrex.lol/main/otherscripts/cherrybombone-regular.ttf",
 
-    "Whitney-Book": "https://raw.githubusercontent.com/plutoxqqq/Xyrex.lol/main/otherscripts/cherrybombone-regular.ttf",
-    "Whitney-Medium": "https://raw.githubusercontent.com/plutoxqqq/Xyrex.lol/main/otherscripts/cherrybombone-regular.ttf",
-    "Whitney-Semibold": "https://raw.githubusercontent.com/plutoxqqq/Xyrex.lol/main/otherscripts/cherrybombone-regular.ttf",
-    "Whitney-Bold": "https://raw.githubusercontent.com/plutoxqqq/Xyrex.lol/main/otherscripts/cherrybombone-regular.ttf",
+    "NotoSans-Normal": "https://raw.githubusercontent.com/plutoxqqq/Xyrex.lol/main/otherscripts/cherrybombone-regular.ttf",
+    "NotoSans-NormalItalic": "https://raw.githubusercontent.com/plutoxqqq/Xyrex.lol/main/otherscripts/cherrybombone-regular.ttf",
+    "NotoSans-Medium": "https://raw.githubusercontent.com/plutoxqqq/Xyrex.lol/main/otherscripts/cherrybombone-regular.ttf",
+    "NotoSans-Semibold": "https://raw.githubusercontent.com/plutoxqqq/Xyrex.lol/main/otherscripts/cherrybombone-regular.ttf",
+    "NotoSans-Bold": "https://raw.githubusercontent.com/plutoxqqq/Xyrex.lol/main/otherscripts/cherrybombone-regular.ttf",
+    "NotoSans-ExtraBold": "https://raw.githubusercontent.com/plutoxqqq/Xyrex.lol/main/otherscripts/cherrybombone-regular.ttf",
 
-    "ABC Ginto Nord Unlicensed Trial Black": "https://raw.githubusercontent.com/plutoxqqq/Xyrex.lol/main/otherscripts/cherrybombone-regular.ttf",
-    "ABC Ginto Normal Unlicensed Trial Regular": "https://raw.githubusercontent.com/plutoxqqq/Xyrex.lol/main/otherscripts/cherrybombone-regular.ttf",
-
-    "Consolas": "https://raw.githubusercontent.com/plutoxqqq/Xyrex.lol/main/otherscripts/cherrybombone-regular.ttf",
-    "Menlo": "https://raw.githubusercontent.com/plutoxqqq/Xyrex.lol/main/otherscripts/cherrybombone-regular.ttf",
-    "Monaco": "https://raw.githubusercontent.com/plutoxqqq/Xyrex.lol/main/otherscripts/cherrybombone-regular.ttf"
+    "SourceCodePro-Semibold": "https://raw.githubusercontent.com/plutoxqqq/Xyrex.lol/main/otherscripts/cherrybombone-regular.ttf"
   }
 }
