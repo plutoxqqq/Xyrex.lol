@@ -2487,7 +2487,7 @@ function loadNewUiModule() {
 
   return new Promise(resolve => {
     const script = document.createElement('script');
-    script.src = '/new-ui.js?v=2.1.2';
+    script.src = '/new-ui.js?v=2.1.3';
     script.defer = true;
     script.onload = () => resolve(Boolean(window.XyrexNewUI));
     script.onerror = () => resolve(false);
@@ -2882,9 +2882,154 @@ function hideInitialLoadingOverlay() {
   }, 260);
 }
 
+function initCustomScrollbars() {
+  const candidates = new Set();
+  const selector = '.sidebar, .main-content, .modal, .assistant-messages, .assistant-markdown pre, .assistant-table-wrap, .comparison-table-wrap, .script-card pre, .xy-sidepanel, .script-textarea, [data-custom-scroll]';
+  const syncElement = element => {
+    if (!element || element.nodeType !== 1 || element.dataset.xyScrollReady === 'true') return;
+    const style = getComputedStyle(element);
+    const canScrollY = /(auto|scroll)/.test(style.overflowY) || element.scrollHeight > element.clientHeight + 1;
+    const canScrollX = /(auto|scroll)/.test(style.overflowX) || element.scrollWidth > element.clientWidth + 1;
+    if (!canScrollY && !canScrollX) return;
+    element.dataset.xyScrollReady = 'true';
+    element.classList.add('xy-custom-scroll-host');
+    if (style.position === 'static') element.style.position = 'relative';
+
+    const vertical = document.createElement('span');
+    vertical.className = 'xy-custom-scrollbar xy-custom-scrollbar-y';
+    vertical.innerHTML = '<span></span>';
+    const horizontal = document.createElement('span');
+    horizontal.className = 'xy-custom-scrollbar xy-custom-scrollbar-x';
+    horizontal.innerHTML = '<span></span>';
+    element.append(vertical, horizontal);
+    const verticalThumb = vertical.firstElementChild;
+    const horizontalThumb = horizontal.firstElementChild;
+
+    const update = () => {
+      const hasY = element.scrollHeight > element.clientHeight + 1;
+      const hasX = element.scrollWidth > element.clientWidth + 1;
+      vertical.hidden = !hasY;
+      horizontal.hidden = !hasX;
+      if (hasY) {
+        const track = vertical.clientHeight || element.clientHeight;
+        const thumbSize = Math.max(34, (element.clientHeight / element.scrollHeight) * track);
+        const maxTop = Math.max(0, track - thumbSize);
+        const top = maxTop * (element.scrollTop / Math.max(1, element.scrollHeight - element.clientHeight));
+        verticalThumb.style.height = `${thumbSize}px`;
+        verticalThumb.style.transform = `translate3d(0, ${top}px, 0)`;
+      }
+      if (hasX) {
+        const track = horizontal.clientWidth || element.clientWidth;
+        const thumbSize = Math.max(34, (element.clientWidth / element.scrollWidth) * track);
+        const maxLeft = Math.max(0, track - thumbSize);
+        const left = maxLeft * (element.scrollLeft / Math.max(1, element.scrollWidth - element.clientWidth));
+        horizontalThumb.style.width = `${thumbSize}px`;
+        horizontalThumb.style.transform = `translate3d(${left}px, 0, 0)`;
+      }
+    };
+
+    const bindDrag = (track, thumb, axis) => {
+      thumb.addEventListener('pointerdown', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        thumb.setPointerCapture(event.pointerId);
+        const startPointer = axis === 'y' ? event.clientY : event.clientX;
+        const startScroll = axis === 'y' ? element.scrollTop : element.scrollLeft;
+        const onMove = moveEvent => {
+          const pointer = axis === 'y' ? moveEvent.clientY : moveEvent.clientX;
+          const delta = pointer - startPointer;
+          const trackSize = axis === 'y' ? track.clientHeight : track.clientWidth;
+          const thumbSize = axis === 'y' ? thumb.offsetHeight : thumb.offsetWidth;
+          const maxScroll = axis === 'y' ? element.scrollHeight - element.clientHeight : element.scrollWidth - element.clientWidth;
+          const next = startScroll + (delta / Math.max(1, trackSize - thumbSize)) * maxScroll;
+          if (axis === 'y') element.scrollTop = next;
+          else element.scrollLeft = next;
+        };
+        const onUp = () => {
+          thumb.releasePointerCapture(event.pointerId);
+          window.removeEventListener('pointermove', onMove);
+          window.removeEventListener('pointerup', onUp);
+        };
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', onUp, { once: true });
+      });
+    };
+
+    bindDrag(vertical, verticalThumb, 'y');
+    bindDrag(horizontal, horizontalThumb, 'x');
+    element.addEventListener('scroll', update, { passive: true });
+    new ResizeObserver(update).observe(element);
+    update();
+  };
+
+  const initPageScrollbar = () => {
+    if (document.querySelector('.xy-page-scrollbar')) return;
+    const track = document.createElement('span');
+    track.className = 'xy-custom-scrollbar xy-custom-scrollbar-y xy-page-scrollbar';
+    track.innerHTML = '<span></span>';
+    document.body.appendChild(track);
+    const thumb = track.firstElementChild;
+    const update = () => {
+      const scroller = document.scrollingElement || document.documentElement;
+      const hasScroll = scroller.scrollHeight > window.innerHeight + 1;
+      track.hidden = !hasScroll;
+      if (!hasScroll) return;
+      const trackSize = track.clientHeight || window.innerHeight;
+      const thumbSize = Math.max(38, (window.innerHeight / scroller.scrollHeight) * trackSize);
+      const maxTop = Math.max(0, trackSize - thumbSize);
+      const top = maxTop * (window.scrollY / Math.max(1, scroller.scrollHeight - window.innerHeight));
+      thumb.style.height = `${thumbSize}px`;
+      thumb.style.transform = `translate3d(0, ${top}px, 0)`;
+    };
+    thumb.addEventListener('pointerdown', event => {
+      event.preventDefault();
+      thumb.setPointerCapture(event.pointerId);
+      const scroller = document.scrollingElement || document.documentElement;
+      const startY = event.clientY;
+      const startScroll = window.scrollY;
+      const onMove = moveEvent => {
+        const maxScroll = scroller.scrollHeight - window.innerHeight;
+        const next = startScroll + ((moveEvent.clientY - startY) / Math.max(1, track.clientHeight - thumb.offsetHeight)) * maxScroll;
+        window.scrollTo({ top: next });
+      };
+      const onUp = () => {
+        thumb.releasePointerCapture(event.pointerId);
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+      };
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp, { once: true });
+    });
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update, { passive: true });
+    update();
+  };
+
+  const scan = () => {
+    document.querySelectorAll(selector).forEach(element => {
+      candidates.add(element);
+      syncElement(element);
+    });
+    initPageScrollbar();
+  };
+  scan();
+  let queued = false;
+  new MutationObserver(() => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => {
+      queued = false;
+      scan();
+      candidates.forEach(syncElement);
+    });
+  }).observe(document.body, { childList: true, subtree: true });
+  window.addEventListener('resize', scan, { passive: true });
+}
+
 function init() {
   setBetaFeaturesEnabled(getBetaFeaturesEnabled());
   syncNavigationLayoutMetrics();
+  initCustomScrollbars();
   renderProducts(products);
   initWeaoStatuses();
   initScriptsHub();
