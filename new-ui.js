@@ -299,55 +299,107 @@
     const grid = executorsPage.querySelector('#productGrid');
     if (grid) executorsPage.insertBefore(panel, grid);
   }
-  function getAiTokenData() {
+  const AI_TOKEN_API_BASE = '/api/ai';
+  const AI_TOKEN_FORBIDDEN_CACHE_FIELDS = new Set(['isAdmin', 'unlimitedTokens', 'role', 'plan', 'permissions', 'privileges']);
+  let trustedAiTokenSummary = null;
+
+  function clampTokenDisplayInteger(value, min, max) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return min;
+    return Math.max(min, Math.min(max, Math.trunc(number)));
+  }
+  function safeClientSessionId() {
     try {
-      const parsed = JSON.parse(localStorage.getItem(AI_TOKEN_STORAGE_KEY) || '{}');
-      return parsed && typeof parsed === 'object' ? parsed : {};
+      const existing = localStorage.getItem('xyrex_session_id');
+      if (/^[a-f0-9-]{24,80}$/i.test(existing || '')) return existing;
+      const generated = crypto.randomUUID ? crypto.randomUUID() : `${Math.random().toString(16).slice(2)}-${Math.random().toString(16).slice(2)}`;
+      localStorage.setItem('xyrex_session_id', generated);
+      return generated;
     } catch {
-      return {};
+      return '';
     }
   }
-  function writeAiTokenData(payload) {
-    localStorage.setItem(AI_TOKEN_STORAGE_KEY, JSON.stringify(payload));
+  function getAiAuthHeaders() {
+    const headers = { Accept: 'application/json' };
+    const sessionId = window.XyrexAuth?.getSessionToken?.() || window.XyrexAuth?.session?.access_token || safeClientSessionId();
+    if (sessionId) headers['x-xyrex-session'] = sessionId;
+    return headers;
   }
-  function getDayKey() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-  function normalizeTokenState(data) {
-    const next = { ...data };
-    const today = getDayKey();
-    if (next.aiTokenDate !== today) {
-      next.aiTokenDate = today;
-      next.aiTokensUsedToday = 0;
+  function hashDisplayCache(payload) {
+    let hash = 0x811c9dc5;
+    const text = `${payload}xyrex-token-display-cache-v2`;
+    for (let index = 0; index < text.length; index += 1) {
+      hash ^= text.charCodeAt(index);
+      hash = Math.imul(hash, 0x01000193) >>> 0;
     }
-    if (!Number.isFinite(next.aiTokensUsedToday) || next.aiTokensUsedToday < 0) next.aiTokensUsedToday = 0;
-    if (!Number.isFinite(next.aiPurchasedTokens) || next.aiPurchasedTokens < 0) next.aiPurchasedTokens = 0;
-    if (!Array.isArray(next.ownedModifiers)) next.ownedModifiers = ['Balanced'];
-    if (typeof next.selectedModifier !== 'string') next.selectedModifier = 'Balanced';
-    if (!Array.isArray(next.ownedPowerups)) next.ownedPowerups = [];
-    if (!Number.isFinite(next.coins) || next.coins < 0) next.coins = 0;
-    if (!Number.isFinite(next.bestScore) || next.bestScore < 0) next.bestScore = 0;
-    return next;
+    return hash.toString(36);
   }
-  function availableAiTokensFromState(data) {
-    const freeRemaining = Math.max(0, FREE_DAILY_AI_TOKENS - data.aiTokensUsedToday);
-    return freeRemaining + Math.max(0, data.aiPurchasedTokens);
+  function normalizeTokenCache(data) {
+    const source = data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+    AI_TOKEN_FORBIDDEN_CACHE_FIELDS.forEach(field => {
+      if (Object.prototype.hasOwnProperty.call(source, field)) delete source[field];
+    });
+    return {
+      aiTokenDate: /^\d{4}-\d{2}-\d{2}$/.test(String(source.aiTokenDate || '')) ? String(source.aiTokenDate) : '',
+      aiTokensUsedToday: clampTokenDisplayInteger(source.aiTokensUsedToday, 0, FREE_DAILY_AI_TOKENS),
+      aiPurchasedTokens: clampTokenDisplayInteger(source.aiPurchasedTokens, 0, 200),
+      freeTokenCooldownUntil: clampTokenDisplayInteger(source.freeTokenCooldownUntil, 0, Number.MAX_SAFE_INTEGER),
+      serverNow: clampTokenDisplayInteger(source.serverNow, 0, Number.MAX_SAFE_INTEGER),
+      __h: typeof source.__h === 'string' ? source.__h : ''
+    };
   }
-  function tryConsumeAiToken() {
-    const raw = getAiTokenData();
-    const data = normalizeTokenState(raw);
-    const available = availableAiTokensFromState(data);
-    if (available <= 0) return false;
-    const freeRemaining = Math.max(0, FREE_DAILY_AI_TOKENS - data.aiTokensUsedToday);
-    if (freeRemaining > 0) data.aiTokensUsedToday += 1;
-    else data.aiPurchasedTokens = Math.max(0, data.aiPurchasedTokens - 1);
-    writeAiTokenData(data);
-    return true;
+  function writeAiTokenCache(summary) {
+    if (!summary || typeof summary !== 'object') return;
+    const cache = normalizeTokenCache({
+      aiTokenDate: summary.tokenDate,
+      aiTokensUsedToday: summary.freeTokensUsedToday,
+      aiPurchasedTokens: summary.purchasedTokens,
+      freeTokenCooldownUntil: summary.freeTokenCooldownUntil,
+      serverNow: summary.serverNow
+    });
+    const { __h, ...withoutHash } = cache;
+    cache.__h = hashDisplayCache(JSON.stringify(withoutHash));
+    try {
+      localStorage.setItem(AI_TOKEN_STORAGE_KEY, JSON.stringify(cache));
+    } catch {
+      // Display cache failures must never affect backend token authority.
+    }
   }
+  async function refreshAiTokenSummary() {
+    try {
+      const response = await fetch(`${AI_TOKEN_API_BASE}/token-summary`, { headers: getAiAuthHeaders(), cache: 'no-store', credentials: 'same-origin' });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data?.summary) throw new Error(data?.error || `Token summary failed (${response.status})`);
+      trustedAiTokenSummary = data.summary;
+      writeAiTokenCache(data.summary);
+      return data.summary;
+    } catch (error) {
+      console.warn('AI token summary unavailable; using display cache only.', error);
+      return trustedAiTokenSummary;
+    }
+  }
+  async function tryConsumeAiToken() {
+    try {
+      const response = await fetch(`${AI_TOKEN_API_BASE}/consume-token`, {
+        method: 'POST',
+        headers: { ...getAiAuthHeaders(), 'Content-Type': 'application/json' },
+        body: '{}',
+        cache: 'no-store',
+        credentials: 'same-origin'
+      });
+      const data = await response.json().catch(() => ({}));
+      if (data?.summary) {
+        trustedAiTokenSummary = data.summary;
+        writeAiTokenCache(data.summary);
+      }
+      return Boolean(response.ok && data?.ok);
+    } catch (error) {
+      console.warn('AI token consume request failed.', error);
+      return false;
+    }
+  }
+  refreshAiTokenSummary();
+
   function productFromCard(card) {
     const name = card.querySelector('.product-name')?.textContent?.trim() || 'Unknown Executor';
     const catalogProduct = (Array.isArray(window.XYREX_EXECUTOR_PRODUCTS) ? window.XYREX_EXECUTOR_PRODUCTS : [])
@@ -552,7 +604,7 @@ Response nonce: ${nonce}`)}`, { signal: controller.signal });
     const mainContent = document.querySelector('.main-content');
     if (mainContent) mainContent.scrollTo({ top: 0, behavior: 'smooth' });
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    if (!tryConsumeAiToken()) {
+    if (!(await tryConsumeAiToken())) {
       window.alert('You have no AI Insight tokens remaining. Daily tokens reset at midnight, or you can buy more in the Token Shop.');
       return;
     }

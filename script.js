@@ -885,145 +885,191 @@ function openSuncSimulationModal(product) {
   requestAnimationFrame(step);
 }
 
-function getAiTokenSummary() {
-  const fallback = { available: 0, freeRemaining: 0, purchased: 0 };
-  return getFallbackAiTokenSummary() || fallback;
+const AI_TOKEN_API_BASE = '/api/ai';
+const AI_TOKEN_CACHE_HASH_KEY = 'xyrex-token-display-cache-v2';
+const AI_TOKEN_FORBIDDEN_CACHE_FIELDS = new Set(['isAdmin', 'unlimitedTokens', 'role', 'plan', 'permissions', 'privileges']);
+let trustedAiTokenSummary = null;
+let aiTokenServerOffsetMs = 0;
+
+function clampDisplayInteger(value, min, max) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return min;
+  return Math.max(min, Math.min(max, Math.trunc(number)));
 }
 
-function getLocalDayKey() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+function hashDisplayCache(payload) {
+  const text = `${payload}${AI_TOKEN_CACHE_HASH_KEY}`;
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(36);
+}
+
+function safeClientSessionId() {
+  try {
+    const existing = localStorage.getItem('xyrex_session_id');
+    if (/^[a-f0-9-]{24,80}$/i.test(existing || '')) return existing;
+    const generated = crypto.randomUUID ? crypto.randomUUID() : `${Math.random().toString(16).slice(2)}-${Math.random().toString(16).slice(2)}`;
+    localStorage.setItem('xyrex_session_id', generated);
+    return generated;
+  } catch {
+    return '';
+  }
+}
+
+function getAiAuthHeaders() {
+  const headers = { Accept: 'application/json' };
+  const sessionId = window.XyrexAuth?.getSessionToken?.() || window.XyrexAuth?.session?.access_token || safeClientSessionId();
+  if (sessionId) headers['x-xyrex-session'] = sessionId;
+  return headers;
 }
 
 function readFallbackAiTokenData() {
-    try {
-    const raw = localStorage.getItem(AI_TOKEN_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') return { key: AI_TOKEN_STORAGE_KEY, data: parsed };
-    }
+  try {
+    const parsed = JSON.parse(localStorage.getItem(AI_TOKEN_STORAGE_KEY) || '{}');
+    return { key: AI_TOKEN_STORAGE_KEY, data: parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {} };
   } catch {
-    // Ignore invalid saved token data and use defaults.
+    return { key: AI_TOKEN_STORAGE_KEY, data: {} };
   }
-  return { key: AI_TOKEN_STORAGE_KEY, data: {} };
 }
 
 function normalizeFallbackAiTokenData(data) {
-  const next = { ...(data || {}) };
-  const today = getLocalDayKey();
-  if (next.aiTokenDate !== today) {
-    next.aiTokenDate = today;
-    next.aiTokensUsedToday = 0;
-  }
-  next.aiTokensUsedToday = Math.max(0, Number(next.aiTokensUsedToday) || 0);
-  next.aiPurchasedTokens = Math.max(0, Number(next.aiPurchasedTokens) || 0);
-  next.freeTokenCooldownUntil = Math.max(0, Number(next.freeTokenCooldownUntil) || 0);
-  next.freeTokenLastClaimAmount = clampTokenClaimAmount(Number(next.freeTokenLastClaimAmount) || FREE_TOKEN_SHOP.minClaim);
+  const source = data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+  const next = {};
+  next.aiTokenDate = /^\d{4}-\d{2}-\d{2}$/.test(String(source.aiTokenDate || '')) ? String(source.aiTokenDate) : '';
+  next.aiTokensUsedToday = clampDisplayInteger(source.aiTokensUsedToday, 0, FREE_DAILY_AI_TOKENS);
+  next.aiPurchasedTokens = clampDisplayInteger(source.aiPurchasedTokens, 0, 200);
+  next.freeTokenCooldownUntil = clampDisplayInteger(source.freeTokenCooldownUntil, 0, Number.MAX_SAFE_INTEGER);
+  next.freeTokenLastClaimAmount = clampTokenClaimAmount(Number(source.freeTokenLastClaimAmount) || FREE_TOKEN_SHOP.minClaim);
+  next.serverNow = clampDisplayInteger(source.serverNow, 0, Number.MAX_SAFE_INTEGER);
+  Object.keys(source).forEach(key => {
+    if (AI_TOKEN_FORBIDDEN_CACHE_FIELDS.has(key)) return;
+    if (!(key in next) && key === '__h') next.__h = String(source.__h || '');
+  });
   return next;
 }
 
-function getFallbackAiTokenSummary() {
-  const { data } = readFallbackAiTokenData();
-  const normalized = normalizeFallbackAiTokenData(data);
-  const freeRemaining = Math.max(0, FREE_DAILY_AI_TOKENS - normalized.aiTokensUsedToday);
-  const purchased = Math.max(0, normalized.aiPurchasedTokens);
-  return { available: freeRemaining + purchased, freeRemaining, purchased };
+function writeTrustedAiTokenCache(summary) {
+  if (!summary || typeof summary !== 'object') return;
+  const cache = normalizeFallbackAiTokenData({
+    aiTokenDate: summary.tokenDate,
+    aiTokensUsedToday: summary.freeTokensUsedToday,
+    aiPurchasedTokens: summary.purchasedTokens,
+    freeTokenCooldownUntil: summary.freeTokenCooldownUntil,
+    serverNow: summary.serverNow
+  });
+  const { __h, ...cacheWithoutHash } = cache;
+  cache.__h = hashDisplayCache(JSON.stringify(cacheWithoutHash));
+  try {
+    localStorage.setItem(AI_TOKEN_STORAGE_KEY, JSON.stringify(cache));
+  } catch {
+    // Display cache failures must never affect backend authority.
+  }
 }
 
+function resetAiTokenCacheFromSummary(summary) {
+  trustedAiTokenSummary = summary && typeof summary === 'object' ? summary : trustedAiTokenSummary;
+  if (trustedAiTokenSummary) writeTrustedAiTokenCache(trustedAiTokenSummary);
+}
 
-
-function getFreeTokenShopStatus() {
-  const summary = getAiTokenSummary();
-  const tokenState = readFallbackAiTokenData();
-  const data = normalizeFallbackAiTokenData(tokenState.data);
-  const now = Date.now();
-  const cooldownUntil = Math.max(0, Number(data.freeTokenCooldownUntil) || 0);
-  const remainingMs = Math.max(0, cooldownUntil - now);
+function getCachedAiTokenSummary() {
+  if (trustedAiTokenSummary) return trustedAiTokenSummary;
+  const { data } = readFallbackAiTokenData();
+  const normalized = normalizeFallbackAiTokenData(data);
+  const { __h, ...cacheWithoutHash } = normalized;
+  const expected = hashDisplayCache(JSON.stringify(cacheWithoutHash));
+  if (!__h || __h !== expected) return null;
+  const serverNow = normalized.serverNow || 0;
+  const cooldownRemainingMs = Math.max(0, normalized.freeTokenCooldownUntil - serverNow);
+  const dailyFreeRemaining = Math.max(0, FREE_DAILY_AI_TOKENS - normalized.aiTokensUsedToday);
   return {
-    available: summary.available,
-    cooldownUntil,
-    remainingMs,
-    isReady: remainingMs <= 0
+    purchasedTokens: normalized.aiPurchasedTokens,
+    freeTokensUsedToday: normalized.aiTokensUsedToday,
+    freeTokenCooldownUntil: normalized.freeTokenCooldownUntil,
+    tokenDate: normalized.aiTokenDate,
+    serverNow,
+    dailyFreeTokenLimit: FREE_DAILY_AI_TOKENS,
+    dailyFreeRemaining,
+    cooldownRemainingMs,
+    freeAvailable: dailyFreeRemaining > 0 && cooldownRemainingMs <= 0,
+    availableTokens: normalized.aiPurchasedTokens + (dailyFreeRemaining > 0 && cooldownRemainingMs <= 0 ? 1 : 0)
   };
 }
 
-function claimFreeTokens(amountInput) {
-  const rawAmount = Number(amountInput);
-  if (!Number.isFinite(rawAmount)) {
-    return { ok: false, reason: 'Please enter a valid number.' };
+function getAiTokenSummary() {
+  const summary = getCachedAiTokenSummary();
+  if (!summary) return { available: 0, freeRemaining: 0, purchased: 0, serverNow: 0, cooldownUntil: 0, cooldownRemainingMs: 0 };
+  return {
+    available: clampDisplayInteger(summary.availableTokens, 0, 201),
+    freeRemaining: clampDisplayInteger(summary.dailyFreeRemaining, 0, FREE_DAILY_AI_TOKENS),
+    purchased: clampDisplayInteger(summary.purchasedTokens, 0, 200),
+    serverNow: clampDisplayInteger(summary.serverNow, 0, Number.MAX_SAFE_INTEGER),
+    cooldownUntil: clampDisplayInteger(summary.freeTokenCooldownUntil, 0, Number.MAX_SAFE_INTEGER),
+    cooldownRemainingMs: clampDisplayInteger(summary.cooldownRemainingMs, 0, Number.MAX_SAFE_INTEGER)
+  };
+}
+
+async function refreshAiTokenSummary() {
+  try {
+    const response = await fetch(`${AI_TOKEN_API_BASE}/token-summary`, { headers: getAiAuthHeaders(), cache: 'no-store', credentials: 'same-origin' });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data?.summary) throw new Error(data?.error || `Token summary failed (${response.status})`);
+    trustedAiTokenSummary = data.summary;
+    aiTokenServerOffsetMs = Number(data.summary.serverNow || 0) - Date.now();
+    resetAiTokenCacheFromSummary(data.summary);
+    return data.summary;
+  } catch (error) {
+    console.warn('AI token summary unavailable; cached display data only will be shown.', error);
+    return getCachedAiTokenSummary();
   }
-  const amount = clampTokenClaimAmount(rawAmount);
-  if (amount !== Math.trunc(rawAmount)) {
-    return { ok: false, reason: `Please enter a whole number between ${FREE_TOKEN_SHOP.minClaim} and ${FREE_TOKEN_SHOP.maxClaim}.` };
-  }
-  const tokenState = readFallbackAiTokenData();
-  const data = normalizeFallbackAiTokenData(tokenState.data);
-  const now = Date.now();
-  const cooldownUntil = Math.max(0, Number(data.freeTokenCooldownUntil) || 0);
-  if (cooldownUntil > now) {
-    return { ok: false, reason: `You can claim free tokens again in ${formatDuration(cooldownUntil - now)}.` };
-  }
-  const cooldownMs = getFreeTokenCooldownMs(amount);
-  data.aiPurchasedTokens = Math.max(0, Number(data.aiPurchasedTokens) || 0) + amount;
-  data.freeTokenLastClaimAmount = amount;
-  data.freeTokenCooldownUntil = now + cooldownMs;
-  localStorage.setItem(tokenState.key || AI_TOKEN_STORAGE_KEY, JSON.stringify(data));
-  return { ok: true, amount, cooldownMs };
+}
+
+function serverDisplayNow() {
+  return Math.max(0, Date.now() + aiTokenServerOffsetMs);
+}
+
+function getFreeTokenShopStatus() {
+  const summary = getAiTokenSummary();
+  const remainingMs = Math.max(0, summary.cooldownUntil - serverDisplayNow());
+  return {
+    available: summary.available,
+    cooldownUntil: summary.cooldownUntil,
+    remainingMs,
+    isReady: remainingMs <= 0 && summary.freeRemaining > 0
+  };
+}
+
+async function claimFreeTokens() {
+  return { ok: false, reason: 'Free AI usage is now granted only by the server when you submit an AI request.' };
 }
 
 function openEarnTokensModal() {
   const status = getFreeTokenShopStatus();
-  if (!status.isReady) {
-    openNoAiTokensModal(`Free token claims are on cooldown. Time remaining: ${formatDuration(status.remainingMs)}.`);
-    return;
-  }
-  const overlay = qs('#modalOverlay');
-  const content = qs('#modalContent');
-  if (!overlay || !content) return;
-  setCompactModal(true);
-  lastModalTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-  content.innerHTML = `
-    <section class="discord-unavailable-modal" aria-live="polite">
-      <div class="discord-unavailable-icon ai-token-unavailable-icon" aria-hidden="true"><span>+</span></div>
-      <h2>Earn Free Tokens</h2>
-      <p class="modal-headline">Choose a whole number from ${FREE_TOKEN_SHOP.minClaim} to ${FREE_TOKEN_SHOP.maxClaim}. Higher amounts apply a longer cooldown. Claiming ${FREE_TOKEN_SHOP.maxClaim} tokens sets a 1 week cooldown</p>
-      <label class="settings-note" for="earnTokensAmountInput">Token amount</label>
-      <input id="earnTokensAmountInput" type="number" min="${FREE_TOKEN_SHOP.minClaim}" max="${FREE_TOKEN_SHOP.maxClaim}" step="1" value="${FREE_TOKEN_SHOP.minClaim}" class="xy-amount-input">
-      <div class="settings-actions settings-actions-centered">
-        <button id="confirmEarnTokensBtn" class="btn-primary settings-action-btn" type="button">Claim Tokens</button>
-      </div>
-      <p id="earnTokensFeedback" class="settings-note" aria-live="polite"></p>
-    </section>`;
-  overlay.classList.remove('is-closing');
-  overlay.setAttribute('aria-hidden', 'false');
-  const amountInput = qs('#earnTokensAmountInput');
-  const feedback = qs('#earnTokensFeedback');
-  qs('#confirmEarnTokensBtn')?.addEventListener('click', () => {
-    const claim = claimFreeTokens(amountInput?.value ?? '');
-    if (!claim.ok) {
-      if (feedback) feedback.textContent = claim.reason;
-      return;
-    }
-    if (feedback) feedback.textContent = `Success. You earned ${claim.amount} token${claim.amount === 1 ? '' : 's'}. Cooldown: ${formatDuration(claim.cooldownMs)}.`;
-    window.setTimeout(() => openSettingsModal(), 550);
-  });
-  amountInput?.focus();
+  openNoAiTokensModal(status.isReady
+    ? 'Free AI usage is available. Send an AI request and the server will spend the free token automatically.'
+    : `Free AI usage is on cooldown. Time remaining: ${formatDuration(status.remainingMs)}.`);
 }
 
-function consumeAiTokenForAssistant() {
-  const tokenState = readFallbackAiTokenData();
-  const data = normalizeFallbackAiTokenData(tokenState.data);
-  const freeRemaining = Math.max(0, FREE_DAILY_AI_TOKENS - data.aiTokensUsedToday);
-  const purchased = Math.max(0, data.aiPurchasedTokens);
-  if (freeRemaining + purchased <= 0) return false;
-
-  if (freeRemaining > 0) data.aiTokensUsedToday += 1;
-  else data.aiPurchasedTokens = purchased - 1;
-  localStorage.setItem(tokenState.key || AI_TOKEN_STORAGE_KEY, JSON.stringify(data));
-  return true;
+async function consumeAiTokenForAssistant() {
+  try {
+    const response = await fetch(`${AI_TOKEN_API_BASE}/consume-token`, {
+      method: 'POST',
+      headers: { ...getAiAuthHeaders(), 'Content-Type': 'application/json' },
+      body: '{}',
+      cache: 'no-store',
+      credentials: 'same-origin'
+    });
+    const data = await response.json().catch(() => ({}));
+    if (data?.summary) resetAiTokenCacheFromSummary(data.summary);
+    if (response.status === 429) return { ok: false, reason: 'cooldown', summary: data.summary || null };
+    if (!response.ok || !data?.ok) return { ok: false, reason: data?.error || 'unavailable', summary: data?.summary || null };
+    return { ok: true, source: data.source, summary: data.summary };
+  } catch (error) {
+    console.warn('AI token consume request failed.', error);
+    return { ok: false, reason: 'network', summary: getCachedAiTokenSummary() };
+  }
 }
 
 function getBetaFeaturesEnabled() {
@@ -2284,9 +2330,14 @@ function initExploitAssistant() {
     const userMessage = String(rawMessage || input.value || '').trim();
     if (!userMessage) return;
 
-    if (!consumeAiTokenForAssistant()) {
-      appendMessage('bot', NO_ASSISTANT_TOKENS_MESSAGE, ['AI Tokens']);
-      openNoAiTokensModal();
+    const tokenConsume = await consumeAiTokenForAssistant();
+    if (!tokenConsume.ok) {
+      const remainingMs = Math.max(0, Number(tokenConsume.summary?.cooldownRemainingMs) || 0);
+      const message = tokenConsume.reason === 'cooldown' && remainingMs > 0
+        ? `You have no AI tokens available yet. Free AI usage unlocks in ${formatDuration(remainingMs)}.`
+        : NO_ASSISTANT_TOKENS_MESSAGE;
+      appendMessage('bot', message, ['AI Tokens']);
+      openNoAiTokensModal(message);
       return;
     }
 
@@ -2889,6 +2940,7 @@ function init() {
   initWeaoStatuses();
   initScriptsHub();
   injectLegendIcons();
+  refreshAiTokenSummary();
 
   qs('#searchInput').addEventListener('input', applyAllFilters);
   qs('#searchInput').addEventListener('keydown', e => {
