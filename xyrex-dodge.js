@@ -45,6 +45,20 @@
     Synthwave: { price: 260, description: 'High-energy neon blend with vivid lane and pickup glow', accent: '#ff7cd2', accent2: '#8c7bff', danger: '#ff5f86', track: '#24143f' }
   };
 
+  const UTILITY_SKINS = {
+    Pulse: { price: 0, description: 'Default utility HUD pulse with clear game feedback.' },
+    Aurora: { price: 160, description: 'Soft cyan and violet utility highlights for a premium feel.' },
+    Ember: { price: 210, description: 'Warm orange utility highlights that flare when utilities activate.' },
+    Prism: { price: 280, description: 'A multi-color utility aura for players who want maximum energy.' },
+  };
+
+  const DIFFICULTY_STAGES = [
+    { name: 'Easy', minScore: 0, minGap: 1, maxGap: 1, density: 1, interval: 1.1, speed: 0.92, label: 'Easy one-space jumps' },
+    { name: 'Medium', minScore: 18, minGap: 1, maxGap: 2, density: 2, interval: 0.9, speed: 1.04, label: 'More jumps, more often' },
+    { name: 'Hard', minScore: 42, minGap: 2, maxGap: 3, density: 3, interval: 0.72, speed: 1.18, label: 'Two-to-three-space jumps' },
+    { name: 'Very Hard', minScore: 82, minGap: 3, maxGap: 5, density: 4, interval: 0.52, speed: 1.38, label: 'Big jumps, very often, fast' },
+  ];
+
   const GAME_MODES = {
     Classic: {
       description: 'Steady survival mode with predictable scaling and no special rule changes',
@@ -146,6 +160,8 @@
     aiTokensUsedToday: 0,
     aiPurchasedTokens: 0,
     activeCheats: [],
+    utilitySkin: 'Pulse',
+    ownedUtilitySkins: ['Pulse'],
     betaDismissed: false,
     dailyStreak: 0,
     lastDailyClaimDate: '',
@@ -190,7 +206,8 @@
   }
 
   function saveStorage(data) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    if (typeof writeWithHash === 'function') writeWithHash(data);
+    else localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }
 
   function injectStyles() {
@@ -209,7 +226,8 @@
         background: linear-gradient(180deg, ${THEMES.panelAlt}, ${THEMES.panel}); border: 1px solid ${THEMES.border};
         border-radius: 18px; box-shadow: ${THEMES.cardShadow};
       }
-      .xy-dodge-hero { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(240px, 0.85fr); gap: 12px; padding: 14px; }
+      .xy-dodge-hero { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(240px, 0.85fr); gap: 12px; padding: 16px; position: relative; overflow: hidden; }
+      .xy-dodge-hero::before { content: ''; position: absolute; inset: -35% -10% auto 45%; height: 180px; background: radial-gradient(circle, ${withAlpha(THEMES.accent, 0.28, 'rgba(108,229,255,0.2)')}, transparent 65%); pointer-events: none; filter: blur(2px); }
       .xy-dodge-heading { display: grid; gap: 8px; align-content: start; }
       .xy-dodge-kicker { display: inline-flex; width: fit-content; padding: 5px 10px; border-radius: 999px; background: rgba(108,229,255,0.12); color: ${THEMES.accent}; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
       .xy-dodge-heading h2 { margin: 0; font-size: clamp(24px, 3vw, 34px); }
@@ -222,13 +240,16 @@
       .xy-dodge-chip span, .xy-dodge-mini-card span { display:block; font-size:11px; color:${THEMES.subtext}; text-transform:uppercase; letter-spacing:.04em; }
       .xy-dodge-chip strong, .xy-dodge-mode-card strong, .xy-dodge-mini-card strong { display: block; font-size: 17px; margin-top: 4px; }
       .xy-dodge-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.78fr); gap: 12px; align-items: start; }
-      .xy-dodge-board { padding: 12px; display: grid; gap: 10px; }
+      .xy-dodge-board { padding: 14px; display: grid; gap: 12px; position: relative; }
       .xy-dodge-toolbar, .xy-dodge-control-row, .xy-dodge-mobile-controls, .xy-dodge-segmented { display: flex; flex-wrap: wrap; gap: 8px; }
       .xy-dodge-control-row { align-items: center; }
       .xy-dodge-toolbar { justify-content: space-between; align-items: center; }
       .xy-dodge-badges { display: flex; flex-wrap: wrap; gap: 6px; }
       .xy-dodge-badge { padding: 6px 10px; border-radius: 999px; background: ${withAlpha(THEMES.accent2, 0.18, 'rgba(141,132,255,0.12)')}; color: ${THEMES.text}; font-size: 12px; display:inline-flex; align-items:center; justify-content:center; text-align:center; min-height:30px; line-height:1.2; }
-      .xy-dodge-canvas-wrap { position: relative; background: radial-gradient(circle at top, ${withAlpha(THEMES.accent, 0.16, 'rgba(108,229,255,0.08)')}, transparent 40%), ${THEMES.track}; border-radius: 16px; overflow: hidden; min-height: 250px; }
+      .xy-dodge-canvas-wrap { position: relative; background: radial-gradient(circle at top, ${withAlpha(THEMES.accent, 0.18, 'rgba(108,229,255,0.08)')}, transparent 42%), linear-gradient(180deg, ${withAlpha(THEMES.accent2, 0.08, 'rgba(141,132,255,0.08)')}, transparent 52%), ${THEMES.track}; border-radius: 18px; overflow: hidden; min-height: 250px; border: 1px solid ${withAlpha(THEMES.accent, 0.22, 'rgba(108,229,255,0.18)')}; box-shadow: inset 0 0 28px rgba(0,0,0,0.28), 0 16px 38px rgba(0,0,0,0.28); }
+      .xy-dodge-canvas-wrap:fullscreen { width: 100vw; height: 100vh; border-radius: 0; display: grid; place-items: center; background: ${THEMES.track}; }
+      .xy-dodge-canvas-wrap:fullscreen .xy-dodge-canvas { width: min(100vw, calc(100vh * 960 / 620)); height: min(100vh, calc(100vw * 620 / 960)); border-radius: 0; }
+      .xy-dodge-fullscreen-hint { position:absolute; right:12px; bottom:10px; padding:6px 10px; border-radius:999px; background:rgba(2,7,17,.62); color:${THEMES.subtext}; font-size:11px; pointer-events:none; }
       .xy-dodge-canvas { display: block; width: 100%; height: auto; aspect-ratio: 960 / 620; border-radius: 16px; }
       .xy-dodge-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(2, 7, 17, 0.64); backdrop-filter: blur(6px); }
       .xy-dodge-overlay[hidden] { display: none; }
@@ -261,6 +282,11 @@
       .xy-dodge-toast[data-tone='warning'] { background: rgba(255, 209, 102, 0.13); }
       .xy-dodge-toast[data-tone='danger'] { background: rgba(255, 111, 159, 0.18); }
       .xy-dodge-toast[data-tone='ok'] { animation: xyPulse 0.35s ease; }
+      .xy-dodge-shop-note { margin: 0; color: ${THEMES.subtext}; font-size: 12px; line-height: 1.45; }
+      .xy-dodge-difficulty-chip { border-color: ${withAlpha(THEMES.warning, 0.36, 'rgba(255,209,102,.32)')}; background: ${withAlpha(THEMES.warning, 0.12, 'rgba(255,209,102,.12)')}; }
+      .xy-dodge-shell[data-utility-skin='Aurora'] .xy-dodge-utility-label { border-color: rgba(108,229,255,.42); }
+      .xy-dodge-shell[data-utility-skin='Ember'] .xy-dodge-utility-label { border-color: rgba(255,170,94,.45); }
+      .xy-dodge-shell[data-utility-skin='Prism'] .xy-dodge-utility-label { border-color: rgba(255,124,210,.45); box-shadow: 0 0 20px rgba(141,132,255,.12); }
       .xy-dodge-segmented { background: ${withAlpha(THEMES.panelAlt, 0.62, 'rgba(255,255,255,0.04)')}; border-radius: 14px; padding: 4px; border:1px solid ${withAlpha(THEMES.accent2, 0.28, 'rgba(178,188,255,0.22)')}; }
       .xy-dodge-segmented button { flex: 1; min-width: 88px; }
       .xy-dodge-compact-grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:10px; }
@@ -393,6 +419,8 @@
           selectedPowerup: POWERUPS[remote.selectedPowerup] ? remote.selectedPowerup : this.data.selectedPowerup,
           ownedVisualThemes: Array.isArray(remote.ownedVisualThemes) && remote.ownedVisualThemes.length ? remote.ownedVisualThemes.filter(item => VISUAL_THEMES[item]) : this.data.ownedVisualThemes,
           selectedVisualTheme: VISUAL_THEMES[remote.selectedVisualTheme] ? remote.selectedVisualTheme : this.data.selectedVisualTheme,
+          ownedUtilitySkins: Array.isArray(remote.ownedUtilitySkins) && remote.ownedUtilitySkins.length ? remote.ownedUtilitySkins.filter(item => UTILITY_SKINS[item]) : this.data.ownedUtilitySkins,
+          utilitySkin: UTILITY_SKINS[remote.utilitySkin] ? remote.utilitySkin : this.data.utilitySkin,
           selectedMode: GAME_MODES[remote.selectedMode] ? remote.selectedMode : this.data.selectedMode,
         };
         this.ensureTokenState();
@@ -542,7 +570,7 @@
       const visibleMode = betaEnabled ? this.data.selectedMode : 'Classic';
       const classicProgress = this.data.bestScore || 0;
       this.mount.innerHTML = `
-        <section class="xy-dodge-shell" data-beta="${betaEnabled}" aria-label="Xyrex Dodge">
+        <section class="xy-dodge-shell" data-beta="${betaEnabled}" data-utility-skin="${this.data.utilitySkin || 'Pulse'}" aria-label="Xyrex Dodge">
           <section class="xy-dodge-hero">
             <div class="xy-dodge-heading">
               <span class="xy-dodge-kicker">Full features enabled</span>
@@ -575,15 +603,18 @@
                   <span class="xy-dodge-badge" id="xyRunCoins">Coins: 0</span>
                   <span class="xy-dodge-badge" id="xyRunCombo">Combo: 0</span>
                   <span class="xy-dodge-badge" id="xyRunLives">Lives: 1</span>
+                  <span class="xy-dodge-badge xy-dodge-difficulty-chip" id="xyDifficultyBadge">Easy</span>
                 </div>
                 <div class="xy-dodge-control-row">
                   <button class="xy-dodge-button" id="xyPauseBtn" type="button">Pause</button>
+                  <button class="xy-dodge-button" id="xyFullscreenBtn" type="button">Fullscreen Game</button>
                   <button class="xy-dodge-button xy-dodge-button--danger" id="xyRestartBtn" type="button">Restart</button>
                 </div>
               </div>
-              <div class="xy-dodge-canvas-wrap">
+              <div class="xy-dodge-canvas-wrap" id="xyCanvasWrap">
                 <canvas class="xy-dodge-canvas" id="xyGameCanvas" width="${BOARD.width}" height="${BOARD.height}" tabindex="0" aria-label="Dodge game board"></canvas>
                 <div class="xy-dodge-overlay" id="xyOverlay" hidden></div>
+                <span class="xy-dodge-fullscreen-hint">Game-only fullscreen</span>
               </div>
               <div class="xy-dodge-mobile-controls" id="xyMobileControls" hidden>
                 <button type="button" class="xy-dodge-button" data-mobile-move="left">◀ Move Left</button>
@@ -608,19 +639,16 @@
                 <div id="xyMissionCard"></div>
               </section>
               <section class="xy-dodge-panel">
-                <h3>Token Shop</h3>
-                <div class="xy-dodge-shop-grid">
-                  <button class="xy-dodge-button xy-dodge-button--primary" type="button" data-token-pack="1" data-token-cost="60">60 coins → 1 token</button>
-                  <button class="xy-dodge-button xy-dodge-button--primary" type="button" data-token-pack="3" data-token-cost="150">150 coins → 3 tokens</button>
-                  <button class="xy-dodge-button xy-dodge-button--primary" type="button" data-token-pack="7" data-token-cost="300">300 coins → 7 tokens</button>
-                </div>
+                <h3>Coin upgrades</h3>
+                <p class="xy-dodge-shop-note">The former token exchange has been removed from Dodge. Spend Dodge coins on utility skins instead.</p>
+                <div class="xy-dodge-shop-grid" id="xyUtilitySkinShop"></div>
               </section>
               <section class="xy-dodge-panel xy-dodge-panel--beta" id="xyCheatCard" ${betaEnabled ? '' : 'hidden'}>
                 <h3>Utilities</h3>
                 <label class="xy-dodge-utility-label"><input type="checkbox" data-cheat="autoplay" /> Auto Play</label>
                 <label class="xy-dodge-utility-label"><input type="checkbox" data-cheat="nodeath" /> No Death</label>
                 <label class="xy-dodge-utility-label"><input type="checkbox" data-cheat="slowtime" /> Slow Time</label>
-                <label class="xy-dodge-utility-label"><input type="checkbox" data-cheat="ghost" /> Ghost Trail</label>
+                <label class="xy-dodge-utility-label"><input type="checkbox" data-cheat="ghost" /> Gap Warp</label>
                 <small>Coins are disabled while utilities are active.</small>
               </section>
             </aside>
@@ -634,6 +662,8 @@
       this.tabContent = this.mount.querySelector('#xyTabContent');
       this.pauseBtn = this.mount.querySelector('#xyPauseBtn');
       this.restartBtn = this.mount.querySelector('#xyRestartBtn');
+      this.fullscreenBtn = this.mount.querySelector('#xyFullscreenBtn');
+      this.canvasWrap = this.mount.querySelector('#xyCanvasWrap');
       this.statusEl = this.mount.querySelector('#xyStatus');
       this.bestEl = this.mount.querySelector('#xyBest');
       this.bankEl = this.mount.querySelector('#xyBank');
@@ -644,6 +674,7 @@
       this.runCoinsEl = this.mount.querySelector('#xyRunCoins');
       this.runComboEl = this.mount.querySelector('#xyRunCombo');
       this.runLivesEl = this.mount.querySelector('#xyRunLives');
+      this.difficultyBadgeEl = this.mount.querySelector('#xyDifficultyBadge');
       this.currentModeLabelEl = this.mount.querySelector('#xyCurrentModeLabel');
       this.modeObjectiveEl = this.mount.querySelector('#xyModeObjective');
       this.tokenCountEl = this.mount.querySelector('#xyTokenCount');
@@ -653,6 +684,7 @@
       this.missionCardEl = this.mount.querySelector('#xyMissionCard');
       this.cheatCard = this.mount.querySelector('#xyCheatCard');
       this.cheatInputs = Array.from(this.mount.querySelectorAll('[data-cheat]'));
+      this.utilitySkinShopEl = this.mount.querySelector('#xyUtilitySkinShop');
       this.modifierSelect = this.mount.querySelector('#xyModifierSelect');
       this.powerupSelect = this.mount.querySelector('#xyPowerupSelect');
       this.buyModifierBtn = this.mount.querySelector('#xyBuyModifierBtn');
@@ -661,14 +693,17 @@
       if (this.tabContent) this.renderTab('modes');
       this.registerUiListeners();
       this.syncUi();
+      this.renderUtilitySkinShop();
       this.applyResponsiveState();
     }
 
     registerUiListeners() {
       this.pauseBtn.addEventListener('click', () => this.togglePause());
       this.restartBtn.addEventListener('click', () => this.restart());
-      this.mount.querySelectorAll('[data-token-pack]').forEach(button => {
-        button.addEventListener('click', () => this.buyTokenPack(Number(button.dataset.tokenPack), Number(button.dataset.tokenCost)));
+      this.fullscreenBtn?.addEventListener('click', () => this.toggleGameFullscreen());
+      this.mount.addEventListener('click', event => {
+        const skinButton = event.target?.closest?.('[data-utility-skin]');
+        if (skinButton) this.buyUtilitySkin(skinButton.dataset.utilitySkin || 'Pulse');
       });
       this.mount.querySelectorAll('[data-tab]').forEach(button => {
         button.addEventListener('click', () => this.renderTab(button.dataset.tab || 'modes'));
@@ -716,6 +751,10 @@
         if (key === 'p' && !formTarget) {
           event.preventDefault();
           this.togglePause();
+        }
+        if (key === 'f' && !formTarget) {
+          event.preventDefault();
+          this.toggleGameFullscreen();
         }
         if (key === 'r' && !formTarget) {
           event.preventDefault();
@@ -948,6 +987,7 @@
       writeIfChanged('runCoins', this.runCoins, this.runCoinsEl, value => `Coins: ${value}`);
       writeIfChanged('runCombo', this.combo, this.runComboEl, value => `Combo: ${value}`);
       writeIfChanged('runLives', this.lives || 1, this.runLivesEl, value => `Lives: ${value}`);
+      writeIfChanged('difficulty', this.currentDifficultyStage().name, this.difficultyBadgeEl, value => `Difficulty: ${value}`);
       writeIfChanged('modeName', visibleModeName, this.currentModeLabelEl);
       writeIfChanged('modeObjective', mode.objective, this.modeObjectiveEl);
       writeIfChanged('availableTokens', this.availableAiTokens(), this.tokenCountEl, String);
@@ -968,6 +1008,7 @@
       }
       this.syncLoadoutButtons();
       this.updateCheatUi();
+      this.renderUtilitySkinShop();
     }
 
     renderMissionCard() {
@@ -1002,6 +1043,32 @@
         input.disabled = !betaEnabled;
         input.checked = cheats.has(String(input.dataset.cheat || ''));
       });
+    }
+
+    renderUtilitySkinShop() {
+      if (!this.utilitySkinShopEl) return;
+      const owned = Array.isArray(this.data.ownedUtilitySkins) ? this.data.ownedUtilitySkins : ['Pulse'];
+      const signature = JSON.stringify({ owned, selected: this.data.utilitySkin || 'Pulse', coins: this.data.coins || 0 });
+      if (signature === this.lastUtilitySkinSignature) return;
+      this.lastUtilitySkinSignature = signature;
+      this.utilitySkinShopEl.innerHTML = Object.entries(UTILITY_SKINS).map(([name, skin]) => {
+        const isOwned = owned.includes(name);
+        const selected = (this.data.utilitySkin || 'Pulse') === name;
+        const label = selected ? 'Equipped' : isOwned ? 'Equip' : `Buy for ${skin.price} coins`;
+        return `<button class="xy-dodge-button ${selected ? 'xy-dodge-button--primary' : ''}" type="button" data-utility-skin="${name}"><strong>${name}</strong><br><small>${skin.description}</small><br><small>${label}</small></button>`;
+      }).join('');
+    }
+
+    toggleGameFullscreen() {
+      const target = this.canvasWrap || this.canvas;
+      if (!target) return;
+      if (document.fullscreenElement === target) {
+        document.exitFullscreen?.();
+        return;
+      }
+      target.requestFullscreen?.().then(() => {
+        this.canvas.focus({ preventScroll: true });
+      }).catch(() => this.flashStatus('Fullscreen is not available in this browser.', 'warning'));
     }
 
     flashStatus(text, tone = 'ok') {
@@ -1084,17 +1151,30 @@
       this.flashStatus(`${this.data.selectedVisualTheme} theme unlocked.`, 'ok');
     }
 
-    buyTokenPack(amount, cost) {
-      if (!Number.isFinite(amount) || !Number.isFinite(cost) || amount <= 0 || cost <= 0) return;
-      if (this.data.coins < cost) {
-        this.flashStatus('Not enough coins for tokens.', 'warning');
+    buyUtilitySkin(name) {
+      const skin = UTILITY_SKINS[name];
+      if (!skin) return;
+      if (!Array.isArray(this.data.ownedUtilitySkins)) this.data.ownedUtilitySkins = ['Pulse'];
+      if (this.data.ownedUtilitySkins.includes(name)) {
+        this.data.utilitySkin = name;
+        this.mount.querySelector('.xy-dodge-shell')?.setAttribute('data-utility-skin', name);
+        this.saveData();
+        this.renderUtilitySkinShop();
+        this.flashStatus(`${name} utility skin equipped.`, 'ok');
         return;
       }
-      this.data.coins -= cost;
-      this.data.aiPurchasedTokens += amount;
+      if (this.data.coins < skin.price) {
+        this.flashStatus('Not enough coins for this utility skin.', 'warning');
+        return;
+      }
+      this.data.coins -= skin.price;
+      this.data.ownedUtilitySkins.push(name);
+      this.data.utilitySkin = name;
+      this.mount.querySelector('.xy-dodge-shell')?.setAttribute('data-utility-skin', name);
       this.saveData();
       this.syncUi();
-      this.flashStatus(`Purchased ${amount} AI token${amount > 1 ? 's' : ''}.`, 'ok');
+      this.renderUtilitySkinShop();
+      this.flashStatus(`${name} utility skin unlocked.`, 'ok');
     }
 
     start() {
@@ -1168,83 +1248,115 @@
       this.flashStatus(this.paused ? 'Paused.' : 'Resumed.', this.paused ? 'warning' : 'ok');
     }
 
+    currentDifficultyStage() {
+      const score = Number(this.score || 0);
+      return [...DIFFICULTY_STAGES].reverse().find(stage => score >= stage.minScore) || DIFFICULTY_STAGES[0];
+    }
+
     currentSpeed(elapsed) {
-      const cheatSlow = this.activeCheatSet().has('slowtime') ? 0.65 : 1;
-      return clamp((3.4 + elapsed * 0.1 + this.score * 0.016) * this.mode.speed * this.modifier.pressure * cheatSlow, 2.8, 18);
+      const stage = this.currentDifficultyStage();
+      const cheatSlow = this.activeCheatSet().has('slowtime') ? 0.5 : 1;
+      return clamp((3.2 + elapsed * 0.095 + this.score * 0.018) * this.mode.speed * this.modifier.pressure * stage.speed * cheatSlow, 1.4, 22);
     }
 
     currentSpawnInterval(elapsed) {
-      const cheatSlow = this.activeCheatSet().has('slowtime') ? 1.25 : 1;
+      const stage = this.currentDifficultyStage();
+      const cheatSlow = this.activeCheatSet().has('slowtime') ? 2 : 1;
       const modeModifier = this.mode.interval;
-      return clamp((1.15 - elapsed * 0.0022 - this.score * 0.0011) * modeModifier * cheatSlow, 0.22, 1.6);
+      return clamp((1.18 - elapsed * 0.0024 - this.score * 0.0012) * modeModifier * stage.interval * cheatSlow, 0.16, 1.75);
     }
 
     lanePressure() {
       const pressure = Array(BOARD.lanes).fill(0);
       for (const block of this.blocks) {
         const distance = Math.max(20, this.player.y - block.y);
-        pressure[block.lane] += 200 / distance;
+        pressure[block.lane] += 220 / distance;
+        if (block.y < this.player.y && block.y + block.h > this.player.y - 120) pressure[block.lane] += 5;
       }
       return pressure;
     }
 
-    safeLanes() {
+    safeLanes(buffer = 70) {
       const blocked = new Set();
       for (const block of this.blocks) {
-        if (block.y + block.h > this.player.y - 60 && block.y < this.player.y + 20) blocked.add(block.lane);
+        if (block.y + block.h > this.player.y - buffer && block.y < this.player.y + 26) blocked.add(block.lane);
       }
       return [...Array(BOARD.lanes).keys()].filter(lane => !blocked.has(lane));
     }
 
-    choosePattern() {
-      const patterns = [[0], [1], [2], [3], [4], [5], [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [0, 2], [1, 3], [2, 4], [3, 5], [0, 3], [1, 4], [2, 5], [0, 1, 3], [1, 2, 4], [2, 3, 5], [0, 2, 4], [1, 3, 5]];
-      const safe = this.safeLanes();
+    findBestEmergencyLane(preferredLane = this.player.targetLane) {
       const pressure = this.lanePressure();
-      const currentLane = this.player.targetLane;
-      let bestScore = -Infinity;
-      let bestPattern = patterns[0];
-      for (const pattern of patterns) {
-        const futureSafe = [...Array(BOARD.lanes).keys()].filter(lane => !pattern.includes(lane));
-        if (!futureSafe.length) continue;
-        let score = pattern.length * (0.55 + this.mode.modeScore * 0.2);
-        for (const lane of pattern) score += Math.max(0, 2.4 - pressure[lane]) + Math.abs(lane - currentLane) * 0.35;
-        if (safe.length && safe.every(lane => pattern.includes(lane))) score -= 40;
-        score += Math.random() * 0.5;
-        if (score > bestScore) {
-          bestScore = score;
-          bestPattern = pattern;
-        }
-      }
-      return bestPattern;
+      const lanes = [...Array(BOARD.lanes).keys()];
+      return lanes.reduce((best, lane) => {
+        const laneScore = pressure[lane] + Math.abs(lane - preferredLane) * 0.36;
+        const bestScore = pressure[best] + Math.abs(best - preferredLane) * 0.36;
+        return laneScore < bestScore ? lane : best;
+      }, lanes[0]);
+    }
+
+    choosePattern() {
+      const stage = this.currentDifficultyStage();
+      const lanes = [...Array(BOARD.lanes).keys()];
+      const pressure = this.lanePressure();
+      const currentLane = clamp(Math.round(this.player.targetLane ?? this.player.lane ?? 2), 0, BOARD.lanes - 1);
+      const desiredGap = clamp(currentLane + (Math.random() < 0.5 ? -1 : 1) * (stage.minGap + Math.floor(Math.random() * (stage.maxGap - stage.minGap + 1))), 0, BOARD.lanes - 1);
+      const fallbackGap = desiredGap === currentLane
+        ? clamp(currentLane + (currentLane < BOARD.lanes / 2 ? stage.minGap : -stage.minGap), 0, BOARD.lanes - 1)
+        : desiredGap;
+      const pickupLane = this.pickups
+        .filter(pickup => pickup.y < this.player.y && pickup.y > BOARD.height * 0.12)
+        .sort((a, b) => Math.abs(a.lane - fallbackGap) - Math.abs(b.lane - fallbackGap))[0]?.lane;
+      const safeGap = Number.isInteger(pickupLane) && Math.abs(pickupLane - currentLane) <= stage.maxGap + 1 ? pickupLane : fallbackGap;
+      const secondaryGap = clamp(safeGap + (safeGap <= currentLane ? 1 : -1), 0, BOARD.lanes - 1);
+      const openLanes = new Set([safeGap]);
+      if (stage.name === 'Easy') openLanes.add(secondaryGap);
+      if (stage.name === 'Medium' && Math.random() < 0.34) openLanes.add(secondaryGap);
+      const targetBlockCount = clamp(stage.density + Math.floor(this.score / 55), 1, BOARD.lanes - 1);
+      const candidates = lanes
+        .filter(lane => !openLanes.has(lane))
+        .sort((a, b) => {
+          const aScore = Math.abs(a - currentLane) * 0.55 - pressure[a] + Math.random() * 0.35;
+          const bScore = Math.abs(b - currentLane) * 0.55 - pressure[b] + Math.random() * 0.35;
+          return bScore - aScore;
+        });
+      const pattern = candidates.slice(0, targetBlockCount);
+      if (!pattern.length) pattern.push(lanes.find(lane => lane !== safeGap) ?? 0);
+      return [...new Set(pattern)].filter(lane => lane >= 0 && lane < BOARD.lanes);
     }
 
     spawnWave(elapsed) {
       this.level = 1 + Math.floor(this.score / 18);
       const laneWidth = BOARD.width / BOARD.lanes;
       const speed = this.currentSpeed(elapsed);
+      const stage = this.currentDifficultyStage();
       const pattern = this.choosePattern();
       pattern.forEach(lane => {
-        this.blocks.push({ lane, x: lane * laneWidth + 12, y: -48, w: laneWidth - 24, h: 36, speed, color: lane % 2 ? THEMES.danger : THEMES.accent2 });
+        this.blocks.push({ lane, x: lane * laneWidth + 12, y: -48, w: laneWidth - 24, h: stage.name === 'Very Hard' ? 42 : 36, speed, color: lane % 2 ? THEMES.danger : THEMES.accent2 });
       });
       if (this.isBetaEnabled() && Math.random() < this.mode.pickups) {
         const openLanes = [...Array(BOARD.lanes).keys()].filter(lane => !pattern.includes(lane));
-        const lane = pick(openLanes.length ? openLanes : [2]);
+        const preferredLane = openLanes.sort((a, b) => Math.abs(a - this.player.targetLane) - Math.abs(b - this.player.targetLane))[0];
+        const lane = Number.isInteger(preferredLane) ? preferredLane : pick(openLanes.length ? openLanes : [2]);
         this.pickups.push({ lane, x: lane * laneWidth + laneWidth / 2, y: -30, size: 11, speed: speed * 0.82 });
       }
     }
 
     chooseAutoplayLane() {
-      const safe = this.safeLanes();
-      if (!safe.length) return this.player.targetLane;
+      let safe = this.safeLanes(120);
+      if (!safe.length) {
+        const emergencyLane = this.findBestEmergencyLane();
+        this.blocks = this.blocks.filter(block => !(block.lane === emergencyLane && block.y + block.h > this.player.y - 140 && block.y < this.player.y + 32));
+        safe = [emergencyLane];
+      }
       const pressure = this.lanePressure();
       const pickupCandidate = this.pickups
-        .filter(pickup => safe.includes(pickup.lane) && pickup.y > BOARD.height * 0.18 && pickup.y < this.player.y + 24)
+        .filter(pickup => safe.includes(pickup.lane) && pickup.y > BOARD.height * 0.08 && pickup.y < this.player.y + 34)
         .sort((a, b) => {
-          const scoreA = pressure[a.lane] + Math.abs(a.lane - this.player.targetLane) * 0.18 + Math.abs(this.player.y - a.y) * 0.002;
-          const scoreB = pressure[b.lane] + Math.abs(b.lane - this.player.targetLane) * 0.18 + Math.abs(this.player.y - b.y) * 0.002;
+          const scoreA = pressure[a.lane] * 0.18 + Math.abs(a.lane - this.player.targetLane) * 0.24 + Math.abs(this.player.y - a.y) * 0.001;
+          const scoreB = pressure[b.lane] * 0.18 + Math.abs(b.lane - this.player.targetLane) * 0.24 + Math.abs(this.player.y - b.y) * 0.001;
           return scoreA - scoreB;
         })[0];
-      if (pickupCandidate && pressure[pickupCandidate.lane] < 1.35) return pickupCandidate.lane;
+      if (pickupCandidate) return pickupCandidate.lane;
       return safe.reduce((best, lane) => {
         if (pressure[lane] !== pressure[best]) return pressure[lane] < pressure[best] ? lane : best;
         return Math.abs(lane - this.player.targetLane) < Math.abs(best - this.player.targetLane) ? lane : best;
@@ -1253,26 +1365,28 @@
 
     updatePlayer() {
       const cheats = this.activeCheatSet();
+      const laneWidth = BOARD.width / BOARD.lanes;
       if (cheats.has('autoplay') || cheats.has('ghost')) {
         this.player.targetLane = this.chooseAutoplayLane();
       }
+      const targetX = this.player.targetLane * laneWidth + laneWidth / 2;
       if (cheats.has('ghost')) {
+        this.player.x = targetX;
         if ((this.frameCounter || 0) % 2 === 0) {
           this.particles.push({
             x: this.player.x,
             y: this.player.y + 4,
-            vx: 0,
-            vy: 0.18,
-            life: 0.34,
-            size: 6,
-            color: withAlpha(THEMES.accent, 0.26, 'rgba(108,229,255,0.26)')
+            vx: (Math.random() - 0.5) * 1.2,
+            vy: 0.22,
+            life: 0.42,
+            size: 7,
+            color: withAlpha(THEMES.accent, 0.34, 'rgba(108,229,255,0.34)')
           });
         }
-        if (this.particles.length > 72) this.particles.shift();
+        if (this.particles.length > 96) this.particles.shift();
+        return;
       }
-      const laneWidth = BOARD.width / BOARD.lanes;
-      const targetX = this.player.targetLane * laneWidth + laneWidth / 2;
-      const quickstep = this.powerups.has('Quickstep');
+      const quickstep = this.powerups.has('Quickstep') || cheats.has('autoplay');
       const lerpSpeed = quickstep ? 1 : 0.17 * this.modifier.playerSpeed;
       this.player.x += (targetX - this.player.x) * lerpSpeed;
     }
@@ -1298,8 +1412,10 @@
     }
 
     handleCollision() {
-      if (this.activeCheatSet().has('nodeath')) {
-        this.flashStatus('No Death blocked the hit.', 'warning');
+      const cheats = this.activeCheatSet();
+      if (cheats.has('nodeath') || cheats.has('autoplay') || cheats.has('ghost')) {
+        this.blocks = this.blocks.filter(block => !this.intersectsPlayer(block));
+        this.flashStatus(cheats.has('ghost') ? 'Gap Warp phased through danger.' : cheats.has('autoplay') ? 'Auto Play corrected a collision.' : 'No Death blocked the hit.', 'warning');
         return;
       }
       if (this.lives > 1) {
@@ -1534,6 +1650,7 @@
   const _JSON_stringify = JSON.stringify.bind(JSON);
   const PROTECTED_KEYS = new Set([TOKEN_SAVE_KEY, TOKEN_LEGACY_KEY]);
   const MAX_PURCHASED_TOKENS = 200;
+  const MAX_DODGE_COINS = 250000;
   const MAX_USED_TODAY = 5;
   const MAX_COOLDOWN_MS = 8 * 24 * 60 * 60 * 1000;
   const HASH_KEY = '__xyrex_ih__';
@@ -1559,12 +1676,22 @@
   function sanitizeData(data) {
     if (!data || typeof data !== 'object') return {};
     const now = Date.now();
+    const validCheats = new Set(['autoplay', 'nodeath', 'slowtime', 'ghost']);
+    const ownedUtilitySkins = Array.isArray(data.ownedUtilitySkins)
+      ? data.ownedUtilitySkins.filter(item => UTILITY_SKINS[item])
+      : ['Pulse'];
+    if (!ownedUtilitySkins.includes('Pulse')) ownedUtilitySkins.unshift('Pulse');
     return {
       ...data,
+      coins: clampInt(data.coins, 0, MAX_DODGE_COINS),
+      runCoins: clampInt(data.runCoins, 0, MAX_DODGE_COINS),
       aiPurchasedTokens: clampInt(data.aiPurchasedTokens, 0, MAX_PURCHASED_TOKENS),
       aiTokensUsedToday: clampInt(data.aiTokensUsedToday, 0, MAX_USED_TODAY),
       freeTokenCooldownUntil: clampInt(data.freeTokenCooldownUntil, 0, now + MAX_COOLDOWN_MS),
       freeTokenLastClaimAmount: clampInt(data.freeTokenLastClaimAmount, 0, 30),
+      activeCheats: Array.isArray(data.activeCheats) ? [...new Set(data.activeCheats.map(item => String(item).toLowerCase()).filter(item => validCheats.has(item)))] : [],
+      ownedUtilitySkins,
+      utilitySkin: UTILITY_SKINS[data.utilitySkin] && ownedUtilitySkins.includes(data.utilitySkin) ? data.utilitySkin : 'Pulse',
     };
   }
 
@@ -1588,9 +1715,14 @@
     const { __h, ...rest } = data;
     const clean = sanitizeData(rest);
     const expected = simpleHash(_JSON_stringify(clean) + HASH_KEY);
+    if (!__h) {
+      writeWithHash(clean);
+      return clean;
+    }
     if (__h !== expected) {
-      writeWithHash({});
-      return sanitizeData({});
+      const repaired = { ...clean, coins: 0, aiPurchasedTokens: 0, aiTokensUsedToday: 0, freeTokenCooldownUntil: 0 };
+      writeWithHash(repaired);
+      return sanitizeData(repaired);
     }
     return clean;
   }
@@ -1635,10 +1767,10 @@
       const clean = sanitizeData(rest);
       const expected = simpleHash(_JSON_stringify(clean) + HASH_KEY);
       if (__h !== expected) {
-        writeWithHash({});
+        writeWithHash({ ...clean, coins: 0, aiPurchasedTokens: 0, aiTokensUsedToday: 0, freeTokenCooldownUntil: 0 });
         return;
       }
-      if (Number(rest.aiPurchasedTokens) > MAX_PURCHASED_TOKENS || Number(rest.aiTokensUsedToday) > MAX_USED_TODAY) {
+      if (Number(rest.aiPurchasedTokens) > MAX_PURCHASED_TOKENS || Number(rest.aiTokensUsedToday) > MAX_USED_TODAY || Number(rest.coins) > MAX_DODGE_COINS) {
         writeWithHash(clean);
       }
     }, 3000);
@@ -1647,7 +1779,7 @@
   function startStorageEventGuard() {
     window.addEventListener('storage', event => {
       if (!PROTECTED_KEYS.has(event.key)) return;
-      writeWithHash({});
+      writeWithHash(readWithHash());
     });
   }
 

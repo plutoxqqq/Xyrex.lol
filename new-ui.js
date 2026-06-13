@@ -71,7 +71,7 @@
     }
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/new-ui.css?v=2.1.2';
+    link.href = '/new-ui.css?v=2.1.3';
     link.dataset.newUiCss = 'true';
     document.head.appendChild(link);
     cssLoaded = true;

@@ -50,6 +50,47 @@
 
 *{ box-sizing:border-box; }
 
+/* Site-native custom scrollbars. Native browser scrollbar painting is hidden; script.js renders themed draggable rails. */
+*{
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+}
+*::-webkit-scrollbar{
+  width:0 !important;
+  height:0 !important;
+  display:none !important;
+}
+.xy-custom-scroll-host{
+  scrollbar-width:none !important;
+  -ms-overflow-style:none !important;
+}
+.xy-custom-scrollbar{
+  position:absolute;
+  z-index:35;
+  pointer-events:none;
+  opacity:.78;
+  transition:opacity var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease);
+}
+.xy-custom-scroll-host:hover > .xy-custom-scrollbar,
+.xy-custom-scroll-host:focus-within > .xy-custom-scrollbar{ opacity:1; }
+.xy-custom-scrollbar[hidden]{ display:none !important; }
+.xy-custom-scrollbar-y{ top:8px; right:5px; bottom:8px; width:10px; }
+.xy-page-scrollbar{ position:fixed; top:calc(var(--safe-top) + 8px); right:5px; bottom:calc(var(--safe-bottom) + 8px); width:10px; z-index:100; pointer-events:none; opacity:.78; }
+.xy-custom-scrollbar-x{ left:8px; right:8px; bottom:5px; height:10px; }
+.xy-custom-scrollbar > span{
+  display:block;
+  pointer-events:auto;
+  border-radius:999px;
+  background:linear-gradient(180deg, rgba(178,188,255,.92), rgba(108,229,255,.62));
+  border:2px solid rgba(8,12,26,.82);
+  box-shadow:0 0 16px rgba(108,229,255,.18);
+  cursor:grab;
+}
+.xy-custom-scrollbar > span:active{ cursor:grabbing; }
+.xy-custom-scrollbar-y > span{ width:100%; min-height:34px; }
+.xy-custom-scrollbar-x > span{ height:100%; min-width:34px; background:linear-gradient(90deg, rgba(178,188,255,.92), rgba(108,229,255,.62)); }
+
+
 html, body {
   height: 100%;
   margin: 0;
@@ -206,12 +247,12 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
   body.easter-game-mode .page-layout{ margin-top:var(--nav-height); min-height:calc(100dvh - var(--nav-height)); }
 }
 .sidebar,.main-content{ min-height:0; }
-.sidebar{ background:linear-gradient(180deg,color-mix(in srgb, var(--panel) 92%, var(--bg) 8%), color-mix(in srgb, var(--panel-2) 90%, var(--bg-2) 10%)); border-radius:var(--radius); border:1px solid rgba(178,188,255,.16); box-shadow:var(--soft-shadow); padding:16px 16px 22px; overflow-y:auto; overflow-x:hidden; scrollbar-width:thin; scrollbar-color:rgba(129,146,255,0.5) rgba(11,16,34,0.35); transition:max-height var(--motion-med) ease-in-out, padding var(--motion-med) ease-in-out; }
-.main-content{ background:linear-gradient(180deg, rgba(17,20,38,.86), rgba(12,15,28,.86)); border-radius:var(--radius); border:1px solid rgba(178,188,255,.16); box-shadow:var(--soft-shadow); padding:14px; overflow-y:auto; overflow-x:hidden; scrollbar-width:thin; scrollbar-color:rgba(129,146,255,0.5) rgba(11,16,34,0.35); transform-origin:center center; }
+.sidebar{ background:linear-gradient(180deg,color-mix(in srgb, var(--panel) 92%, var(--bg) 8%), color-mix(in srgb, var(--panel-2) 90%, var(--bg-2) 10%)); border-radius:var(--radius); border:1px solid rgba(178,188,255,.16); box-shadow:var(--soft-shadow); padding:16px 16px 22px; overflow-y:auto; overflow-x:hidden; scrollbar-width:none;  transition:max-height var(--motion-med) ease-in-out, padding var(--motion-med) ease-in-out; }
+.main-content{ background:linear-gradient(180deg, rgba(17,20,38,.86), rgba(12,15,28,.86)); border-radius:var(--radius); border:1px solid rgba(178,188,255,.16); box-shadow:var(--soft-shadow); padding:14px; overflow-y:auto; overflow-x:hidden; scrollbar-width:none;  transform-origin:center center; }
 .main-content.is-view-switching{ animation:viewSwitch var(--motion-slow) var(--motion-ease-entrance); will-change:transform, opacity; }
-.sidebar::-webkit-scrollbar,.main-content::-webkit-scrollbar,.modal::-webkit-scrollbar{ width:10px; }
-.sidebar::-webkit-scrollbar-thumb,.main-content::-webkit-scrollbar-thumb,.modal::-webkit-scrollbar-thumb{ background:linear-gradient(180deg, rgba(141,156,255,.78), rgba(108,229,255,.5)); border:2px solid rgba(11,16,34,.86); border-radius:999px; }
-.sidebar::-webkit-scrollbar-track,.main-content::-webkit-scrollbar-track,.modal::-webkit-scrollbar-track{ background:rgba(11,16,34,.42); border-radius:999px; }
+.sidebar::-webkit-scrollbar,.main-content::-webkit-scrollbar,.modal::-webkit-scrollbar{ width:0 !important; height:0 !important; display:none !important; }
+.sidebar::-webkit-scrollbar-thumb,.main-content::-webkit-scrollbar-thumb,.modal::-webkit-scrollbar-thumb{ display:none !important; }
+.sidebar::-webkit-scrollbar-track,.main-content::-webkit-scrollbar-track,.modal::-webkit-scrollbar-track{ display:none !important; }
 .sidebar::-webkit-scrollbar-button,.main-content::-webkit-scrollbar-button,.modal::-webkit-scrollbar-button{ display:none; width:0; height:0; }
 .sidebar-title{ margin: 0 0 8px; color: var(--periwinkle-2); }
 .filter-group{ margin-bottom:14px; padding-bottom:10px; border-bottom:1px dashed rgba(178,188,255,.16); }
@@ -305,7 +346,7 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 .modal-overlay{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.66); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); padding:20px; z-index:90; opacity:0; pointer-events:none; }
 .modal-overlay[aria-hidden="false"]{ opacity:1; pointer-events:auto; animation:overlayFadeIn var(--motion-med) var(--motion-ease-soft); }
 .modal-overlay.is-closing{ animation:overlayFadeOut var(--motion-med) var(--motion-ease-exit) forwards; }
-.modal{ width:min(760px,100%); max-height:88dvh; overflow-y:auto; overflow-x:hidden; border-radius:12px; padding:18px; background:linear-gradient(180deg,color-mix(in srgb, var(--panel) 90%, var(--bg) 10%), color-mix(in srgb, var(--panel-2) 88%, var(--bg-2) 12%)); border:1px solid rgba(178,188,255,.25); box-shadow:0 18px 48px rgba(0,0,0,.62); position:relative; transform-origin:center top; scrollbar-width:thin; scrollbar-color:rgba(178,188,255,0.45) transparent; }
+.modal{ width:min(760px,100%); max-height:88dvh; overflow-y:auto; overflow-x:hidden; border-radius:12px; padding:18px; background:linear-gradient(180deg,color-mix(in srgb, var(--panel) 90%, var(--bg) 10%), color-mix(in srgb, var(--panel-2) 88%, var(--bg-2) 12%)); border:1px solid rgba(178,188,255,.25); box-shadow:0 18px 48px rgba(0,0,0,.62); position:relative; transform-origin:center top; scrollbar-width:none;  }
 .modal.modal-compact{ width:min(360px,calc(100vw - 32px)); text-align:center; }
 .modal-overlay[aria-hidden="false"] .modal{ animation:modalIn var(--motion-slow) var(--motion-ease-entrance); }
 .modal-overlay.is-closing .modal{ animation:modalOut var(--motion-med) var(--motion-ease-exit) forwards; }
@@ -333,7 +374,7 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 .settings-note{ margin:8px 0 0; color:var(--muted); font-size:.86rem; }
 .settings-token-count{ margin:0; color:var(--text); }
 .xy-amount-input{ width:100%; border:1px solid rgba(178,188,255,.35); border-radius:10px; background:rgba(15,19,35,.9); color:var(--text); padding:10px 12px; font:inherit; }
-.settings-credit{ text-align:center; margin-top:2px; color:var(--muted); font-size:.88rem; }
+.settings-credit{ display:block; width:100%; text-align:center; margin-top:2px; color:var(--muted); font-size:.88rem; }
 .info-badges{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 12px; }
 .info-chip{ display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; border:1px solid rgba(178,188,255,.26); background:rgba(20,26,48,.7); color:var(--periwinkle-2); font-size:.82rem; }
 .info-grid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:12px 0; }
@@ -597,11 +638,11 @@ body.easter-game-mode .xy-sidepanel{ max-height:min(56dvh, 560px); overflow-y:au
     overflow-y:auto;
     overflow-x:hidden;
     overscroll-behavior:contain;
-    scrollbar-width:thin;
-    scrollbar-color:rgba(178,188,255,.45) transparent;
+    scrollbar-width:none;
+
   }
-  body.easter-game-mode .xy-sidepanel::-webkit-scrollbar{ width:8px; }
-  body.easter-game-mode .xy-sidepanel::-webkit-scrollbar-thumb{ background:rgba(178,188,255,.35); border-radius:999px; }
+  body.easter-game-mode .xy-sidepanel::-webkit-scrollbar{ width:0 !important; height:0 !important; display:none !important; }
+  body.easter-game-mode .xy-sidepanel::-webkit-scrollbar-thumb{ display:none !important; }
   body.easter-game-mode .xy-sidepanel::-webkit-scrollbar-button{ display:none; width:0; height:0; }
 }
 
