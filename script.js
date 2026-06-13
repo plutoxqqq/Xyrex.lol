@@ -1055,6 +1055,13 @@ function openSettingsModal() {
         <p class="settings-note">Theme Customizer is available when New UI mode is active</p>
       </div>
       <div class="settings-group">
+        <h3>Games</h3>
+        <div class="settings-actions">
+          <button id="settingsDodgeBtn" class="btn-primary settings-action-btn" type="button">Open Dodge</button>
+        </div>
+        <p class="settings-note">Launch the built-in Dodge game from settings.</p>
+      </div>
+      <div class="settings-group">
         <h3>AI Usage</h3>
         <p class="settings-token-count">Available AI tokens: <strong>${tokenSummary.available}</strong></p>
         <div class="settings-actions settings-earn-tokens-action">
@@ -1076,6 +1083,13 @@ function openSettingsModal() {
     await applyUiMode();
     syncRouteWithState();
     openSettingsModal();
+  });
+
+  const dodgeBtn = qs('#settingsDodgeBtn');
+  dodgeBtn?.addEventListener('click', () => {
+    closeModal();
+    syncNavButtonsWithPage('easterEggPage');
+    setActivePage('easterEggPage');
   });
 
   const earnTokensBtn = qs('#settingsEarnTokensBtn');
@@ -2501,18 +2515,6 @@ let activePageId = null;
 let activeSubtabId = 'smartRankingsPanel';
 let suppressRouteSync = false;
 
-const subtabPathSlugMap = {
-  smartRankingsPanel: 'rankings',
-  comparisonPanel: 'comparison',
-  popularScriptsPanel: 'popularscripts',
-  assistantPanel: 'assistant',
-  savedScriptsPanel: 'savedscripts',
-  recentChangesPanel: 'recentchanges'
-};
-
-const subtabPathToIdMap = Object.fromEntries(
-  Object.entries(subtabPathSlugMap).map(([key, value]) => [value, key])
-);
 const SEO_DEFAULT_TITLE = 'Xyrex.lol | Roblox Executor Directory, sUNC Comparisons, and Script Hub';
 const SEO_DEFAULT_DESCRIPTION = 'Xyrex.lol is a Roblox executor and script hub featuring executor comparisons, sUNC scores, platform filters, trusted reviews, popular scripts, and real-time updates.';
 const SEO_DEFAULT_IMAGE = 'https://xyrex.lol/otherscripts/logo.png';
@@ -2521,29 +2523,17 @@ const SEO_PATH_META = {
     title: SEO_DEFAULT_TITLE,
     description: SEO_DEFAULT_DESCRIPTION
   },
+  '/executors': {
+    title: SEO_DEFAULT_TITLE,
+    description: SEO_DEFAULT_DESCRIPTION
+  },
   '/scripthub': {
     title: 'Xyrex Script Hub | Rankings, Comparisons, and Script Discovery',
     description: 'Explore the Xyrex Script Hub for executor rankings, trusted comparisons, popular scripts, saved scripts, and real-time Roblox script discovery updates'
   },
-  '/scripthub/comparison': {
-    title: 'Executor Comparison | Xyrex Script Hub',
-    description: 'Compare Roblox executors side by side with pricing, stability, trust level, and platform support in the Xyrex Script Hub'
-  },
-  '/scripthub/popularscripts': {
-    title: 'Popular Roblox Scripts | Xyrex Script Hub',
-    description: 'Browse trending and popular Roblox scripts on Xyrex with clean discovery tools and organized script insights'
-  },
-  '/scripthub/assistant': {
-    title: 'Exploit Assistant | Xyrex Script Hub',
-    description: 'Use the Xyrex Exploit Assistant to quickly find Roblox executor and script details from current hub data'
-  },
-  '/scripthub/savedscripts': {
-    title: 'Saved Scripts Manager | Xyrex Script Hub',
-    description: 'Store, manage, and revisit your Roblox scripts with the Xyrex saved scripts manager in the Script Hub'
-  },
-  '/scripthub/recentchanges': {
-    title: 'Recent Updates | Xyrex Script Hub',
-    description: 'Track real-time executor and script hub updates, changes, and improvements on Xyrex'
+  '/dodge': {
+    title: 'Xyrex Dodge | Play the Built-In Dodge Game',
+    description: 'Play Xyrex Dodge, the built-in reflex game with missions, progression, responsive controls, and unlockable rewards.'
   }
 };
 
@@ -2592,10 +2582,8 @@ function getRouteStateFromPath(pathname) {
 
   if (segments[cursor] === 'scripthub') {
     pageId = 'scriptsPage';
-    const slug = segments[cursor + 1] || '';
-    if (slug && subtabPathToIdMap[slug]) {
-      subtabId = subtabPathToIdMap[slug];
-    }
+  } else if (segments[cursor] === 'dodge') {
+    pageId = 'easterEggPage';
   }
 
   return {
@@ -2607,14 +2595,11 @@ function getRouteStateFromPath(pathname) {
 
 function buildPathFromState() {
   const base = isNewUiMode ? '/newui' : '';
-  if (activePageId === 'scriptsPage') {
-    const subtabSegment = subtabPathSlugMap[activeSubtabId];
-    if (subtabSegment && activeSubtabId !== 'smartRankingsPanel') return `${base}/scripthub/${subtabSegment}`;
-    return `${base}/scripthub`;
-  }
+  if (activePageId === 'scriptsPage') return `${base}/scripthub`;
 
+  if (activePageId === 'easterEggPage') return `${base}/dodge`;
 
-  return base || '/';
+  return `${base}/executors`;
 }
 
 function syncRouteWithState(replace = false) {
@@ -2718,11 +2703,18 @@ function setActivePage(targetPageId) {
   activePageId = targetPageId;
 
   const onScriptsPage = targetPageId === 'scriptsPage';
-  qs('#sidebar').hidden = onScriptsPage;
-  qs('#searchInput').disabled = onScriptsPage;
-  qs('#clearSearchBtn').disabled = onScriptsPage;
-  qs('.page-layout').classList.toggle('scripts-mode', onScriptsPage);
-  document.body.classList.remove('easter-game-mode');
+  const onDodgePage = targetPageId === 'easterEggPage';
+  qs('#sidebar').hidden = onScriptsPage || onDodgePage;
+  qs('#searchInput').disabled = onScriptsPage || onDodgePage;
+  qs('#clearSearchBtn').disabled = onScriptsPage || onDodgePage;
+  qs('.page-layout').classList.toggle('scripts-mode', onScriptsPage || onDodgePage);
+  document.body.classList.toggle('easter-game-mode', onDodgePage);
+
+  if (onDodgePage) {
+    window.XyrexDodge?.start?.();
+  } else {
+    window.XyrexDodge?.stop?.();
+  }
 
   syncRouteWithState();
 }
@@ -2905,6 +2897,16 @@ function init() {
     if (e.key !== 'Enter') return;
 
     e.preventDefault();
+
+    if (searchValue === 'dodge') {
+      searchInput.value = '';
+      applyAllFilters();
+      syncNavButtonsWithPage('easterEggPage');
+      setActivePage('easterEggPage');
+      searchInput.blur();
+      return;
+    }
+
     applyAllFilters();
 
     searchInput.blur();
