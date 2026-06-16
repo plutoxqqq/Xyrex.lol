@@ -53,10 +53,10 @@
   };
 
   const DIFFICULTY_STAGES = [
-    { name: 'Easy', minScore: 0, minGap: 1, maxGap: 1, density: 1, interval: 1.1, speed: 0.92, label: 'Easy one-space jumps' },
-    { name: 'Medium', minScore: 18, minGap: 1, maxGap: 2, density: 2, interval: 0.9, speed: 1.04, label: 'More jumps, more often' },
-    { name: 'Hard', minScore: 42, minGap: 2, maxGap: 3, density: 3, interval: 0.72, speed: 1.18, label: 'Two-to-three-space jumps' },
-    { name: 'Very Hard', minScore: 82, minGap: 3, maxGap: 5, density: 4, interval: 0.52, speed: 1.38, label: 'Big jumps, very often, fast' },
+    { name: 'Easy', minScore: 0, minGap: 0, maxGap: 1, density: 1, interval: 1.2, speed: 0.88, label: 'Simple openings with forgiving timing' },
+    { name: 'Medium', minScore: 30, minGap: 1, maxGap: 2, density: 2, interval: 1.02, speed: 0.98, label: 'Gradual lane changes and wider recovery windows' },
+    { name: 'Hard', minScore: 75, minGap: 1, maxGap: 3, density: 2, interval: 0.84, speed: 1.1, label: 'Faster waves with controlled density' },
+    { name: 'Very Hard', minScore: 135, minGap: 2, maxGap: 4, density: 3, interval: 0.68, speed: 1.24, label: 'High pressure without closing every lane' },
   ];
 
   const GAME_MODES = {
@@ -1227,6 +1227,9 @@
       this.blocks = [];
       this.pickups = [];
       this.particles = [];
+      this.lastSafeGap = null;
+      this.lastPickupLane = null;
+      this.recentPatternLanes = [];
       this.startTs = performance.now();
       this.lives = this.powerups.has('Shield Matrix') ? 2 : 1;
       this.player = { lane: 2, targetLane: 2, x: 2.5 * (BOARD.width / BOARD.lanes), y: BOARD.height - 76, w: 82, h: 34 };
@@ -1256,14 +1259,18 @@
     currentSpeed(elapsed) {
       const stage = this.currentDifficultyStage();
       const cheatSlow = this.activeCheatSet().has('slowtime') ? 0.5 : 1;
-      return clamp((3.2 + elapsed * 0.095 + this.score * 0.018) * this.mode.speed * this.modifier.pressure * stage.speed * cheatSlow, 1.4, 22);
+      const timeRamp = Math.min(elapsed, 150) * 0.062;
+      const scoreRamp = Math.min(this.score, 220) * 0.011;
+      return clamp((3 + timeRamp + scoreRamp) * this.mode.speed * this.modifier.pressure * stage.speed * cheatSlow, 1.35, 15.5);
     }
 
     currentSpawnInterval(elapsed) {
       const stage = this.currentDifficultyStage();
       const cheatSlow = this.activeCheatSet().has('slowtime') ? 2 : 1;
       const modeModifier = this.mode.interval;
-      return clamp((1.18 - elapsed * 0.0024 - this.score * 0.0012) * modeModifier * stage.interval * cheatSlow, 0.16, 1.75);
+      const timePressure = Math.min(elapsed, 150) * 0.00135;
+      const scorePressure = Math.min(this.score, 220) * 0.0007;
+      return clamp((1.26 - timePressure - scorePressure) * modeModifier * stage.interval * cheatSlow, 0.34, 1.85);
     }
 
     lanePressure() {
@@ -1299,28 +1306,52 @@
       const lanes = [...Array(BOARD.lanes).keys()];
       const pressure = this.lanePressure();
       const currentLane = clamp(Math.round(this.player.targetLane ?? this.player.lane ?? 2), 0, BOARD.lanes - 1);
-      const desiredGap = clamp(currentLane + (Math.random() < 0.5 ? -1 : 1) * (stage.minGap + Math.floor(Math.random() * (stage.maxGap - stage.minGap + 1))), 0, BOARD.lanes - 1);
-      const fallbackGap = desiredGap === currentLane
-        ? clamp(currentLane + (currentLane < BOARD.lanes / 2 ? stage.minGap : -stage.minGap), 0, BOARD.lanes - 1)
-        : desiredGap;
-      const pickupLane = this.pickups
-        .filter(pickup => pickup.y < this.player.y && pickup.y > BOARD.height * 0.12)
-        .sort((a, b) => Math.abs(a.lane - fallbackGap) - Math.abs(b.lane - fallbackGap))[0]?.lane;
-      const safeGap = Number.isInteger(pickupLane) && Math.abs(pickupLane - currentLane) <= stage.maxGap + 1 ? pickupLane : fallbackGap;
-      const secondaryGap = clamp(safeGap + (safeGap <= currentLane ? 1 : -1), 0, BOARD.lanes - 1);
+      const recentGaps = new Set([this.lastSafeGap].filter(Number.isInteger));
+      const gapOptions = lanes
+        .map(lane => {
+          const distance = Math.abs(lane - currentLane);
+          const withinStageJump = distance >= stage.minGap && distance <= stage.maxGap;
+          const reachableEarly = stage.name === 'Easy' && distance <= 1;
+          return {
+            lane,
+            score:
+              pressure[lane] * 1.7 +
+              (withinStageJump || reachableEarly ? 0 : 1.8) +
+              (recentGaps.has(lane) ? 1.15 : 0) +
+              Math.abs(lane - (BOARD.lanes - 1) / 2) * 0.04 +
+              Math.random() * 1.35,
+          };
+        })
+        .sort((a, b) => a.score - b.score);
+      const safeGap = gapOptions[0]?.lane ?? currentLane;
+      this.lastSafeGap = safeGap;
+
+      const secondaryGapCandidates = lanes
+        .filter(lane => lane !== safeGap && Math.abs(lane - safeGap) <= 2)
+        .sort((a, b) => pressure[a] - pressure[b] + Math.random() - 0.5);
       const openLanes = new Set([safeGap]);
-      if (stage.name === 'Easy') openLanes.add(secondaryGap);
-      if (stage.name === 'Medium' && Math.random() < 0.34) openLanes.add(secondaryGap);
-      const targetBlockCount = clamp(stage.density + Math.floor(this.score / 55), 1, BOARD.lanes - 1);
+      if (stage.name === 'Easy' || Math.random() < (stage.name === 'Medium' ? 0.55 : 0.22)) {
+        const secondaryGap = secondaryGapCandidates[0];
+        if (Number.isInteger(secondaryGap)) openLanes.add(secondaryGap);
+      }
+
+      const densityBonus = Math.floor(Math.min(this.score, 180) / 90);
+      const targetBlockCount = clamp(stage.density + densityBonus, 1, BOARD.lanes - openLanes.size);
+      const recentBlocks = new Set((this.recentPatternLanes || []).slice(-4));
       const candidates = lanes
         .filter(lane => !openLanes.has(lane))
-        .sort((a, b) => {
-          const aScore = Math.abs(a - currentLane) * 0.55 - pressure[a] + Math.random() * 0.35;
-          const bScore = Math.abs(b - currentLane) * 0.55 - pressure[b] + Math.random() * 0.35;
-          return bScore - aScore;
-        });
-      const pattern = candidates.slice(0, targetBlockCount);
+        .map(lane => ({
+          lane,
+          score:
+            pressure[lane] * 0.65 +
+            (recentBlocks.has(lane) ? 0.9 : 0) -
+            Math.abs(lane - currentLane) * 0.12 +
+            Math.random() * 1.6,
+        }))
+        .sort((a, b) => a.score - b.score);
+      const pattern = candidates.slice(0, targetBlockCount).map(item => item.lane);
       if (!pattern.length) pattern.push(lanes.find(lane => lane !== safeGap) ?? 0);
+      this.recentPatternLanes = [...(this.recentPatternLanes || []), ...pattern].slice(-12);
       return [...new Set(pattern)].filter(lane => lane >= 0 && lane < BOARD.lanes);
     }
 
@@ -1335,9 +1366,20 @@
       });
       if (this.isBetaEnabled() && Math.random() < this.mode.pickups) {
         const openLanes = [...Array(BOARD.lanes).keys()].filter(lane => !pattern.includes(lane));
-        const preferredLane = openLanes.sort((a, b) => Math.abs(a - this.player.targetLane) - Math.abs(b - this.player.targetLane))[0];
-        const lane = Number.isInteger(preferredLane) ? preferredLane : pick(openLanes.length ? openLanes : [2]);
-        this.pickups.push({ lane, x: lane * laneWidth + laneWidth / 2, y: -30, size: 11, speed: speed * 0.82 });
+        const pickupCandidates = (openLanes.length ? openLanes : [...Array(BOARD.lanes).keys()])
+          .map(lane => ({
+            lane,
+            score:
+              (lane === this.lastPickupLane ? 1.25 : 0) +
+              Math.abs(lane - this.player.targetLane) * 0.08 +
+              Math.random() * 1.4,
+          }))
+          .sort((a, b) => a.score - b.score);
+        const lane = pickupCandidates[0]?.lane ?? pick(openLanes.length ? openLanes : [2]);
+        this.lastPickupLane = lane;
+        const laneJitter = (Math.random() - 0.5) * laneWidth * 0.34;
+        const pickupX = clamp(lane * laneWidth + laneWidth / 2 + laneJitter, lane * laneWidth + 18, (lane + 1) * laneWidth - 18);
+        this.pickups.push({ lane, x: pickupX, y: -30, size: 11, speed: speed * 0.78 });
       }
     }
 
