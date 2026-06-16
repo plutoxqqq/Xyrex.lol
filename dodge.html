@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Xyrex Dodge</title>
+<style>
+  :root {
+    --bg: #08090d;
+    --surface: #0f1118;
+    --surface2: #161820;
+    --border: rgba(255,255,255,0.07);
+    --border-bright: rgba(255,255,255,0.14);
+    --text: #e8eaf0;
+    --muted: #6b7080;
+    --accent: #5b8cff;
+    --accent-glow: rgba(91,140,255,0.18);
+    --danger: #ff4d6b;
+    --danger-glow: rgba(255,77,107,0.18);
+    --gold: #f5c542;
+    --gold-glow: rgba(245,197,66,0.18);
+    --success: #3ecf8e;
+    --radius: 10px;
+    --radius-lg: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, -apple-system, sans-serif; min-height: 100vh; overflow-x: hidden; }
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+  #app { max-width: 1100px; margin: 0 auto; padding: 16px; display: grid; gap: 14px; }
+
+  /* HEADER */
+  .hdr { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+  .hdr-left { display: flex; align-items: center; gap: 12px; }
+  .logo { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; color: var(--text); }
+  .logo span { color: var(--accent); }
+  .pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid; }
+  .pill-accent { color: var(--accent); border-color: rgba(91,140,255,0.3); background: rgba(91,140,255,0.08); }
+  .pill-danger { color: var(--danger); border-color: rgba(255,77,107,0.3); background: rgba(255,77,107,0.08); }
+  .pill-gold { color: var(--gold); border-color: rgba(245,197,66,0.3); background: rgba(245,197,66,0.08); }
+  .pill-success { color: var(--success); border-color: rgba(62,207,142,0.3); background: rgba(62,207,142,0.08); }
+  .hdr-stats { display: flex; gap: 20px; }
+  .hdr-stat { text-align: center; }
+  .hdr-stat-val { font-size: 18px; font-weight: 700; line-height: 1; }
+  .hdr-stat-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+
+  /* MAIN LAYOUT */
+  .layout { display: grid; grid-template-columns: 1fr 300px; gap: 14px; align-items: start; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+
+  /* GAME BOARD */
+  .board { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+  .board-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border); gap: 8px; }
+  .run-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
+  .badge svg { width: 11px; height: 11px; }
+  .badge-score { border-color: rgba(91,140,255,0.25); color: var(--accent); background: var(--accent-glow); }
+  .badge-coins { border-color: rgba(245,197,66,0.25); color: var(--gold); background: var(--gold-glow); }
+  .badge-combo { border-color: rgba(62,207,142,0.25); color: var(--success); background: rgba(62,207,142,0.1); }
+  .badge-lives { border-color: rgba(255,77,107,0.25); color: var(--danger); background: var(--danger-glow); }
+  .badge-diff { border-color: rgba(255,255,255,0.15); color: var(--muted); }
+  .board-controls { display: flex; gap: 6px; }
+  .btn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: var(--radius); border: 1px solid var(--border-bright); background: var(--surface2); color: var(--text); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s ease; white-space: nowrap; font-family: inherit; }
+  .btn:hover { background: #1e2030; border-color: rgba(255,255,255,0.22); transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn-primary { background: rgba(91,140,255,0.15); border-color: rgba(91,140,255,0.4); color: var(--accent); }
+  .btn-primary:hover { background: rgba(91,140,255,0.22); }
+  .btn-danger { background: var(--danger-glow); border-color: rgba(255,77,107,0.35); color: var(--danger); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+  /* CANVAS */
+  .canvas-wrap { position: relative; background: #060810; }
+  canvas { display: block; width: 100%; height: auto; aspect-ratio: 960/580; }
+  .overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(8,9,13,0.85); backdrop-filter: blur(8px); }
+  .overlay[hidden] { display: none; }
+  .modal { background: var(--surface); border: 1px solid var(--border-bright); border-radius: var(--radius-lg); padding: 28px 32px; max-width: 420px; width: 90%; text-align: center; }
+  .modal h2 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .modal p { color: var(--muted); font-size: 14px; margin-bottom: 16px; line-height: 1.5; }
+  .modal-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 16px 0; }
+  .modal-stat { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
+  .modal-stat-val { font-size: 22px; font-weight: 700; }
+  .modal-stat-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+  /* MOBILE CONTROLS */
+  .mobile-controls { display: none; padding: 10px 14px; border-top: 1px solid var(--border); gap: 8px; }
+  @media (max-width: 860px) { .mobile-controls { display: flex; } }
+  .mobile-controls .btn { flex: 1; justify-content: center; padding: 14px; font-size: 15px; }
+
+  /* TABS */
+  .tabs { border-top: 1px solid var(--border); }
+  .tab-nav { display: flex; border-bottom: 1px solid var(--border); background: var(--bg); }
+  .tab-btn { flex: 1; padding: 10px 12px; background: none; border: none; color: var(--muted); font-size: 12px; font-weight: 600; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em; transition: color 0.15s; position: relative; font-family: inherit; }
+  .tab-btn.active { color: var(--accent); }
+  .tab-btn.active::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; background: var(--accent); }
+  .tab-content { padding: 14px; display: none; }
+  .tab-content.active { display: block; }
+
+  /* MODE CARDS */
+  .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  @media (max-width: 600px) { .mode-grid { grid-template-columns: 1fr; } }
+  .mode-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; cursor: pointer; text-align: left; transition: all 0.15s; width: 100%; font-family: inherit; color: var(--text); }
+  .mode-card:hover { border-color: var(--border-bright); background: #1a1c26; }
+  .mode-card.selected { border-color: rgba(91,140,255,0.5); background: rgba(91,140,255,0.07); }
+  .mode-name { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+  .mode-desc { font-size: 11px; color: var(--muted); line-height: 1.4; }
+  .mode-tag { margin-top: 7px; }
+
+  /* SIDEBAR */
+  .sidebar { display: grid; gap: 14px; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; }
+  .panel-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 10px; }
+
+  /* STATUS */
+  .status-bar { padding: 9px 12px; border-radius: var(--radius); font-size: 13px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); transition: background 0.2s, border-color 0.2s; min-height: 38px; display: flex; align-items: center; }
+  .status-bar.ok { background: rgba(62,207,142,0.08); border-color: rgba(62,207,142,0.22); color: var(--success); }
+  .status-bar.warn { background: rgba(245,197,66,0.08); border-color: rgba(245,197,66,0.22); color: var(--gold); }
+  .status-bar.danger { background: var(--danger-glow); border-color: rgba(255,77,107,0.3); color: var(--danger); }
+
+  /* DAILY OBJECTIVE */
+  .mission-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; }
+  .mission-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .mission-desc { font-size: 12px; color: var(--muted); margin-bottom: 10px; line-height: 1.4; }
+  .mission-footer { display: flex; align-items: center; justify-content: space-between; }
+  .progress-bar { height: 4px; border-radius: 999px; background: var(--border); overflow: hidden; margin: 8px 0; }
+  .progress-fill { height: 100%; border-radius: inherit; background: var(--accent); transition: width 0.3s; }
+
+  /* LOADOUT */
+  .loadout-grid { display: grid; gap: 6px; }
+  .loadout-item { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; cursor: pointer; display: flex; align-items: flex-start; gap: 10px; transition: all 0.15s; text-align: left; width: 100%; font-family: inherit; color: var(--text); }
+  .loadout-item:hover { border-color: var(--border-bright); }
+  .loadout-item.selected { border-color: rgba(91,140,255,0.45); background: rgba(91,140,255,0.06); }
+  .loadout-item.locked { opacity: 0.55; cursor: default; }
+  .loadout-item-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 15px; background: var(--surface); border: 1px solid var(--border); }
+  .loadout-item-body { flex: 1; min-width: 0; }
+  .loadout-item-name { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .loadout-item-desc { font-size: 11px; color: var(--muted); margin-top: 2px; line-height: 1.35; }
+  .price-tag { font-size: 10px; font-weight: 600; color: var(--gold); background: var(--gold-glow); border: 1px solid rgba(245,197,66,0.2); padding: 1px 6px; border-radius: 4px; }
+  .owned-tag { font-size: 10px; font-weight: 600; color: var(--success); background: rgba(62,207,142,0.1); border: 1px solid rgba(62,207,142,0.2); padding: 1px 6px; border-radius: 4px; }
+
+  /* UTILITIES */
+  .cheat-panel { display: grid; gap: 6px; }
+  .cheat-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .cheat-row:last-child { border-bottom: none; }
+  .cheat-label { font-size: 13px; }
+  .toggle { position: relative; width: 36px; height: 20px; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-track { position: absolute; inset: 0; background: var(--border-bright); border-radius: 999px; cursor: pointer; transition: background 0.2s; }
+  .toggle input:checked + .toggle-track { background: var(--accent); }
+  .toggle-thumb { position: absolute; width: 14px; height: 14px; background: white; border-radius: 50%; top: 3px; left: 3px; transition: transform 0.2s; }
+  .toggle input:checked ~ .toggle-thumb { transform: translateX(16px); }
+
+  /* SHOP */
+  .shop-grid { display: grid; gap: 6px; }
+  .shop-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); }
+  .shop-item-left { display: flex; flex-direction: column; gap: 2px; }
+  .shop-item-name { font-size: 13px; font-weight: 600; }
+  .shop-item-desc { font-size: 11px; color: var(--muted); }
+
+  /* STORY */
+  .story-cards { display: grid; gap: 8px; }
+  .story-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; }
+  .story-card.locked { opacity: 0.5; }
+  .story-card.done { border-color: rgba(62,207,142,0.3); }
+  .story-card-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .story-card-desc { font-size: 11px; color: var(--muted); line-height: 1.4; margin-bottom: 8px; }
+  .story-card-footer { display: flex; align-items: center; gap: 6px; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+  .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-row-lbl { color: var(--muted); }
+  .stat-row-val { font-weight: 600; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="hdr">
+    <div class="hdr-left">
+      <div class="logo">Xyrex<span>·</span>Dodge</div>
+      <span class="pill pill-accent" id="hdrModePill">Classic</span>
+    </div>
+    <div class="hdr-stats">
+      <div class="hdr-stat"><div class="hdr-stat-val" id="hdrCoins">0</div><div class="hdr-stat-lbl">Coins</div></div>
+      <div class="hdr-stat"><div class="hdr-stat-val" id="hdrBest">0</div><div class="hdr-stat-lbl">Best</div></div>
+      <div class="hdr-stat"><div class="hdr-stat-val" id="hdrRuns">0</div><div class="hdr-stat-lbl">Runs</div></div>
+      <div class="hdr-stat"><div class="hdr-stat-val" id="hdrStreak">0</div><div class="hdr-stat-lbl">Streak</div></div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <section class="board">
+      <div class="board-toolbar">
+        <div class="run-badges">
+          <span class="badge badge-score" id="badgeScore">⬡ 0</span>
+          <span class="badge badge-coins" id="badgeCoins">◈ 0</span>
+          <span class="badge badge-combo" id="badgeCombo">× 0</span>
+          <span class="badge badge-lives" id="badgeLives">♥ 1</span>
+          <span class="badge badge-diff" id="badgeDiff">Easy</span>
+        </div>
+        <div class="board-controls">
+          <button class="btn" id="pauseBtn">Pause</button>
+          <button class="btn btn-primary" id="fsBtn" title="Game fullscreen">⛶</button>
+          <button class="btn btn-danger" id="restartBtn">↺ Restart</button>
+        </div>
+      </div>
+
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="gameCanvas" width="960" height="580" tabindex="0" aria-label="Dodge game board"></canvas>
+        <div class="overlay" id="overlay" hidden></div>
+      </div>
+
+      <div class="mobile-controls" id="mobileControls">
+        <button class="btn" id="mobileLeft">◀ Left</button>
+        <button class="btn" id="mobileRight">Right ▶</button>
+      </div>
+
+      <div class="tabs">
+        <div class="tab-nav">
+          <button class="tab-btn active" data-tab="modes">Modes</button>
+          <button class="tab-btn" data-tab="progress">Progress</button>
+          <button class="tab-btn" data-tab="loadout">Loadout</button>
+          <button class="tab-btn" data-tab="shop">Shop</button>
+        </div>
+        <div class="tab-content active" id="tab-modes"></div>
+        <div class="tab-content" id="tab-progress"></div>
+        <div class="tab-content" id="tab-loadout"></div>
+        <div class="tab-content" id="tab-shop"></div>
+      </div>
+    </section>
+
+    <aside class="sidebar">
+      <div class="panel">
+        <div class="panel-title">Status</div>
+        <div class="status-bar" id="statusBar">Ready to run — press Space or click Restart</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Daily objective</div>
+        <div id="missionSection"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Utilities</div>
+        <div class="cheat-panel" id="cheatPanel">
+          <div class="cheat-row"><span class="cheat-label">Auto Play</span><label class="toggle"><input type="checkbox" data-cheat="autoplay"><span class="toggle-track"></span><span class="toggle-thumb"></span></label></div>
+          <div class="cheat-row"><span class="cheat-label">No Death</span><label class="toggle"><input type="checkbox" data-cheat="nodeath"><span class="toggle-track"></span><span class="toggle-thumb"></span></label></div>
+          <div class="cheat-row"><span class="cheat-label">Slow Time</span><label class="toggle"><input type="checkbox" data-cheat="slowtime"><span class="toggle-track"></span><span class="toggle-thumb"></span></label></div>
+          <div class="cheat-row"><span class="cheat-label">Gap Warp</span><label class="toggle"><input type="checkbox" data-cheat="ghost"><span class="toggle-track"></span><span class="toggle-thumb"></span></label></div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;">Coins are disabled while utilities are on.</div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ─── CONSTANTS ────────────────────────────────────────────────────────────────
+  const SAVE_KEY = 'xyrex_dodge_v3';
+  const W = 960, H = 580, LANES = 6;
+  const LANE_W = W / LANES;
+  const FREE_TOKENS = 5;
+
+  const MODIFIERS = {
+    Balanced:{ price:0,  desc:'Standard handling', playerSpeed:1,   coinBonus:1,    pressure:1,    waveBonus:1 },
+    Swift:   { price:125,desc:'20% faster lane change', playerSpeed:1.2, coinBonus:1, pressure:1.08, waveBonus:1 },
+    Fortune: { price:180,desc:'35% more coins, harder waves', playerSpeed:1, coinBonus:1.35, pressure:1.14, waveBonus:1.08 },
+    Bulwark: { price:220,desc:'Less pressure, slower movement', playerSpeed:0.9, coinBonus:0.92, pressure:0.92, waveBonus:0.95 },
+    Chaos:   { price:260,desc:'Max rewards, max danger', playerSpeed:1.1, coinBonus:1.6, pressure:1.3, waveBonus:1.2 },
+  };
+
+  const POWERUPS = {
+    None:          { price:0,   desc:'No powerup equipped', icon:'○' },
+    Quickstep:     { price:200, desc:'Snap lane changes — no slide', icon:'⚡' },
+    'Shield Matrix':{ price:280,desc:'Start with an extra life', icon:'🛡' },
+    'Lucky Drift': { price:190, desc:'+20% coin rewards per run', icon:'✦' },
+    'Time Bloom':  { price:320, desc:'Every 12 combo steps slows hazards', icon:'⏱' },
+    'Magnet Pulse':{ price:240, desc:'Shards drift toward your lane', icon:'⊕' },
+  };
+
+  const VISUAL_THEMES = {
+    Neon:     { price:0,   desc:'Default blue/pink', accent:'#5b8cff', danger:'#ff4d6b', track:'#060810' },
+    Amethyst: { price:180, desc:'Purple tones',      accent:'#b490ff', danger:'#ff80c8', track:'#0c0818' },
+    Obsidian: { price:220, desc:'Dark tactical',     accent:'#56d9f5', danger:'#ff6c7a', track:'#050d14' },
+    Synthwave:{ price:260, desc:'Vivid neon blend',  accent:'#f562c8', danger:'#ff5e5e', track:'#17082a' },
+  };
+
+  const UTILITY_SKINS = {
+    Pulse:  { price:0,   desc:'Clean default feedback' },
+    Aurora: { price:160, desc:'Soft cyan highlights' },
+    Ember:  { price:210, desc:'Warm orange on activate' },
+    Prism:  { price:280, desc:'Multi-color aura' },
+  };
+
+  const DIFFICULTY_STAGES = [
+    { name:'Easy',      minScore:0,   minGap:0, maxGap:1, density:1, interval:1.2,  speed:0.88 },
+    { name:'Medium',    minScore:30,  minGap:1, maxGap:2, density:2, interval:1.02, speed:0.98 },
+    { name:'Hard',      minScore:75,  minGap:1, maxGap:3, density:2, interval:0.84, speed:1.1  },
+    { name:'Very Hard', minScore:135, minGap:2, maxGap:4, density:3, interval:0.68, speed:1.24 },
+  ];
+
+  const GAME_MODES = {
+    Classic:  { desc:'Steady survival, predictable scaling', speed:1,    interval:1,    pickups:0.45, modeScore:1,    obj:'Survive and earn coins from clean dodges.' },
+    Blitz:    { desc:'Denser patterns, faster, higher payout', speed:1.22, interval:0.78, pickups:0.35, modeScore:1.35, obj:'Short high-pressure runs where reaction speed wins.' },
+    Gauntlet: { desc:'Extended runs with harder formations', speed:1.08, interval:0.92, pickups:0.5,  modeScore:1.5,  obj:'Survive elite waves and hold long combos.' },
+    Harvest:  { desc:'Lower pressure, more shard spawns', speed:0.95, interval:1.08, pickups:0.82, modeScore:0.95, obj:'Farm coins and keep your combo alive.' },
+    Story:    { desc:'Objective-based sectors with rewards', speed:1,    interval:1,    pickups:0.55, modeScore:1.15, obj:'Complete each sector to advance the campaign.' },
+  };
+
+  const STORY_CHAPTERS = [
+    { id:'s1', title:'Sector 1: Wake Protocol', brief:'Restore the first lane beacon.', label:'Reach 25 score + collect 4 shards', targetScore:25, targetPickups:4, reward:120 },
+    { id:'s2', title:'Sector 2: Crosswind Array', brief:'Maintain clean combos under turbulence.', label:'Reach 40 score + 10 combo streak', targetScore:40, targetCombo:10, reward:180 },
+    { id:'s3', title:'Sector 3: Final Echo', brief:'High-score burst with shield preserved.', label:'Reach 60 score + finish with 1 life', targetScore:60, requireLife:true, reward:260 },
+  ];
+
+  const DAILY_OBJ = [
+    { id:'run',    title:'Finish 1 run',          desc:'Complete any run in any mode',                reward:90, type:'run' },
+    { id:'shards', title:'Collect 3 shards',       desc:'Collect at least 3 energy shards in one run', reward:90, type:'pickups', target:3 },
+    { id:'coins',  title:'Earn 25 coins',           desc:'Finish one run with ≥25 coins earned',        reward:90, type:'coins', target:25 },
+    { id:'pwrup',  title:'Score 20 with a powerup', desc:'Score 20+ while an owned powerup is equipped', reward:90, type:'powerupScore', target:20 },
+  ];
+
+  const DEFAULT = {
+    coins:0, bestScore:0, bestByMode:{}, totalRuns:0, totalPickups:0, longestCombo:0,
+    dailyObjective:null, ownedModifiers:['Balanced'], selectedModifier:'Balanced',
+    ownedPowerups:[], selectedPowerup:'None', ownedVisualThemes:['Neon'],
+    selectedVisualTheme:'Neon', selectedMode:'Classic', storyProgress:0,
+    storyRewardsClaimed:[], aiTokenDate:'', aiTokensUsedToday:0, aiPurchasedTokens:0,
+    activeCheats:[], utilitySkin:'Pulse', ownedUtilitySkins:['Pulse'],
+    dailyStreak:0, lastDailyClaimDate:'',
+  };
+
+  // ─── STORAGE ─────────────────────────────────────────────────────────────────
+  function localDay() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (raw) return { ...DEFAULT, ...JSON.parse(raw) };
+    } catch {}
+    return { ...DEFAULT };
+  }
+
+  function save(d) {
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(d)); } catch {}
+  }
+
+  // ─── THEME COLORS ────────────────────────────────────────────────────────────
+  let COLORS = {
+    accent: '#5b8cff',
+    danger: '#ff4d6b',
+    track: '#060810',
+    lane: 'rgba(91,140,255,0.18)',
+    pickup: '#3ecf8e',
+    text: '#e8eaf0',
+    muted: '#6b7080',
+    particle: 'rgba(91,140,255,0.45)',
+  };
+
+  function applyVisualTheme(name) {
+    const t = VISUAL_THEMES[name] || VISUAL_THEMES.Neon;
+    COLORS.accent = t.accent;
+    COLORS.danger = t.danger;
+    COLORS.track = t.track;
+    COLORS.lane = t.accent + '2a';
+    COLORS.particle = t.accent + '70';
+  }
+
+  // ─── HELPERS ────────────────────────────────────────────────────────────────
+  const clamp = (v,mn,mx) => Math.max(mn, Math.min(mx, v));
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+  // ─── PARTICLE POOL ───────────────────────────────────────────────────────────
+  class ParticleSystem {
+    constructor() { this.pool = []; }
+    emit(x, y, opts = {}) {
+      const count = opts.count || 1;
+      for (let i = 0; i < count; i++) {
+        const angle = opts.angle != null ? opts.angle + (Math.random()-0.5)*0.5 : Math.random()*Math.PI*2;
+        const speed = opts.speed || (Math.random()*1.8+0.4);
+        this.pool.push({
+          x, y,
+          vx: Math.cos(angle)*speed * (opts.vxScale||1),
+          vy: Math.sin(angle)*speed * (opts.vyScale||1),
+          life: 1, maxLife: opts.life||0.6,
+          size: opts.size||(Math.random()*4+2),
+          color: opts.color || COLORS.accent,
+          gravity: opts.gravity||0,
+        });
+      }
+    }
+    update(dt) {
+      this.pool = this.pool.filter(p => {
+        p.x += p.vx; p.y += p.vy; p.vy += p.gravity;
+        p.life -= dt / p.maxLife;
+        return p.life > 0;
+      });
+    }
+    draw(ctx) {
+      this.pool.forEach(p => {
+        ctx.globalAlpha = Math.max(0, p.life) * 0.85;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI*2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // ─── GAME ENGINE ─────────────────────────────────────────────────────────────
+  class DodgeEngine {
+    constructor(canvas, data) {
+      this.canvas = canvas;
+      this.ctx = canvas.getContext('2d');
+      this.data = data;
+      this.ps = new ParticleSystem();
+      this.running = false;
+      this.paused = false;
+      this.gameOver = false;
+      this.rafId = 0;
+      this.lastTs = 0;
+      this.startTs = 0;
+      this.score = 0;
+      this.runCoins = 0;
+      this.combo = 0;
+      this.bestComboRun = 0;
+      this.storyPickups = 0;
+      this.lives = 1;
+      this.blocks = [];
+      this.pickups = [];
+      this.spawnTimer = 0;
+      this.frameN = 0;
+      this.trailPoints = [];
+      this.player = { lane:2, targetLane:2, x:2.5*LANE_W, y:H-80, w:70, h:28, shieldFlash:0 };
+      this.modifier = MODIFIERS[data.selectedModifier] || MODIFIERS.Balanced;
+      this.mode = GAME_MODES[data.selectedMode] || GAME_MODES.Classic;
+      this.powerups = new Set();
+      this.onEndRun = null;
+      this.lastSafeGap = null;
+      this.recentPatternLanes = [];
+      this.lastPickupLane = null;
+      this.hitFlash = 0;
+      applyVisualTheme(data.selectedVisualTheme);
+    }
+
+    get cheats() {
+      return new Set((this.data.activeCheats||[]).map(s=>s.toLowerCase()));
+    }
+
+    get hasCheats() { return this.cheats.size > 0; }
+
+    start() {
+      if (this.running) return;
+      this.running = true;
+      this._resetGameState();
+      this.lastTs = performance.now();
+      this.startTs = this.lastTs;
+      this.rafId = requestAnimationFrame(this._loop);
+    }
+
+    restart() {
+      this._resetGameState();
+      if (!this.running) {
+        this.running = true;
+        this.lastTs = performance.now();
+        this.startTs = this.lastTs;
+        this.rafId = requestAnimationFrame(this._loop);
+      }
+    }
+
+    stop() {
+      this.running = false;
+      cancelAnimationFrame(this.rafId);
+    }
+
+    togglePause() {
+      if (!this.running || this.gameOver) return false;
+      this.paused = !this.paused;
+      return this.paused;
+    }
+
+    moveLane(dir) {
+      if (!this.player) return;
+      if (dir === 'left') this.player.targetLane = Math.max(0, this.player.targetLane-1);
+      if (dir === 'right') this.player.targetLane = Math.min(LANES-1, this.player.targetLane+1);
+    }
+
+    _resetGameState() {
+      const owned = this.data.ownedPowerups||[];
+      const selPu = this.data.selectedPowerup;
+      this.powerups = new Set(selPu !== 'None' && owned.includes(selPu) ? [selPu] : []);
+      this.modifier = MODIFIERS[this.data.selectedModifier] || MODIFIERS.Balanced;
+      this.mode = GAME_MODES[this.data.selectedMode] || GAME_MODES.Classic;
+      applyVisualTheme(this.data.selectedVisualTheme);
+      this.paused = false;
+      this.gameOver = false;
+      this.score = 0;
+      this.runCoins = 0;
+      this.combo = 0;
+      this.bestComboRun = 0;
+      this.storyPickups = 0;
+      this.spawnTimer = 0;
+      this.blocks = [];
+      this.pickups = [];
+      this.ps = new ParticleSystem();
+      this.trailPoints = [];
+      this.hitFlash = 0;
+      this.frameN = 0;
+      this.lastSafeGap = null;
+      this.recentPatternLanes = [];
+      this.lastPickupLane = null;
+      this.lives = this.powerups.has('Shield Matrix') ? 2 : 1;
+      this.player = { lane:2, targetLane:2, x:2.5*LANE_W, y:H-80, w:70, h:28, shieldFlash:0 };
+      this.startTs = performance.now();
+      this.lastTs = this.startTs;
+    }
+
+    _diffStage() {
+      return [...DIFFICULTY_STAGES].reverse().find(s => this.score >= s.minScore) || DIFFICULTY_STAGES[0];
+    }
+
+    _speed(elapsed) {
+      const s = this._diffStage();
+      const slow = this.cheats.has('slowtime') ? 0.5 : 1;
+      const tr = Math.min(elapsed,150)*0.062;
+      const sr = Math.min(this.score,220)*0.011;
+      return clamp((3+tr+sr)*this.mode.speed*this.modifier.pressure*s.speed*slow, 1.35, 15.5);
+    }
+
+    _spawnInterval(elapsed) {
+      const s = this._diffStage();
+      const slow = this.cheats.has('slowtime') ? 2 : 1;
+      const tp = Math.min(elapsed,150)*0.00135;
+      const sp = Math.min(this.score,220)*0.0007;
+      return clamp((1.26-tp-sp)*this.mode.interval*s.interval*slow, 0.34, 1.85);
+    }
+
+    _lanePressure() {
+      const p = Array(LANES).fill(0);
+      for (const b of this.blocks) {
+        const dist = Math.max(20, this.player.y - b.y);
+        p[b.lane] += 220/dist;
+        if (b.y < this.player.y && b.y+b.h > this.player.y-120) p[b.lane] += 5;
+      }
+      return p;
+    }
+
+    _safeLanes(buf=70) {
+      const blocked = new Set();
+      for (const b of this.blocks) {
+        if (b.y+b.h > this.player.y-buf && b.y < this.player.y+26) blocked.add(b.lane);
+      }
+      return [...Array(LANES).keys()].filter(l => !blocked.has(l));
+    }
+
+    _choosePattern() {
+      const s = this._diffStage();
+      const lanes = [...Array(LANES).keys()];
+      const pressure = this._lanePressure();
+      const cur = clamp(Math.round(this.player.targetLane), 0, LANES-1);
+      const recentGaps = new Set([this.lastSafeGap].filter(Number.isInteger));
+      const gapOptions = lanes.map(l => ({
+        l, score: pressure[l]*1.7 + (Math.abs(l-cur)>=s.minGap && Math.abs(l-cur)<=s.maxGap?0:1.8) + (recentGaps.has(l)?1.15:0) + Math.random()*1.35
+      })).sort((a,b)=>a.score-b.score);
+      const safeGap = gapOptions[0]?.l ?? cur;
+      this.lastSafeGap = safeGap;
+      const openLanes = new Set([safeGap]);
+      const secondary = lanes.filter(l=>l!==safeGap&&Math.abs(l-safeGap)<=2).sort((a,b)=>pressure[a]-pressure[b]+Math.random()-0.5);
+      if (s.name==='Easy'||Math.random()<(s.name==='Medium'?0.55:0.22)) {
+        const g2 = secondary[0];
+        if (Number.isInteger(g2)) openLanes.add(g2);
+      }
+      const densityBonus = Math.floor(Math.min(this.score,180)/90);
+      const targetCount = clamp(s.density+densityBonus,1,LANES-openLanes.size);
+      const recent = new Set((this.recentPatternLanes||[]).slice(-4));
+      const cands = lanes.filter(l=>!openLanes.has(l)).map(l=>({l, score:pressure[l]*0.65+(recent.has(l)?0.9:0)-Math.abs(l-cur)*0.12+Math.random()*1.6})).sort((a,b)=>a.score-b.score);
+      const pattern = cands.slice(0,targetCount).map(c=>c.l);
+      if (!pattern.length) pattern.push(lanes.find(l=>l!==safeGap)??0);
+      this.recentPatternLanes = [...(this.recentPatternLanes||[]),...pattern].slice(-12);
+      return [...new Set(pattern)].filter(l=>l>=0&&l<LANES);
+    }
+
+    _spawnWave(elapsed) {
+      const speed = this._speed(elapsed);
+      const s = this._diffStage();
+      const pattern = this._choosePattern();
+      pattern.forEach(lane => {
+        this.blocks.push({ lane, x:lane*LANE_W+10, y:-52, w:LANE_W-20, h:s.name==='Very Hard'?44:36, speed, shapeType:Math.floor(Math.random()*3) });
+      });
+      if (Math.random() < this.mode.pickups) {
+        const open = [...Array(LANES).keys()].filter(l=>!pattern.includes(l));
+        const cands = (open.length?open:[...Array(LANES).keys()]).map(l=>({ l, score:(l===this.lastPickupLane?1.25:0)+Math.abs(l-this.player.targetLane)*0.08+Math.random()*1.4})).sort((a,b)=>a.score-b.score);
+        const lane = cands[0]?.l ?? pick(open.length?open:[2]);
+        this.lastPickupLane = lane;
+        const jitter = (Math.random()-0.5)*LANE_W*0.34;
+        const px = clamp(lane*LANE_W+LANE_W/2+jitter, lane*LANE_W+18, (lane+1)*LANE_W-18);
+        this.pickups.push({ lane, x:px, y:-30, size:10, speed:speed*0.76, glow:0 });
+      }
+    }
+
+    _updatePlayer(dt) {
+      const c = this.cheats;
+      const targetX = this.player.targetLane * LANE_W + LANE_W/2;
+      if (c.has('ghost')) {
+        this.player.x = targetX;
+        if (this.frameN % 3 === 0) {
+          this.ps.emit(this.player.x, this.player.y+10, { count:1, life:0.5, size:5, color:COLORS.particle, angle:Math.PI/2, speed:0.4, vyScale:1 });
+        }
+        return;
+      }
+      if (c.has('autoplay')) {
+        let safe = this._safeLanes(120);
+        if (!safe.length) {
+          const el = this._bestEmergencyLane();
+          this.blocks = this.blocks.filter(b=>!(b.lane===el&&b.y+b.h>this.player.y-140&&b.y<this.player.y+32));
+          safe = [el];
+        }
+        const pressure = this._lanePressure();
+        const pu = this.pickups.filter(p=>safe.includes(p.lane)&&p.y>H*0.08&&p.y<this.player.y+34).sort((a,b)=>pressure[a.lane]-pressure[b.lane])[0];
+        this.player.targetLane = pu ? pu.lane : safe.reduce((best,l)=>pressure[l]<pressure[best]?l:best, safe[0]);
+      }
+      const quick = this.powerups.has('Quickstep') || c.has('autoplay');
+      const lerp = quick ? 1 : 0.17 * this.modifier.playerSpeed;
+      this.player.x += (targetX - this.player.x) * lerp;
+      // Exhaust trail
+      if (this.frameN % 2 === 0) {
+        this.ps.emit(this.player.x + (Math.random()-0.5)*16, this.player.y+this.player.h/2, {
+          count:1, life:0.35, size:3, color:COLORS.accent+'66', angle:Math.PI/2, speed:0.6, vyScale:0.7, gravity:0
+        });
+      }
+      if (this.player.shieldFlash > 0) this.player.shieldFlash -= dt;
+    }
+
+    _bestEmergencyLane(pref = this.player.targetLane) {
+      const p = this._lanePressure();
+      return [...Array(LANES).keys()].reduce((best,l) => p[l]+Math.abs(l-pref)*0.36 < p[best]+Math.abs(best-pref)*0.36 ? l : best, 0);
+    }
+
+    _hits(b) {
+      const hw = this.player.w/2, hh = this.player.h/2;
+      if ('size' in b) return b.x>=this.player.x-hw&&b.x<=this.player.x+hw&&b.y>=this.player.y-hh&&b.y<=this.player.y+hh;
+      return !(this.player.x+hw<b.x||this.player.x-hw>b.x+b.w||this.player.y+hh<b.y||this.player.y-hh>b.y+b.h);
+    }
+
+    _handleCollision() {
+      const c = this.cheats;
+      if (c.has('nodeath')||c.has('autoplay')||c.has('ghost')) {
+        this.blocks = this.blocks.filter(b=>!this._hits(b));
+        return;
+      }
+      if (this.lives > 1) {
+        this.lives--;
+        this.player.shieldFlash = 0.6;
+        this.blocks = this.blocks.filter(b=>b.y<this.player.y-70||b.y>this.player.y+70);
+        this.ps.emit(this.player.x, this.player.y, { count:18, life:0.5, size:6, color:'#ffffff', angle:0, speed:3, gravity:0.05 });
+        this.hitFlash = 0.35;
+        return;
+      }
+      this._endRun();
+    }
+
+    _updateBlocks(dt) {
+      const alive = [];
+      for (const b of this.blocks) {
+        b.y += b.speed*dt*60;
+        if (this._hits(b)) { this._handleCollision(); if (this.gameOver) return; continue; }
+        if (b.y > H) {
+          this.score += Math.max(1,Math.round(this.mode.modeScore));
+          this.combo++;
+          this.bestComboRun = Math.max(this.bestComboRun, this.combo);
+          if (!this.hasCheats) {
+            const base = Math.max(1,Math.round(this.modifier.coinBonus*this.mode.modeScore));
+            this.runCoins += this.powerups.has('Lucky Drift') ? Math.ceil(base*1.2) : base;
+          }
+          // Particle burst on dodge
+          this.ps.emit(b.x+b.w/2, H-10, { count:6, life:0.4, size:4, color:COLORS.accent, angle:-Math.PI/2, speed:2, gravity:0 });
+        } else {
+          alive.push(b);
+        }
+      }
+      this.blocks = alive;
+    }
+
+    _updatePickups(dt) {
+      const alive = [];
+      for (const p of this.pickups) {
+        p.y += p.speed*dt*60;
+        p.glow = (p.glow||0) + dt*3;
+        if (this.powerups.has('Magnet Pulse')) p.x += (this.player.x-p.x)*0.04;
+        if (this._hits(p)) {
+          this.storyPickups++;
+          this.combo += 2;
+          this.bestComboRun = Math.max(this.bestComboRun, this.combo);
+          this.data.totalPickups++;
+          if (!this.hasCheats) this.runCoins += this.powerups.has('Lucky Drift')?3:2;
+          this.ps.emit(p.x, p.y, { count:14, life:0.55, size:5, color:'#3ecf8e', angle:0, speed:2.5, gravity:-0.03 });
+          continue;
+        }
+        if (p.y <= H+30) alive.push(p);
+      }
+      this.pickups = alive;
+    }
+
+    _endRun() {
+      if (this.gameOver) return;
+      this.gameOver = true;
+      this.ps.emit(this.player.x, this.player.y, { count:30, life:0.7, size:7, color:COLORS.danger, angle:0, speed:3.5, gravity:0.06 });
+      if (this.onEndRun) this.onEndRun({ score:this.score, runCoins:this.runCoins, pickups:this.storyPickups, combo:this.bestComboRun });
+    }
+
+    _drawHazard(ctx, b) {
+      const cx = b.x+b.w/2, cy = b.y+b.h/2;
+      ctx.fillStyle = COLORS.danger;
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+      ctx.lineWidth = 1.5;
+      switch (b.shapeType) {
+        case 0: // Rectangle
+          ctx.beginPath(); ctx.roundRect(b.x, b.y, b.w, b.h, 6); ctx.fill(); ctx.stroke(); break;
+        case 1: // Diamond
+          ctx.beginPath();
+          ctx.moveTo(cx, b.y+2); ctx.lineTo(b.x+b.w-4, cy); ctx.lineTo(cx, b.y+b.h-2); ctx.lineTo(b.x+4, cy);
+          ctx.closePath(); ctx.fill(); ctx.stroke(); break;
+        case 2: // Hex-ish
+          ctx.beginPath();
+          const hr = b.h/2, wr = b.w/2;
+          ctx.moveTo(cx-wr*0.7, b.y); ctx.lineTo(cx+wr*0.7, b.y); ctx.lineTo(b.x+b.w, cy);
+          ctx.lineTo(cx+wr*0.7, b.y+b.h); ctx.lineTo(cx-wr*0.7, b.y+b.h); ctx.lineTo(b.x, cy);
+          ctx.closePath(); ctx.fill(); ctx.stroke(); break;
+      }
+      // Cross detail inside
+      ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(cx, b.y+4); ctx.lineTo(cx, b.y+b.h-4);
+      ctx.moveTo(b.x+6, cy); ctx.lineTo(b.x+b.w-6, cy); ctx.stroke();
+    }
+
+    _drawPlayer(ctx) {
+      const p = this.player;
+      const cx = p.x, cy = p.y;
+      const w2 = p.w/2, h2 = p.h/2;
+      // Shield flash ring
+      if (p.shieldFlash > 0) {
+        const alpha = p.shieldFlash * 2;
+        ctx.strokeStyle = `rgba(255,255,255,${Math.min(1,alpha)})`;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.arc(cx, cy, w2+10, 0, Math.PI*2); ctx.stroke();
+      }
+      // Body
+      ctx.fillStyle = COLORS.accent;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy-h2); ctx.lineTo(cx+w2*0.85, cy);
+      ctx.lineTo(cx+w2*0.55, cy+h2); ctx.lineTo(cx-w2*0.55, cy+h2);
+      ctx.lineTo(cx-w2*0.85, cy); ctx.closePath();
+      ctx.fill();
+      // Engine glow
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = 0.7;
+      ctx.beginPath(); ctx.arc(cx, cy+h2*0.4, 3.5, 0, Math.PI*2); ctx.fill();
+      ctx.globalAlpha = 1;
+      // Cockpit
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.beginPath(); ctx.ellipse(cx, cy-h2*0.25, 8, 5, 0, 0, Math.PI*2); ctx.fill();
+      // Wings accent
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(cx-w2*0.55, cy+h2); ctx.lineTo(cx-w2*0.85, cy);
+      ctx.moveTo(cx+w2*0.55, cy+h2); ctx.lineTo(cx+w2*0.85, cy);
+      ctx.stroke();
+    }
+
+    draw() {
+      const ctx = this.ctx;
+      ctx.clearRect(0, 0, W, H);
+
+      // Background
+      ctx.fillStyle = COLORS.track;
+      ctx.fillRect(0, 0, W, H);
+
+      // Hit flash
+      if (this.hitFlash > 0) {
+        ctx.fillStyle = `rgba(255,50,80,${this.hitFlash*0.35})`;
+        ctx.fillRect(0, 0, W, H);
+        this.hitFlash -= 0.016;
+      }
+
+      // Scanlines (subtle)
+      ctx.strokeStyle = 'rgba(255,255,255,0.025)';
+      ctx.lineWidth = 1;
+      for (let y = 0; y < H; y += 8) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+      }
+
+      // Lane dividers
+      ctx.strokeStyle = `rgba(91,140,255,0.12)`;
+      ctx.lineWidth = 1;
+      for (let l = 1; l < LANES; l++) {
+        const x = l * LANE_W;
+        ctx.setLineDash([6,12]);
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+      }
+      ctx.setLineDash([]);
+
+      // Speed lines (depth effect)
+      ctx.strokeStyle = 'rgba(91,140,255,0.06)';
+      ctx.lineWidth = 1;
+      for (let l = 0; l < LANES; l++) {
+        const cx = (l+0.5)*LANE_W;
+        ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, H); ctx.stroke();
+      }
+
+      // Particles (behind blocks)
+      this.ps.draw(ctx);
+
+      // Pickups
+      this.pickups.forEach(p => {
+        const pulse = Math.sin(p.glow)*0.4+0.6;
+        ctx.globalAlpha = 0.25*pulse;
+        ctx.fillStyle = '#3ecf8e';
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size*2.5, 0, Math.PI*2); ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#3ecf8e';
+        ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 1.5;
+        // Hexagon shard shape
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.glow*0.5);
+        ctx.beginPath();
+        for (let i=0;i<6;i++) { const a=i*Math.PI/3-Math.PI/6; ctx.lineTo(Math.cos(a)*p.size, Math.sin(a)*p.size); }
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.restore();
+      });
+
+      // Hazard blocks
+      this.blocks.forEach(b => this._drawHazard(ctx, b));
+
+      // Player
+      this._drawPlayer(ctx);
+
+      // Story HUD
+      if (this.data.selectedMode === 'Story') {
+        const ch = STORY_CHAPTERS[clamp(this.data.storyProgress,0,STORY_CHAPTERS.length-1)];
+        if (ch) {
+          ctx.fillStyle = 'rgba(0,0,0,0.55)';
+          ctx.beginPath(); ctx.roundRect(12, 12, 360, 52, 8); ctx.fill();
+          ctx.fillStyle = COLORS.accent; ctx.font = 'bold 12px Inter,system-ui,sans-serif';
+          ctx.fillText(ch.title, 22, 30);
+          ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.font = '11px Inter,system-ui,sans-serif';
+          ctx.fillText(ch.label, 22, 50);
+        }
+      }
+
+      // Combo burst text
+      if (this.combo > 0 && this.combo % 10 === 0) {
+        ctx.fillStyle = COLORS.accent; ctx.font = 'bold 20px Inter,system-ui,sans-serif';
+        ctx.globalAlpha = 0.8;
+        ctx.fillText(`×${this.combo} COMBO`, W/2-60, H/2-40);
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    _loop = ts => {
+      if (!this.running) return;
+      this.frameN++;
+      const dt = clamp((ts-this.lastTs)/1000, 0, 0.045);
+      this.lastTs = ts;
+      if (!this.paused && !this.gameOver) {
+        const elapsed = (ts-this.startTs)/1000;
+        this.spawnTimer += dt;
+        if (this.spawnTimer >= this._spawnInterval(elapsed)) {
+          this.spawnTimer = 0;
+          this._spawnWave(elapsed);
+        }
+        if (this.powerups.has('Time Bloom') && this.combo>0 && this.combo%12===0) {
+          this.blocks.forEach(b=>{ b.speed*=0.995; });
+        }
+        this._updatePlayer(dt);
+        this._updateBlocks(dt);
+        this._updatePickups(dt);
+      }
+      this.ps.update(dt);
+      this.draw();
+      this.rafId = requestAnimationFrame(this._loop);
+    };
+  }
+
+  // ─── DAILY OBJECTIVE ─────────────────────────────────────────────────────────
+  function dailyObjForDay(day) {
+    let h = 0x811c9dc5;
+    for (const c of day) { h ^= c.charCodeAt(0); h = (h*0x01000193)>>>0; }
+    return DAILY_OBJ[h % DAILY_OBJ.length];
+  }
+
+  // ─── UI CONTROLLER ───────────────────────────────────────────────────────────
+  class DodgeUI {
+    constructor() {
+      this.data = load();
+      this.engine = null;
+      this.activeTab = 'modes';
+      this._statusTimer = null;
+      this._uiTimer = null;
+      this._syncThrottle = 0;
+      this._ensureDefaults();
+      this._ensureDailyObjective();
+      this._buildEngine();
+      this._buildTabs();
+      this._bindGlobal();
+      this._bindButtons();
+      this._bindCheats();
+      this._syncUI();
+    }
+
+    _ensureDefaults() {
+      const d = this.data;
+      if (!Array.isArray(d.ownedModifiers)||!d.ownedModifiers.length) d.ownedModifiers=['Balanced'];
+      if (!d.ownedModifiers.includes('Balanced')) d.ownedModifiers.unshift('Balanced');
+      if (!Array.isArray(d.ownedPowerups)) d.ownedPowerups=[];
+      if (!Array.isArray(d.ownedVisualThemes)||!d.ownedVisualThemes.length) d.ownedVisualThemes=['Neon'];
+      if (!d.ownedVisualThemes.includes('Neon')) d.ownedVisualThemes.unshift('Neon');
+      if (!Array.isArray(d.ownedUtilitySkins)||!d.ownedUtilitySkins.length) d.ownedUtilitySkins=['Pulse'];
+      if (!d.ownedUtilitySkins.includes('Pulse')) d.ownedUtilitySkins.unshift('Pulse');
+      if (!Array.isArray(d.storyRewardsClaimed)) d.storyRewardsClaimed=[];
+      if (!Array.isArray(d.activeCheats)) d.activeCheats=[];
+      if (!MODIFIERS[d.selectedModifier]) d.selectedModifier='Balanced';
+      if (!POWERUPS[d.selectedPowerup]) d.selectedPowerup='None';
+      if (!VISUAL_THEMES[d.selectedVisualTheme]) d.selectedVisualTheme='Neon';
+      if (!GAME_MODES[d.selectedMode]) d.selectedMode='Classic';
+      save(d);
+    }
+
+    _ensureDailyObjective() {
+      const today = localDay();
+      const obj = dailyObjForDay(today);
+      const stored = this.data.dailyObjective;
+      if (!stored||stored.date!==today||stored.objectiveId!==obj.id) {
+        this.data.dailyObjective = { date:today, objectiveId:obj.id, completed:false, rewardClaimed:false };
+        save(this.data);
+      }
+    }
+
+    get dailyState() {
+      this._ensureDailyObjective();
+      const s = this.data.dailyObjective;
+      return { ...s, meta: dailyObjForDay(localDay()) };
+    }
+
+    _buildEngine() {
+      const canvas = document.getElementById('gameCanvas');
+      this.engine = new DodgeEngine(canvas, this.data);
+      this.engine.onEndRun = summary => this._handleRunEnd(summary);
+    }
+
+    _handleRunEnd(summary) {
+      const d = this.data;
+      d.totalRuns++;
+      d.bestScore = Math.max(d.bestScore, summary.score);
+      d.bestByMode = d.bestByMode||{};
+      d.bestByMode[d.selectedMode] = Math.max(d.bestByMode[d.selectedMode]||0, summary.score);
+      d.longestCombo = Math.max(d.longestCombo, summary.combo);
+      // Story check
+      if (d.selectedMode==='Story') this._checkStory();
+      // Daily objective
+      this._evaluateDaily(summary);
+      // Coins
+      if (!this.engine.hasCheats) d.coins += summary.runCoins;
+      save(d);
+      this._syncUI();
+      this._showEndModal(summary);
+    }
+
+    _checkStory() {
+      const d = this.data;
+      const idx = clamp(d.storyProgress||0, 0, STORY_CHAPTERS.length-1);
+      const ch = STORY_CHAPTERS[idx];
+      if (!ch) return;
+      const e = this.engine;
+      const ok = e.score>=(ch.targetScore||0) && (!ch.targetPickups||e.storyPickups>=ch.targetPickups) && (!ch.targetCombo||e.bestComboRun>=ch.targetCombo) && (!ch.requireLife||e.lives>=1);
+      if (ok && !d.storyRewardsClaimed.includes(ch.id)) {
+        d.coins += ch.reward;
+        d.storyRewardsClaimed.push(ch.id);
+        d.storyProgress = Math.min(STORY_CHAPTERS.length, (d.storyProgress||0)+1);
+        this.flash(`Sector cleared: ${ch.title} · +${ch.reward} coins`, 'ok');
+      }
+    }
+
+    _evaluateDaily(summary) {
+      const ds = this.dailyState;
+      if (ds.completed) return;
+      const { type, target=0 } = ds.meta;
+      const hasOwnedPu = this.data.selectedPowerup!=='None' && this.data.ownedPowerups.includes(this.data.selectedPowerup);
+      const done = (type==='run') || (type==='pickups'&&summary.pickups>=target) || (type==='coins'&&summary.runCoins>=target) || (type==='powerupScore'&&hasOwnedPu&&summary.score>=target);
+      if (done) {
+        this.data.dailyObjective = { ...this.data.dailyObjective, completed:true };
+        save(this.data);
+        this.flash(`Daily objective complete: ${ds.meta.title}`, 'ok');
+      }
+    }
+
+    claimDaily() {
+      const ds = this.dailyState;
+      if (!ds.completed) { this.flash('Finish the objective first.', 'warn'); return; }
+      if (ds.rewardClaimed) { this.flash('Already claimed today.', 'warn'); return; }
+      const d = this.data;
+      d.coins += ds.meta.reward;
+      const prevDate = d.lastDailyClaimDate||'';
+      const consecutive = prevDate && (new Date(ds.date).getTime()-new Date(prevDate).getTime())===86400000;
+      d.dailyStreak = consecutive ? (d.dailyStreak||0)+1 : 1;
+      d.lastDailyClaimDate = ds.date;
+      const bonus = d.dailyStreak>1 ? Math.min(80, d.dailyStreak*10) : 0;
+      if (bonus>0) d.coins += bonus;
+      if (d.dailyStreak%3===0) d.aiPurchasedTokens = (d.aiPurchasedTokens||0)+1;
+      d.dailyObjective = { ...d.dailyObjective, rewardClaimed:true };
+      save(d);
+      this._syncUI();
+      this.flash(`Reward claimed · Streak: ${d.dailyStreak}${bonus?` · Streak bonus: +${bonus} coins`:''}`, 'ok');
+    }
+
+    _showEndModal(summary) {
+      const overlay = document.getElementById('overlay');
+      const isCheat = this.engine.hasCheats;
+      overlay.innerHTML = `
+        <div class="modal">
+          <h2>Run over</h2>
+          <p>Mode: <strong>${this.data.selectedMode}</strong> · ${isCheat?'Utilities active — no coins earned':'Coins banked'}</p>
+          <div class="modal-stats">
+            <div class="modal-stat"><div class="modal-stat-val" style="color:var(--accent)">${summary.score}</div><div class="modal-stat-lbl">Score</div></div>
+            <div class="modal-stat"><div class="modal-stat-val" style="color:var(--gold)">${isCheat?0:summary.runCoins}</div><div class="modal-stat-lbl">Coins</div></div>
+            <div class="modal-stat"><div class="modal-stat-val" style="color:var(--success)">${summary.pickups}</div><div class="modal-stat-lbl">Shards</div></div>
+            <div class="modal-stat"><div class="modal-stat-val" style="color:var(--text)">${summary.combo}</div><div class="modal-stat-lbl">Best combo</div></div>
+          </div>
+          <button class="btn btn-primary" id="overlayRestart" style="width:100%;justify-content:center;padding:12px">Play again</button>
+        </div>`;
+      overlay.hidden = false;
+      overlay.querySelector('#overlayRestart').addEventListener('click', () => {
+        overlay.hidden = true;
+        this.engine.restart();
+        this.engine.running = true;
+        this.flash('New run started', 'ok');
+      });
+    }
+
+    flash(msg, tone='ok') {
+      const el = document.getElementById('statusBar');
+      el.textContent = msg;
+      el.className = 'status-bar ' + (tone==='ok'?'ok':tone==='warn'?'warn':'danger');
+      clearTimeout(this._statusTimer);
+      this._statusTimer = setTimeout(() => {
+        el.textContent = this.engine?.gameOver ? 'Run ended.' : this.engine?.paused ? 'Paused.' : 'Ready.';
+        el.className = 'status-bar';
+      }, 2200);
+    }
+
+    _syncUI() {
+      const now = performance.now();
+      if (now - this._syncThrottle < 80) return;
+      this._syncThrottle = now;
+      const d = this.data;
+      const e = this.engine;
+      document.getElementById('hdrCoins').textContent = d.coins||0;
+      document.getElementById('hdrBest').textContent = d.bestScore||0;
+      document.getElementById('hdrRuns').textContent = d.totalRuns||0;
+      document.getElementById('hdrStreak').textContent = d.dailyStreak||0;
+      document.getElementById('hdrModePill').textContent = d.selectedMode||'Classic';
+      document.getElementById('badgeScore').textContent = `⬡ ${e?.score||0}`;
+      document.getElementById('badgeCoins').textContent = `◈ ${e?.runCoins||0}`;
+      document.getElementById('badgeCombo').textContent = `× ${e?.combo||0}`;
+      document.getElementById('badgeLives').textContent = `♥ ${e?.lives||1}`;
+      document.getElementById('badgeDiff').textContent = e?._diffStage?.()?.name||'Easy';
+      this._syncMission();
+      this._syncCheats();
+    }
+
+    _syncMission() {
+      const ds = this.dailyState;
+      const el = document.getElementById('missionSection');
+      if (!el) return;
+      el.innerHTML = `
+        <div class="mission-card">
+          <div class="mission-title">${ds.meta.title}</div>
+          <div class="mission-desc">${ds.meta.desc}</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${ds.completed?100:0}%"></div></div>
+          <div class="mission-footer">
+            <span class="pill ${ds.completed?'pill-gold':'pill-accent'}">${ds.rewardClaimed?'Claimed':ds.completed?`+${ds.meta.reward} coins ready`:'In progress'}</span>
+            <button class="btn ${ds.completed&&!ds.rewardClaimed?'btn-primary':''}" id="claimBtn" ${ds.completed&&!ds.rewardClaimed?'':'disabled'}>
+              ${ds.rewardClaimed?'✓ Claimed':ds.completed?'Claim reward':'Not yet done'}
+            </button>
+          </div>
+        </div>`;
+      el.querySelector('#claimBtn')?.addEventListener('click', () => this.claimDaily());
+    }
+
+    _syncCheats() {
+      document.querySelectorAll('[data-cheat]').forEach(inp => {
+        inp.checked = (this.data.activeCheats||[]).includes(inp.dataset.cheat);
+      });
+    }
+
+    _buildTabs() {
+      this._renderTab('modes');
+    }
+
+    _renderTab(tab) {
+      this.activeTab = tab;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab===tab));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id===`tab-${tab}`));
+      const el = document.getElementById(`tab-${tab}`);
+      if (!el) return;
+      if (tab==='modes') el.innerHTML = this._buildModes();
+      if (tab==='progress') el.innerHTML = this._buildProgress();
+      if (tab==='loadout') el.innerHTML = this._buildLoadout();
+      if (tab==='shop') el.innerHTML = this._buildShop();
+      this._bindTabEvents(tab);
+    }
+
+    _buildModes() {
+      const cards = Object.entries(GAME_MODES).map(([name, m]) => `
+        <button class="mode-card ${this.data.selectedMode===name?'selected':''}" data-mode="${name}">
+          <div class="mode-name">${name}</div>
+          <div class="mode-desc">${m.desc}</div>
+          <div class="mode-tag"><span class="pill pill-accent" style="font-size:10px">${m.obj.split(' ').slice(0,4).join(' ')}…</span></div>
+        </button>`).join('');
+      return `<div class="mode-grid">${cards}</div>`;
+    }
+
+    _buildProgress() {
+      const d = this.data;
+      const prog = d.storyProgress||0;
+      const story = STORY_CHAPTERS.map((ch, i) => {
+        const locked = i>prog;
+        const done = d.storyRewardsClaimed.includes(ch.id);
+        return `<div class="story-card ${locked?'locked':done?'done':''}">
+          <div class="story-card-title">${ch.title}</div>
+          <div class="story-card-desc">${ch.brief}</div>
+          <div class="story-card-footer">
+            <span class="pill ${done?'pill-success':locked?'':'pill-accent'}">${done?'✓ Done':locked?'Locked':'Available'}</span>
+            <span class="pill pill-gold">+${ch.reward} coins</span>
+          </div>
+        </div>`;
+      }).join('');
+      const bm = d.bestByMode||{};
+      const modeRows = Object.keys(GAME_MODES).map(m => `
+        <div class="stat-row"><span class="stat-row-lbl">${m}</span><span class="stat-row-val">${bm[m]||0}</span></div>`).join('');
+      return `
+        <div class="story-cards">${story}</div>
+        <hr class="divider">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">Best by mode</div>
+        ${modeRows}
+        <hr class="divider">
+        <div class="stat-row"><span class="stat-row-lbl">Total runs</span><span class="stat-row-val">${d.totalRuns}</span></div>
+        <div class="stat-row"><span class="stat-row-lbl">Best combo</span><span class="stat-row-val">${d.longestCombo}</span></div>
+        <div class="stat-row"><span class="stat-row-lbl">Total pickups</span><span class="stat-row-val">${d.totalPickups}</span></div>`;
+    }
+
+    _buildLoadout() {
+      const d = this.data;
+      const modItems = Object.entries(MODIFIERS).map(([n, m]) => {
+        const owned = d.ownedModifiers.includes(n);
+        const sel = d.selectedModifier===n;
+        return `<button class="loadout-item ${sel?'selected':''} ${!owned?'locked':''}" data-loadout="modifier" data-name="${n}">
+          <div class="loadout-item-icon">${sel?'◉':'○'}</div>
+          <div class="loadout-item-body">
+            <div class="loadout-item-name">${n} ${m.price?`<span class="${owned?'owned-tag':'price-tag'}">${owned?'Owned':`${m.price}c`}</span>`:''}</div>
+            <div class="loadout-item-desc">${m.desc}</div>
+          </div>
+        </button>`;
+      }).join('');
+      const puItems = Object.entries(POWERUPS).map(([n, p]) => {
+        const owned = n==='None'||d.ownedPowerups.includes(n);
+        const sel = d.selectedPowerup===n;
+        return `<button class="loadout-item ${sel?'selected':''} ${!owned?'locked':''}" data-loadout="powerup" data-name="${n}">
+          <div class="loadout-item-icon">${p.icon||'○'}</div>
+          <div class="loadout-item-body">
+            <div class="loadout-item-name">${n} ${p.price?`<span class="${owned?'owned-tag':'price-tag'}">${owned?'Owned':`${p.price}c`}</span>`:''}</div>
+            <div class="loadout-item-desc">${p.desc}</div>
+          </div>
+        </button>`;
+      }).join('');
+      const vtItems = Object.entries(VISUAL_THEMES).map(([n, t]) => {
+        const owned = d.ownedVisualThemes.includes(n);
+        const sel = d.selectedVisualTheme===n;
+        return `<button class="loadout-item ${sel?'selected':''} ${!owned?'locked':''}" data-loadout="theme" data-name="${n}" style="border-left:3px solid ${t.accent}">
+          <div class="loadout-item-body">
+            <div class="loadout-item-name">${n} ${t.price?`<span class="${owned?'owned-tag':'price-tag'}">${owned?'Owned':`${t.price}c`}</span>`:''}</div>
+            <div class="loadout-item-desc">${t.desc}</div>
+          </div>
+        </button>`;
+      }).join('');
+      return `
+        <div style="margin-bottom:12px">
+          <div class="panel-title" style="margin-bottom:8px">Modifier</div>
+          <div class="loadout-grid">${modItems}</div>
+          <button class="btn btn-primary" data-action="buy-modifier" style="width:100%;margin-top:8px;justify-content:center">${d.ownedModifiers.includes(d.selectedModifier)?'Equip modifier':`Buy for ${MODIFIERS[d.selectedModifier]?.price||0} coins`}</button>
+        </div>
+        <hr class="divider">
+        <div style="margin-bottom:12px">
+          <div class="panel-title" style="margin-bottom:8px">Powerup</div>
+          <div class="loadout-grid">${puItems}</div>
+          <button class="btn btn-primary" data-action="buy-powerup" style="width:100%;margin-top:8px;justify-content:center">${d.selectedPowerup==='None'||d.ownedPowerups.includes(d.selectedPowerup)?'Equip powerup':`Buy for ${POWERUPS[d.selectedPowerup]?.price||0} coins`}</button>
+        </div>
+        <hr class="divider">
+        <div>
+          <div class="panel-title" style="margin-bottom:8px">Visual theme</div>
+          <div class="loadout-grid">${vtItems}</div>
+          <button class="btn btn-primary" data-action="buy-theme" style="width:100%;margin-top:8px;justify-content:center">${d.ownedVisualThemes.includes(d.selectedVisualTheme)?'Equip theme':`Buy for ${VISUAL_THEMES[d.selectedVisualTheme]?.price||0} coins`}</button>
+        </div>`;
+    }
+
+    _buildShop() {
+      const d = this.data;
+      const skinItems = Object.entries(UTILITY_SKINS).map(([n, s]) => {
+        const owned = (d.ownedUtilitySkins||[]).includes(n);
+        const sel = d.utilitySkin===n;
+        return `<div class="shop-item">
+          <div class="shop-item-left">
+            <div class="shop-item-name">${n}</div>
+            <div class="shop-item-desc">${s.desc}</div>
+          </div>
+          <button class="btn ${sel?'btn-primary':''}" data-skin="${n}" style="white-space:nowrap">${sel?'Equipped':owned?'Equip':`${s.price}c`}</button>
+        </div>`;
+      }).join('');
+      return `
+        <div class="panel-title" style="margin-bottom:8px">Utility skins</div>
+        <div class="shop-grid">${skinItems}</div>
+        <p style="font-size:11px;color:var(--muted);margin-top:10px">Utility skins change the visual feedback style of pickups and dodge effects. They don't affect gameplay.</p>`;
+    }
+
+    _bindTabEvents(tab) {
+      if (tab==='modes') {
+        document.querySelectorAll('[data-mode]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            this.data.selectedMode = btn.dataset.mode;
+            save(this.data);
+            this.engine.data = this.data;
+            this.engine.restart();
+            this._renderTab('modes');
+            this._syncUI();
+            this.flash(`${this.data.selectedMode} mode selected`, 'ok');
+          });
+        });
+      }
+      if (tab==='loadout') {
+        document.querySelectorAll('[data-loadout]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const type = btn.dataset.loadout, name = btn.dataset.name;
+            if (type==='modifier') this.data.selectedModifier = name;
+            if (type==='powerup') this.data.selectedPowerup = name;
+            if (type==='theme') { this.data.selectedVisualTheme = name; applyVisualTheme(name); }
+            save(this.data); this.engine.data = this.data;
+            this._renderTab('loadout');
+          });
+        });
+        document.querySelector('[data-action="buy-modifier"]')?.addEventListener('click', () => this._buyModifier());
+        document.querySelector('[data-action="buy-powerup"]')?.addEventListener('click', () => this._buyPowerup());
+        document.querySelector('[data-action="buy-theme"]')?.addEventListener('click', () => this._buyTheme());
+      }
+      if (tab==='shop') {
+        document.querySelectorAll('[data-skin]').forEach(btn => {
+          btn.addEventListener('click', () => this._buySkin(btn.dataset.skin));
+        });
+      }
+    }
+
+    _buyModifier() {
+      const d = this.data;
+      const m = MODIFIERS[d.selectedModifier];
+      if (!m) return;
+      if (d.ownedModifiers.includes(d.selectedModifier)) {
+        this.engine.restart(); this._syncUI();
+        this.flash('Modifier equipped', 'ok'); return;
+      }
+      if (d.coins < m.price) { this.flash('Not enough coins', 'warn'); return; }
+      d.coins -= m.price; d.ownedModifiers.push(d.selectedModifier);
+      save(d); this._renderTab('loadout'); this._syncUI();
+      this.flash(`${d.selectedModifier} unlocked`, 'ok');
+    }
+
+    _buyPowerup() {
+      const d = this.data;
+      const p = POWERUPS[d.selectedPowerup];
+      if (!p||d.selectedPowerup==='None') { this.flash('No purchase needed for None', 'warn'); return; }
+      if (d.ownedPowerups.includes(d.selectedPowerup)) {
+        this.engine.restart(); this._syncUI();
+        this.flash('Powerup equipped', 'ok'); return;
+      }
+      if (d.coins < p.price) { this.flash('Not enough coins', 'warn'); return; }
+      d.coins -= p.price; d.ownedPowerups.push(d.selectedPowerup);
+      save(d); this._renderTab('loadout'); this._syncUI();
+      this.flash(`${d.selectedPowerup} unlocked`, 'ok');
+    }
+
+    _buyTheme() {
+      const d = this.data;
+      const t = VISUAL_THEMES[d.selectedVisualTheme];
+      if (!t) return;
+      if (d.ownedVisualThemes.includes(d.selectedVisualTheme)) {
+        applyVisualTheme(d.selectedVisualTheme); this.engine.restart();
+        this._syncUI(); this.flash('Theme equipped', 'ok'); return;
+      }
+      if (d.coins < t.price) { this.flash('Not enough coins', 'warn'); return; }
+      d.coins -= t.price; d.ownedVisualThemes.push(d.selectedVisualTheme);
+      applyVisualTheme(d.selectedVisualTheme);
+      save(d); this._renderTab('loadout'); this._syncUI();
+      this.flash(`${d.selectedVisualTheme} theme unlocked`, 'ok');
+    }
+
+    _buySkin(name) {
+      const d = this.data;
+      const s = UTILITY_SKINS[name];
+      if (!s) return;
+      if (!(d.ownedUtilitySkins||[]).includes(name)) {
+        if (d.coins < s.price) { this.flash('Not enough coins', 'warn'); return; }
+        d.coins -= s.price;
+        if (!d.ownedUtilitySkins) d.ownedUtilitySkins=['Pulse'];
+        d.ownedUtilitySkins.push(name);
+      }
+      d.utilitySkin = name;
+      save(d); this._renderTab('shop'); this._syncUI();
+      this.flash(`${name} skin equipped`, 'ok');
+    }
+
+    _bindButtons() {
+      document.getElementById('pauseBtn').addEventListener('click', () => {
+        if (!this.engine.running) { this.engine.start(); this.flash('Run started', 'ok'); document.getElementById('pauseBtn').textContent='Pause'; return; }
+        const now = this.engine.togglePause();
+        document.getElementById('pauseBtn').textContent = now?'Resume':'Pause';
+        this.flash(now?'Paused':'Resumed', now?'warn':'ok');
+      });
+      document.getElementById('restartBtn').addEventListener('click', () => {
+        document.getElementById('overlay').hidden = true;
+        this.engine.data = this.data;
+        this.engine.restart();
+        if (!this.engine.running) { this.engine.start(); }
+        document.getElementById('pauseBtn').textContent='Pause';
+        this.flash('Run started', 'ok');
+      });
+      document.getElementById('fsBtn').addEventListener('click', () => {
+        const w = document.getElementById('canvasWrap');
+        if (document.fullscreenElement===w) document.exitFullscreen?.();
+        else w.requestFullscreen?.().catch(()=>this.flash('Fullscreen not available', 'warn'));
+      });
+      document.getElementById('mobileLeft').addEventListener('click', () => this.engine.moveLane('left'));
+      document.getElementById('mobileRight').addEventListener('click', () => this.engine.moveLane('right'));
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.addEventListener('click', () => this._renderTab(b.dataset.tab));
+      });
+    }
+
+    _bindCheats() {
+      document.querySelectorAll('[data-cheat]').forEach(inp => {
+        inp.addEventListener('change', () => {
+          const cheats = new Set((this.data.activeCheats||[]).map(s=>s.toLowerCase()));
+          if (inp.checked) cheats.add(inp.dataset.cheat);
+          else cheats.delete(inp.dataset.cheat);
+          this.data.activeCheats = [...cheats];
+          this.engine.data = this.data;
+          save(this.data);
+          this._syncUI();
+        });
+      });
+    }
+
+    _bindGlobal() {
+      const onKey = e => {
+        const k = e.key.toLowerCase();
+        const tag = (e.target?.tagName||'').toLowerCase();
+        if (['input','select','textarea','button'].includes(tag)) return;
+        if (k==='arrowleft'||k==='a') { e.preventDefault(); if (!e.repeat) this.engine.moveLane('left'); }
+        if (k==='arrowright'||k==='d') { e.preventDefault(); if (!e.repeat) this.engine.moveLane('right'); }
+        if (k===' '||k==='enter') { e.preventDefault();
+          if (!this.engine.running||this.engine.gameOver) {
+            document.getElementById('overlay').hidden=true;
+            this.engine.data=this.data; this.engine.restart();
+            if (!this.engine.running) this.engine.start();
+            document.getElementById('pauseBtn').textContent='Pause';
+            this.flash('Run started','ok');
+          } else { const now=this.engine.togglePause(); document.getElementById('pauseBtn').textContent=now?'Resume':'Pause'; }
+        }
+        if (k==='r') { e.preventDefault(); document.getElementById('restartBtn').click(); }
+        if (k==='f') { e.preventDefault(); document.getElementById('fsBtn').click(); }
+        if (k==='p') { e.preventDefault();
+          const now=this.engine.togglePause();
+          if (now!==false) { document.getElementById('pauseBtn').textContent=now?'Resume':'Pause'; }
+        }
+      };
+      document.addEventListener('keydown', onKey, { capture:true });
+      // Auto-sync UI every 100ms while game runs
+      setInterval(() => { if (this.engine?.running && !this.engine?.paused && !this.engine?.gameOver) this._syncUI(); }, 100);
+      // Auto-start drawing loop
+      window.addEventListener('load', () => this.engine.start());
+    }
+  }
+
+  // ─── BOOT ─────────────────────────────────────────────────────────────────────
+  window.addEventListener('DOMContentLoaded', () => {
+    new DodgeUI();
+  });
+
+})();
+</script>
+</body>
+</html>
