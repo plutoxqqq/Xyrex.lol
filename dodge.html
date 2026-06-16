@@ -32,6 +32,7 @@
   /* HEADER */
   .hdr { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
   .hdr-left { display: flex; align-items: center; gap: 12px; }
+  .home-link { text-decoration: none; }
   .logo { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; color: var(--text); }
   .logo span { color: var(--accent); }
   .pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid; }
@@ -175,6 +176,7 @@
 <div id="app">
   <header class="hdr">
     <div class="hdr-left">
+      <a class="btn home-link" href="/" aria-label="Return to the Xyrex home page">← Home</a>
       <div class="logo">Xyrex<span>·</span>Dodge</div>
       <span class="pill pill-accent" id="hdrModePill">Classic</span>
     </div>
