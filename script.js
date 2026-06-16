@@ -1087,9 +1087,7 @@ function openSettingsModal() {
 
   const dodgeBtn = qs('#settingsDodgeBtn');
   dodgeBtn?.addEventListener('click', () => {
-    closeModal();
-    syncNavButtonsWithPage('easterEggPage');
-    setActivePage('easterEggPage');
+    window.location.href = '/dodge.html';
   });
 
   const earnTokensBtn = qs('#settingsEarnTokensBtn');
@@ -2534,6 +2532,10 @@ const SEO_PATH_META = {
   '/dodge': {
     title: 'Xyrex Dodge | Play the Built-In Dodge Game',
     description: 'Play Xyrex Dodge, the built-in reflex game with missions, progression, responsive controls, and unlockable rewards.'
+  },
+  '/dodge.html': {
+    title: 'Xyrex Dodge | Play the Built-In Dodge Game',
+    description: 'Play Xyrex Dodge, the built-in reflex game with missions, progression, responsive controls, and unlockable rewards.'
   }
 };
 
@@ -3044,11 +3046,7 @@ function init() {
     e.preventDefault();
 
     if (searchValue === 'dodge') {
-      searchInput.value = '';
-      applyAllFilters();
-      syncNavButtonsWithPage('easterEggPage');
-      setActivePage('easterEggPage');
-      searchInput.blur();
+      window.location.href = '/dodge.html';
       return;
     }
 
