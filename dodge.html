@@ -333,22 +333,104 @@
     dailyStreak:0, lastDailyClaimDate:'',
   };
 
-  // ─── STORAGE ─────────────────────────────────────────────────────────────────
+  // ─── STORAGE + ANTICHEAT ─────────────────────────────────────────────────────
+  const ANTICHEAT_VERSION = 2;
+  const ANTICHEAT_SALT = 'xyrex.dodge.integrity.v2.2026';
+  const MAX_SAFE_COINS = 250000;
+  const MAX_SAFE_SCORE = 100000;
+  const VALID_CHEATS = new Set(['autoplay', 'nodeath', 'slowtime', 'ghost']);
+
   function localDay() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   }
 
+  function stableStringify(value) {
+    if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+    if (value && typeof value === 'object') return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`;
+    return JSON.stringify(value);
+  }
+
+  function checksum(payload) {
+    const input = `${ANTICHEAT_SALT}:${stableStringify(payload)}`;
+    let hash = 2166136261;
+    for (let i = 0; i < input.length; i++) { hash ^= input.charCodeAt(i); hash = Math.imul(hash, 16777619); }
+    return (hash >>> 0).toString(36);
+  }
+
+  function stripIntegrity(payload) {
+    const clean = { ...(payload || {}) };
+    delete clean.__xyrexIntegrity;
+    return clean;
+  }
+
+  function seal(payload) {
+    const clean = sanitizeSaveData(stripIntegrity(payload));
+    return { ...clean, __xyrexIntegrity: { version: ANTICHEAT_VERSION, checksum: checksum(clean) } };
+  }
+
+  function isSealed(payload) {
+    const meta = payload?.__xyrexIntegrity;
+    if (!meta || meta.version !== ANTICHEAT_VERSION || typeof meta.checksum !== 'string') return false;
+    return meta.checksum === checksum(stripIntegrity(payload));
+  }
+
+  function numberInRange(value, fallback, min, max) {
+    const next = Number(value);
+    if (!Number.isFinite(next)) return fallback;
+    return clamp(Math.trunc(next), min, max);
+  }
+
+  function listFromCatalog(value, catalog, required = []) {
+    const valid = new Set(Object.keys(catalog));
+    const next = Array.isArray(value) ? value.filter(item => valid.has(item)) : [];
+    required.forEach(item => { if (!next.includes(item)) next.unshift(item); });
+    return [...new Set(next)];
+  }
+
+  function sanitizeSaveData(input) {
+    const d = { ...DEFAULT, ...(input || {}) };
+    d.coins = numberInRange(d.coins, DEFAULT.coins, 0, MAX_SAFE_COINS);
+    d.bestScore = numberInRange(d.bestScore, DEFAULT.bestScore, 0, MAX_SAFE_SCORE);
+    d.totalRuns = numberInRange(d.totalRuns, DEFAULT.totalRuns, 0, 1000000);
+    d.totalPickups = numberInRange(d.totalPickups, DEFAULT.totalPickups, 0, 1000000);
+    d.longestCombo = numberInRange(d.longestCombo, DEFAULT.longestCombo, 0, MAX_SAFE_SCORE);
+    d.storyProgress = numberInRange(d.storyProgress, DEFAULT.storyProgress, 0, STORY_CHAPTERS.length);
+    d.aiTokensUsedToday = numberInRange(d.aiTokensUsedToday, DEFAULT.aiTokensUsedToday, 0, FREE_TOKENS);
+    d.aiPurchasedTokens = numberInRange(d.aiPurchasedTokens, DEFAULT.aiPurchasedTokens, 0, 365);
+    d.dailyStreak = numberInRange(d.dailyStreak, DEFAULT.dailyStreak, 0, 3650);
+    d.bestByMode = Object.fromEntries(Object.entries(d.bestByMode && typeof d.bestByMode === 'object' ? d.bestByMode : {}).filter(([mode]) => GAME_MODES[mode]).map(([mode, score]) => [mode, numberInRange(score, 0, 0, MAX_SAFE_SCORE)]));
+    d.ownedModifiers = listFromCatalog(d.ownedModifiers, MODIFIERS, ['Balanced']);
+    d.ownedPowerups = listFromCatalog(d.ownedPowerups, POWERUPS).filter(item => item !== 'None');
+    d.ownedVisualThemes = listFromCatalog(d.ownedVisualThemes, VISUAL_THEMES, ['Neon']);
+    d.ownedUtilitySkins = listFromCatalog(d.ownedUtilitySkins, UTILITY_SKINS, ['Pulse']);
+    d.storyRewardsClaimed = Array.isArray(d.storyRewardsClaimed) ? [...new Set(d.storyRewardsClaimed.filter(id => STORY_CHAPTERS.some(ch => ch.id === id)))] : [];
+    d.activeCheats = Array.isArray(d.activeCheats) ? [...new Set(d.activeCheats.map(item => String(item).toLowerCase()).filter(item => VALID_CHEATS.has(item)))] : [];
+    if (!MODIFIERS[d.selectedModifier]) d.selectedModifier = 'Balanced';
+    if (!POWERUPS[d.selectedPowerup]) d.selectedPowerup = 'None';
+    if (d.selectedPowerup !== 'None' && !d.ownedPowerups.includes(d.selectedPowerup)) d.selectedPowerup = 'None';
+    if (!VISUAL_THEMES[d.selectedVisualTheme] || !d.ownedVisualThemes.includes(d.selectedVisualTheme)) d.selectedVisualTheme = 'Neon';
+    if (!UTILITY_SKINS[d.utilitySkin] || !d.ownedUtilitySkins.includes(d.utilitySkin)) d.utilitySkin = 'Pulse';
+    if (!GAME_MODES[d.selectedMode]) d.selectedMode = 'Classic';
+    return d;
+  }
+
   function load() {
     try {
       const raw = localStorage.getItem(SAVE_KEY);
-      if (raw) return { ...DEFAULT, ...JSON.parse(raw) };
+      if (!raw) return { ...DEFAULT };
+      const parsed = JSON.parse(raw);
+      if (!parsed?.__xyrexIntegrity || !isSealed(parsed)) {
+        console.warn('Xyrex Dodge anticheat reset unverified save data.');
+        return { ...DEFAULT };
+      }
+      return sanitizeSaveData(stripIntegrity(parsed));
     } catch {}
     return { ...DEFAULT };
   }
 
   function save(d) {
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(d)); } catch {}
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(seal(d))); } catch {}
   }
 
   // ─── THEME COLORS ────────────────────────────────────────────────────────────

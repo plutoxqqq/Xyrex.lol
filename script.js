@@ -16,6 +16,54 @@ const FREE_TOKEN_SHOP = Object.freeze({
 });
 let settingsCooldownTimerId = null;
 
+const XYREX_ANTICHEAT_VERSION = 2;
+const XYREX_ANTICHEAT_SALT = 'xyrex.lol.integrity.v2.2026';
+
+function stableStringify(value) {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function anticheatChecksum(payload, namespace = 'global') {
+  const input = `${XYREX_ANTICHEAT_SALT}:${namespace}:${stableStringify(payload)}`;
+  let hash = 2166136261;
+  for (let i = 0; i < input.length; i += 1) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function sealAnticheatPayload(payload, namespace = 'global') {
+  const cleanPayload = { ...(payload || {}) };
+  delete cleanPayload.__xyrexIntegrity;
+  return {
+    ...cleanPayload,
+    __xyrexIntegrity: {
+      version: XYREX_ANTICHEAT_VERSION,
+      checksum: anticheatChecksum(cleanPayload, namespace)
+    }
+  };
+}
+
+function verifyAnticheatPayload(payload, namespace = 'global') {
+  if (!payload || typeof payload !== 'object') return false;
+  const saved = payload.__xyrexIntegrity;
+  if (!saved || saved.version !== XYREX_ANTICHEAT_VERSION || typeof saved.checksum !== 'string') return false;
+  const cleanPayload = { ...payload };
+  delete cleanPayload.__xyrexIntegrity;
+  return saved.checksum === anticheatChecksum(cleanPayload, namespace);
+}
+
+function stripAnticheatPayload(payload) {
+  const cleanPayload = { ...(payload || {}) };
+  delete cleanPayload.__xyrexIntegrity;
+  return cleanPayload;
+}
+
 function clampTokenClaimAmount(value) {
   if (!Number.isFinite(value)) return FREE_TOKEN_SHOP.minClaim;
   return Math.min(FREE_TOKEN_SHOP.maxClaim, Math.max(FREE_TOKEN_SHOP.minClaim, Math.trunc(value)));
@@ -903,7 +951,10 @@ function readFallbackAiTokenData() {
     const raw = localStorage.getItem(AI_TOKEN_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') return { key: AI_TOKEN_STORAGE_KEY, data: parsed };
+      if (parsed && typeof parsed === 'object') {
+        if (parsed.__xyrexIntegrity && verifyAnticheatPayload(parsed, AI_TOKEN_STORAGE_KEY)) return { key: AI_TOKEN_STORAGE_KEY, data: stripAnticheatPayload(parsed), legacy: false };
+        console.warn('Xyrex anticheat blocked unverified AI token storage.');
+      }
     }
   } catch {
     // Ignore invalid saved token data and use defaults.
@@ -919,8 +970,8 @@ function normalizeFallbackAiTokenData(data) {
     next.aiTokensUsedToday = 0;
   }
   next.aiTokensUsedToday = Math.max(0, Number(next.aiTokensUsedToday) || 0);
-  next.aiPurchasedTokens = Math.max(0, Number(next.aiPurchasedTokens) || 0);
-  next.freeTokenCooldownUntil = Math.max(0, Number(next.freeTokenCooldownUntil) || 0);
+  next.aiPurchasedTokens = Math.min(365, Math.max(0, Number(next.aiPurchasedTokens) || 0));
+  next.freeTokenCooldownUntil = Math.min(Date.now() + FREE_TOKEN_SHOP.maxCooldownMs, Math.max(0, Number(next.freeTokenCooldownUntil) || 0));
   next.freeTokenLastClaimAmount = clampTokenClaimAmount(Number(next.freeTokenLastClaimAmount) || FREE_TOKEN_SHOP.minClaim);
   return next;
 }
@@ -970,7 +1021,7 @@ function claimFreeTokens(amountInput) {
   data.aiPurchasedTokens = Math.max(0, Number(data.aiPurchasedTokens) || 0) + amount;
   data.freeTokenLastClaimAmount = amount;
   data.freeTokenCooldownUntil = now + cooldownMs;
-  localStorage.setItem(tokenState.key || AI_TOKEN_STORAGE_KEY, JSON.stringify(data));
+  localStorage.setItem(tokenState.key || AI_TOKEN_STORAGE_KEY, JSON.stringify(sealAnticheatPayload(data, AI_TOKEN_STORAGE_KEY)));
   return { ok: true, amount, cooldownMs };
 }
 
@@ -1022,7 +1073,7 @@ function consumeAiTokenForAssistant() {
 
   if (freeRemaining > 0) data.aiTokensUsedToday += 1;
   else data.aiPurchasedTokens = purchased - 1;
-  localStorage.setItem(tokenState.key || AI_TOKEN_STORAGE_KEY, JSON.stringify(data));
+  localStorage.setItem(tokenState.key || AI_TOKEN_STORAGE_KEY, JSON.stringify(sealAnticheatPayload(data, AI_TOKEN_STORAGE_KEY)));
   return true;
 }
 

@@ -7,6 +7,38 @@
   const AI_MAX_ATTEMPTS = 4;
   const AI_TOKEN_STORAGE_KEY = 'xyrex_ai_tokens_v1';
   const FREE_DAILY_AI_TOKENS = 5;
+
+  const XYREX_ANTICHEAT_VERSION = 2;
+  const XYREX_ANTICHEAT_SALT = 'xyrex.lol.integrity.v2.2026';
+  function stableStringify(value) {
+    if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+    if (value && typeof value === 'object') return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`;
+    return JSON.stringify(value);
+  }
+  function anticheatChecksum(payload, namespace = 'global') {
+    const input = `${XYREX_ANTICHEAT_SALT}:${namespace}:${stableStringify(payload)}`;
+    let hash = 2166136261;
+    for (let i = 0; i < input.length; i += 1) { hash ^= input.charCodeAt(i); hash = Math.imul(hash, 16777619); }
+    return (hash >>> 0).toString(36);
+  }
+  function sealAnticheatPayload(payload, namespace = 'global') {
+    const cleanPayload = { ...(payload || {}) };
+    delete cleanPayload.__xyrexIntegrity;
+    return { ...cleanPayload, __xyrexIntegrity: { version: XYREX_ANTICHEAT_VERSION, checksum: anticheatChecksum(cleanPayload, namespace) } };
+  }
+  function verifyAnticheatPayload(payload, namespace = 'global') {
+    if (!payload || typeof payload !== 'object') return false;
+    const saved = payload.__xyrexIntegrity;
+    if (!saved || saved.version !== XYREX_ANTICHEAT_VERSION || typeof saved.checksum !== 'string') return false;
+    const cleanPayload = { ...payload };
+    delete cleanPayload.__xyrexIntegrity;
+    return saved.checksum === anticheatChecksum(cleanPayload, namespace);
+  }
+  function stripAnticheatPayload(payload) {
+    const cleanPayload = { ...(payload || {}) };
+    delete cleanPayload.__xyrexIntegrity;
+    return cleanPayload;
+  }
   const themeDefaults = themeApi?.themeDefaults || {
     bg: '#06070d',
     bg2: '#0a0c14',
@@ -302,13 +334,16 @@
   function getAiTokenData() {
     try {
       const parsed = JSON.parse(localStorage.getItem(AI_TOKEN_STORAGE_KEY) || '{}');
-      return parsed && typeof parsed === 'object' ? parsed : {};
+      if (!parsed || typeof parsed !== 'object') return {};
+      if (parsed.__xyrexIntegrity && verifyAnticheatPayload(parsed, AI_TOKEN_STORAGE_KEY)) return stripAnticheatPayload(parsed);
+      console.warn('Xyrex anticheat blocked unverified AI token storage.');
+      return {};
     } catch {
       return {};
     }
   }
   function writeAiTokenData(payload) {
-    localStorage.setItem(AI_TOKEN_STORAGE_KEY, JSON.stringify(payload));
+    localStorage.setItem(AI_TOKEN_STORAGE_KEY, JSON.stringify(sealAnticheatPayload(payload, AI_TOKEN_STORAGE_KEY)));
   }
   function getDayKey() {
     const now = new Date();
@@ -326,6 +361,7 @@
     }
     if (!Number.isFinite(next.aiTokensUsedToday) || next.aiTokensUsedToday < 0) next.aiTokensUsedToday = 0;
     if (!Number.isFinite(next.aiPurchasedTokens) || next.aiPurchasedTokens < 0) next.aiPurchasedTokens = 0;
+    next.aiPurchasedTokens = Math.min(365, next.aiPurchasedTokens);
     if (!Array.isArray(next.ownedModifiers)) next.ownedModifiers = ['Balanced'];
     if (typeof next.selectedModifier !== 'string') next.selectedModifier = 'Balanced';
     if (!Array.isArray(next.ownedPowerups)) next.ownedPowerups = [];
