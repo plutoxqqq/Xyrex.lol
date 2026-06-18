@@ -17,32 +17,29 @@
 // [+] Fixed a script-breaking syntax error
 
 
-// AntiBan v2
-if (window.fetch.call.toString() == 'function call() { [native code] }') {
-    const call = window.fetch.call;
-    window.fetch.call = function () {
-        if (!arguments[1].includes("s.blooket.com/rc")) return call.apply(this, arguments);
-    }
+// Anti telemetry guard v2
+function shouldBlockTelemetryRequest(input) {
+    const url = typeof input === "string" ? input : input?.url;
+    return typeof url === "string" && url.includes("s.blooket.com/rc");
 }
 
-    /* By CryptoDude3 */
-    if (window.fetch.call.toString() == 'function call() { [native code] }') {
-        const call = window.fetch.call;
-        window.fetch.call = function () {
-            if (!arguments[1].includes("s.blooket.com/rc")) return call.apply(this, arguments);
-        }
-    }
+function installTelemetryGuard() {
+    if (window.__xyrexTelemetryGuardInstalled || typeof window.fetch !== "function") return;
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = function (input, init) {
+        if (shouldBlockTelemetryRequest(input)) return Promise.resolve(new Response(null, { status: 204 }));
+        return originalFetch(input, init);
+    };
+    window.__xyrexTelemetryGuardInstalled = true;
+}
+
+installTelemetryGuard();
+
     const timeProcessed = 1732772251920;
     let latestProcess = -1;
     const cheat = (async () => {
         /* Anti-Suspend By CryptoDude3 */
-        if (window.fetch.call.toString() == "function call() { [native code] }") {
-            const call = window.fetch.call;
-            window.fetch.call = function () {
-                if (!arguments[1].includes("s.blooket.com/rc")) return call.apply(this, arguments);
-            };
-            new Image().src = "https://gui-logger.onrender.com/gui/1?" + Date.now();
-        }
+        installTelemetryGuard();
 
         function addProps(element, obj) {
             for (const prop in obj)
@@ -93,7 +90,7 @@ if (window.fetch.call.toString() == 'function call() { [native code] }') {
                 style: {
                     top: `${Math.max(10, window.innerHeight - 600) / 2}px`,
                     left: `${Math.max(10, window.innerWidth - 1000) / 2}px`,
-                    transform: `scale(${Settings.data.scale})`,
+                    transform: `scale(${Number(Settings.data.scale) || 1})`,
                     position: "fixed",
                     height: "80%",
                     width: "80%",
@@ -597,6 +594,7 @@ if (window.fetch.call.toString() == 'function call() { [native code] }') {
         const alert = i.contentWindow.alert.bind(window);
         const prompt = i.contentWindow.prompt.bind(window);
         const confirm = i.contentWindow.confirm.bind(window);
+        const updateConfirm = confirm;
         i.remove();
 
         function getStateNode() {
@@ -1080,24 +1078,22 @@ if (window.fetch.call.toString() == 'function call() { [native code] }') {
                         if (!this.enabled) {
                             this.enabled = true;
                             const originalSetVal = liveCtrl.setVal.bind(liveCtrl);
+                            const myName = stateNode.props.client.name;
+                            const scoreKeys = /^(g|cr|d|t|f|ca|pr|sc|bs|xc|hp|exp|progress|score|points|tokens|cash|coins|money|blooks|population|toys|fossil|fishWeight|weight|gold|crypto|doubloons|cafeCash|towerPoints|numBlooks|numDefense|guestScore|xp|experience)$/;
                             this.data = originalSetVal;
-                            liveCtrl.setVal = (opts) => {
-                                const myName = stateNode.props.client.name;
-                                const path = opts.path;
-                                if (path.startsWith("c/") && path.endsWith(myName + "/")) {
-                                    // Score-like keys that appear on leaderboards
-                                    if (!/^\/(g|cr|d|t|f|ca|pr|sc|bs|xc|hp|exp|progress|score|points|tokens|cash|coins|money|blooks|population|toys|fossil|fishWeight|weight|gold|crypto|doubloons|cafeCash|towerPoints|numBlooks|numDefense|guestScore|xp|experience)$/.test(path.slice(path.indexOf(myName)+myName.length+1))) {
-                                        return originalSetVal(opts);
-                                    }
-                                    opts.val = 0;
+                            liveCtrl.setVal = (opts = {}) => {
+                                const path = String(opts.path || "");
+                                const prefix = `c/${myName}/`;
+                                if (path.startsWith(prefix) && scoreKeys.test(path.slice(prefix.length))) {
+                                    opts = { ...opts, val: 0 };
                                 }
                                 return originalSetVal(opts);
                             };
                             // Immediately set common score keys to 0
-                            const zeroable = ["g","cr","d","t","f","ca","pr","sc","bs","numBlooks","xp"];
-                            zeroable.forEach(k => {
-                                if (typeof stateNode.state[k] === "number") {
-                                    originalSetVal({ path: `c/${myName}/${k}`, val: 0 });
+                            const zeroable = ["g", "cr", "d", "t", "f", "ca", "pr", "sc", "bs", "numBlooks", "xp"];
+                            zeroable.forEach((key) => {
+                                if (typeof stateNode.state[key] === "number") {
+                                    originalSetVal({ path: `c/${myName}/${key}`, val: 0 });
                                 }
                             });
                         } else {
@@ -3949,7 +3945,7 @@ if (window.fetch.call.toString() == 'function call() { [native code] }') {
         try {
             [_, time, error] = decode.match(/LastUpdated: (.+?); ErrorMessage: "((.|\n)+?)"/);
         } catch (e) {}
-        if ((latestProcess = parseInt(time)) <= timeProcessed || iframe.contentWindow.confirm(error)) cheat();
+        if ((latestProcess = parseInt(time)) <= timeProcessed || updateConfirm(error)) cheat();
     }
     updateImg.onerror = updateImg.onabort = () => {
         updateImg.onerror = updateImg.onabort = null;
