@@ -1158,6 +1158,23 @@ function setUiWidthPreference(value) { setChoicePreference(UI_WIDTH_KEY, value, 
 function getUiImageVisibilityPreference() { return getChoicePreference(UI_IMAGE_VISIBILITY_KEY, 'show', ['show', 'hide']); }
 function setUiImageVisibilityPreference(value) { setChoicePreference(UI_IMAGE_VISIBILITY_KEY, value, 'show', ['show', 'hide']); }
 
+function getNextChoice(current, options) {
+  const index = options.indexOf(current);
+  return options[(index + 1) % options.length] || options[0];
+}
+
+function formatPreferenceLabel(value) {
+  return String(value || '')
+    .split('-')
+    .map(word => word ? `${word.charAt(0).toUpperCase()}${word.slice(1)}` : '')
+    .join(' ');
+}
+
+function cycleDisplayPreference(getter, setter, options) {
+  setter(getNextChoice(getter(), options));
+  openSettingsModal();
+}
+
 function applyDisplayPreferences() {
   document.body.dataset.uiMotion = getUiMotionPreference();
   document.body.dataset.uiFontScale = getUiFontScalePreference();
@@ -1217,23 +1234,15 @@ function openSettingsModal() {
           <button id="settingsLegendToggleBtn" class="btn-primary settings-action-btn" type="button">${getExecutorLegendVisible() ? 'Hide Legend' : 'Show Legend'}</button>
           <button id="settingsDensityToggleBtn" class="btn-primary settings-action-btn" type="button">${getExecutorDensityPreference() === 'compact' ? 'Comfortable Cards' : 'Compact Cards'}</button>
           <button id="settingsImagesToggleBtn" class="btn-primary settings-action-btn" type="button">${getUiImageVisibilityPreference() === 'hide' ? 'Show Logos' : 'Hide Logos'}</button>
+          <button id="settingsColumnsCycleBtn" class="btn-primary settings-action-btn" type="button">Cards Per Row: ${formatPreferenceLabel(getExecutorColumnsPreference())}</button>
+          <button id="settingsCardStyleCycleBtn" class="btn-primary settings-action-btn" type="button">Card Style: ${formatPreferenceLabel(getUiCardStylePreference())}</button>
+          <button id="settingsMotionCycleBtn" class="btn-primary settings-action-btn" type="button">Animations: ${formatPreferenceLabel(getUiMotionPreference())}</button>
+          <button id="settingsFontScaleCycleBtn" class="btn-primary settings-action-btn" type="button">Text Size: ${formatPreferenceLabel(getUiFontScalePreference())}</button>
+          <button id="settingsRoundnessCycleBtn" class="btn-primary settings-action-btn" type="button">Corners: ${formatPreferenceLabel(getUiRoundnessPreference())}</button>
+          <button id="settingsBackgroundCycleBtn" class="btn-primary settings-action-btn" type="button">Background: ${formatPreferenceLabel(getUiBackgroundPreference())}</button>
+          <button id="settingsWidthCycleBtn" class="btn-primary settings-action-btn" type="button">Page Width: ${formatPreferenceLabel(getUiWidthPreference())}</button>
         </div>
-        <div class="settings-field-grid">
-          <label class="settings-field" for="settingsExecutorColumnsSelect"><span>Executor cards per row</span><select id="settingsExecutorColumnsSelect" class="settings-select"><option value="auto" ${getExecutorColumnsPreference() === 'auto' ? 'selected' : ''}>Automatic</option><option value="2" ${getExecutorColumnsPreference() === '2' ? 'selected' : ''}>2 per row</option><option value="3" ${getExecutorColumnsPreference() === '3' ? 'selected' : ''}>3 per row</option></select></label>
-          <label class="settings-field" for="settingsCardStyleSelect"><span>Card style</span><select id="settingsCardStyleSelect" class="settings-select"><option value="glass" ${getUiCardStylePreference() === 'glass' ? 'selected' : ''}>Glass</option><option value="flat" ${getUiCardStylePreference() === 'flat' ? 'selected' : ''}>Flat</option><option value="outlined" ${getUiCardStylePreference() === 'outlined' ? 'selected' : ''}>Outlined</option></select></label>
-        </div>
-        <p class="settings-note">Control density, filter visibility, card count, logo visibility, and card surface styling.</p>
-      </div>
-      <div class="settings-group">
-        <h3>Visual Customization</h3>
-        <div class="settings-field-grid">
-          <label class="settings-field" for="settingsMotionSelect"><span>Animation level</span><select id="settingsMotionSelect" class="settings-select"><option value="full" ${getUiMotionPreference() === 'full' ? 'selected' : ''}>Full motion</option><option value="reduced" ${getUiMotionPreference() === 'reduced' ? 'selected' : ''}>Reduced motion</option><option value="off" ${getUiMotionPreference() === 'off' ? 'selected' : ''}>No motion</option></select></label>
-          <label class="settings-field" for="settingsFontScaleSelect"><span>Text size</span><select id="settingsFontScaleSelect" class="settings-select"><option value="small" ${getUiFontScalePreference() === 'small' ? 'selected' : ''}>Small</option><option value="normal" ${getUiFontScalePreference() === 'normal' ? 'selected' : ''}>Normal</option><option value="large" ${getUiFontScalePreference() === 'large' ? 'selected' : ''}>Large</option><option value="extra-large" ${getUiFontScalePreference() === 'extra-large' ? 'selected' : ''}>Extra large</option></select></label>
-          <label class="settings-field" for="settingsRoundnessSelect"><span>Corner style</span><select id="settingsRoundnessSelect" class="settings-select"><option value="sharp" ${getUiRoundnessPreference() === 'sharp' ? 'selected' : ''}>Sharp</option><option value="soft" ${getUiRoundnessPreference() === 'soft' ? 'selected' : ''}>Soft</option><option value="round" ${getUiRoundnessPreference() === 'round' ? 'selected' : ''}>Round</option></select></label>
-          <label class="settings-field" for="settingsBackgroundSelect"><span>Background mood</span><select id="settingsBackgroundSelect" class="settings-select"><option value="aurora" ${getUiBackgroundPreference() === 'aurora' ? 'selected' : ''}>Aurora</option><option value="plain" ${getUiBackgroundPreference() === 'plain' ? 'selected' : ''}>Plain</option><option value="high-contrast" ${getUiBackgroundPreference() === 'high-contrast' ? 'selected' : ''}>High contrast</option></select></label>
-          <label class="settings-field" for="settingsWidthSelect"><span>Page width</span><select id="settingsWidthSelect" class="settings-select"><option value="narrow" ${getUiWidthPreference() === 'narrow' ? 'selected' : ''}>Narrow</option><option value="standard" ${getUiWidthPreference() === 'standard' ? 'selected' : ''}>Standard</option><option value="wide" ${getUiWidthPreference() === 'wide' ? 'selected' : ''}>Wide</option></select></label>
-        </div>
-        <p class="settings-note">These preferences save automatically and apply across the site.</p>
+        <p class="settings-note">Use these buttons to customize the Executors tab instantly. Each button cycles through the available choices and saves automatically.</p>
       </div>
       <div class="settings-group">
         <h3>Games</h3>
@@ -1284,15 +1293,20 @@ function openSettingsModal() {
     openSettingsModal();
   });
 
-  const columnsSelect = qs('#settingsExecutorColumnsSelect');
-  columnsSelect?.addEventListener('change', event => { setExecutorColumnsPreference(event.target.value); });
-  qs('#settingsImagesToggleBtn')?.addEventListener('click', () => { setUiImageVisibilityPreference(getUiImageVisibilityPreference() === 'hide' ? 'show' : 'hide'); openSettingsModal(); });
-  qs('#settingsCardStyleSelect')?.addEventListener('change', event => { setUiCardStylePreference(event.target.value); });
-  qs('#settingsMotionSelect')?.addEventListener('change', event => { setUiMotionPreference(event.target.value); });
-  qs('#settingsFontScaleSelect')?.addEventListener('change', event => { setUiFontScalePreference(event.target.value); });
-  qs('#settingsRoundnessSelect')?.addEventListener('change', event => { setUiRoundnessPreference(event.target.value); });
-  qs('#settingsBackgroundSelect')?.addEventListener('change', event => { setUiBackgroundPreference(event.target.value); });
-  qs('#settingsWidthSelect')?.addEventListener('change', event => { setUiWidthPreference(event.target.value); });
+  qs('#settingsImagesToggleBtn')?.addEventListener('click', () => {
+    setUiImageVisibilityPreference(getUiImageVisibilityPreference() === 'hide' ? 'show' : 'hide');
+    openSettingsModal();
+  });
+  qs('#settingsColumnsCycleBtn')?.addEventListener('click', () => {
+    setExecutorColumnsPreference(getNextChoice(getExecutorColumnsPreference(), ['auto', '2', '3']));
+    openSettingsModal();
+  });
+  qs('#settingsCardStyleCycleBtn')?.addEventListener('click', () => cycleDisplayPreference(getUiCardStylePreference, setUiCardStylePreference, ['glass', 'flat', 'outlined']));
+  qs('#settingsMotionCycleBtn')?.addEventListener('click', () => cycleDisplayPreference(getUiMotionPreference, setUiMotionPreference, ['full', 'reduced', 'off']));
+  qs('#settingsFontScaleCycleBtn')?.addEventListener('click', () => cycleDisplayPreference(getUiFontScalePreference, setUiFontScalePreference, ['small', 'normal', 'large', 'extra-large']));
+  qs('#settingsRoundnessCycleBtn')?.addEventListener('click', () => cycleDisplayPreference(getUiRoundnessPreference, setUiRoundnessPreference, ['sharp', 'soft', 'round']));
+  qs('#settingsBackgroundCycleBtn')?.addEventListener('click', () => cycleDisplayPreference(getUiBackgroundPreference, setUiBackgroundPreference, ['aurora', 'plain', 'high-contrast']));
+  qs('#settingsWidthCycleBtn')?.addEventListener('click', () => cycleDisplayPreference(getUiWidthPreference, setUiWidthPreference, ['narrow', 'standard', 'wide']));
 
   const dodgeBtn = qs('#settingsDodgeBtn');
   dodgeBtn?.addEventListener('click', () => {
