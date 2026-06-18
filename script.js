@@ -1077,6 +1077,68 @@ function consumeAiTokenForAssistant() {
   return true;
 }
 
+
+const EXECUTOR_FILTERS_COLLAPSED_KEY = 'xyrex_executor_filters_collapsed';
+const EXECUTOR_COLUMNS_KEY = 'xyrex_executor_columns';
+const EXECUTOR_DENSITY_KEY = 'xyrex_executor_density';
+const EXECUTOR_LEGEND_VISIBLE_KEY = 'xyrex_executor_legend_visible';
+
+function getExecutorPreference(key, fallback) {
+  const value = localStorage.getItem(key);
+  return value === null ? fallback : value;
+}
+
+function getExecutorFiltersCollapsed() {
+  return getExecutorPreference(EXECUTOR_FILTERS_COLLAPSED_KEY, 'false') === 'true';
+}
+
+function setExecutorFiltersCollapsed(collapsed) {
+  localStorage.setItem(EXECUTOR_FILTERS_COLLAPSED_KEY, collapsed ? 'true' : 'false');
+  applyExecutorTabPreferences();
+}
+
+function getExecutorColumnsPreference() {
+  const value = getExecutorPreference(EXECUTOR_COLUMNS_KEY, 'auto');
+  return ['auto', '2', '3'].includes(value) ? value : 'auto';
+}
+
+function setExecutorColumnsPreference(value) {
+  localStorage.setItem(EXECUTOR_COLUMNS_KEY, ['auto', '2', '3'].includes(value) ? value : 'auto');
+  applyExecutorTabPreferences();
+}
+
+function getExecutorDensityPreference() {
+  const value = getExecutorPreference(EXECUTOR_DENSITY_KEY, 'comfortable');
+  return value === 'compact' ? 'compact' : 'comfortable';
+}
+
+function setExecutorDensityPreference(value) {
+  localStorage.setItem(EXECUTOR_DENSITY_KEY, value === 'compact' ? 'compact' : 'comfortable');
+  applyExecutorTabPreferences();
+}
+
+function getExecutorLegendVisible() {
+  return getExecutorPreference(EXECUTOR_LEGEND_VISIBLE_KEY, 'true') !== 'false';
+}
+
+function setExecutorLegendVisible(visible) {
+  localStorage.setItem(EXECUTOR_LEGEND_VISIBLE_KEY, visible ? 'true' : 'false');
+  applyExecutorTabPreferences();
+}
+
+function applyExecutorTabPreferences() {
+  const filtersCollapsed = getExecutorFiltersCollapsed();
+  const columns = getExecutorColumnsPreference();
+  const density = getExecutorDensityPreference();
+  const legendVisible = getExecutorLegendVisible();
+  document.body.classList.toggle('executor-filters-collapsed', filtersCollapsed);
+  document.body.classList.toggle('executor-cards-compact', density === 'compact');
+  document.body.classList.toggle('executor-legend-hidden', !legendVisible);
+  document.body.setAttribute('data-executor-columns', filtersCollapsed ? '3' : columns);
+  const sidebar = qs('#sidebar');
+  if (sidebar) sidebar.setAttribute('aria-hidden', filtersCollapsed ? 'true' : 'false');
+}
+
 function getBetaFeaturesEnabled() {
   return localStorage.getItem('xyrex_beta_features') === 'enabled';
 }
@@ -1104,6 +1166,23 @@ function openSettingsModal() {
           <button id="settingsThemeCustomizerBtn" class="btn-primary settings-action-btn" type="button" ${isNewUiMode ? '' : 'disabled'}>Theme Customizer</button>
         </div>
         <p class="settings-note">Theme Customizer is available when New UI mode is active</p>
+      </div>
+      <div class="settings-group">
+        <h3>Executors Tab</h3>
+        <div class="settings-actions">
+          <button id="settingsCollapseFiltersBtn" class="btn-primary settings-action-btn" type="button">${getExecutorFiltersCollapsed() ? 'Restore Filters' : 'Collapse Filters'}</button>
+          <button id="settingsLegendToggleBtn" class="btn-primary settings-action-btn" type="button">${getExecutorLegendVisible() ? 'Hide Legend' : 'Show Legend'}</button>
+          <button id="settingsDensityToggleBtn" class="btn-primary settings-action-btn" type="button">${getExecutorDensityPreference() === 'compact' ? 'Comfortable Cards' : 'Compact Cards'}</button>
+        </div>
+        <label class="settings-field" for="settingsExecutorColumnsSelect">
+          <span>Executor cards per row</span>
+          <select id="settingsExecutorColumnsSelect" class="settings-select">
+            <option value="auto" ${getExecutorColumnsPreference() === 'auto' ? 'selected' : ''}>Automatic</option>
+            <option value="2" ${getExecutorColumnsPreference() === '2' ? 'selected' : ''}>2 per row</option>
+            <option value="3" ${getExecutorColumnsPreference() === '3' ? 'selected' : ''}>3 per row</option>
+          </select>
+        </label>
+        <p class="settings-note">Collapse Filters completely removes the filters sidebar and automatically uses 3 executor cards per row on wider screens.</p>
       </div>
       <div class="settings-group">
         <h3>Games</h3>
@@ -1134,6 +1213,29 @@ function openSettingsModal() {
     await applyUiMode();
     syncRouteWithState();
     openSettingsModal();
+  });
+
+  const collapseFiltersBtn = qs('#settingsCollapseFiltersBtn');
+  collapseFiltersBtn?.addEventListener('click', () => {
+    setExecutorFiltersCollapsed(!getExecutorFiltersCollapsed());
+    openSettingsModal();
+  });
+
+  const legendToggleBtn = qs('#settingsLegendToggleBtn');
+  legendToggleBtn?.addEventListener('click', () => {
+    setExecutorLegendVisible(!getExecutorLegendVisible());
+    openSettingsModal();
+  });
+
+  const densityToggleBtn = qs('#settingsDensityToggleBtn');
+  densityToggleBtn?.addEventListener('click', () => {
+    setExecutorDensityPreference(getExecutorDensityPreference() === 'compact' ? 'comfortable' : 'compact');
+    openSettingsModal();
+  });
+
+  const columnsSelect = qs('#settingsExecutorColumnsSelect');
+  columnsSelect?.addEventListener('change', event => {
+    setExecutorColumnsPreference(event.target.value);
   });
 
   const dodgeBtn = qs('#settingsDodgeBtn');
@@ -3005,6 +3107,7 @@ function hideInitialLoadingOverlay() {
 }
 
 function init() {
+  applyExecutorTabPreferences();
   setBetaFeaturesEnabled(getBetaFeaturesEnabled());
   syncNavigationLayoutMetrics();
   renderProducts(products);
