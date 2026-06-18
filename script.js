@@ -1253,75 +1253,154 @@ function estimatedPriceValue(product) {
 
 function computeSmartRanking() {
   const clampScore = value => Math.max(0, Math.min(100, Math.round(value)));
-  const mapValue = (value, map) => map[String(value || '').toLowerCase()] ?? 50;
-  const trustScoreMap = { trusted: 96, caution: 68, risky: 36, unknown: 52 };
+  const mapValue = (value, map) => map[String(value || '').toLowerCase()] ?? null;
+  const trustScoreMap = { trusted: 96, caution: 68, risky: 36, unknown: 52, low: 36 };
   const stabilityScoreLabelMap = { 'very stable': 100, stable: 92, high: 96, medium: 72, mixed: 62, basic: 48, questionable: 34, low: 46, unstable: 30, unknown: 42 };
+  const normalizeList = value => Array.isArray(value) ? value.filter(Boolean).map(String) : [];
+  const hasValue = value => value !== null && value !== undefined && String(value).trim() !== '';
+  const formatPlatformOrType = product => normalizeList(product.platform).join(', ') || product.cheatType || 'Unknown';
+  const formatScore = score => Number.isFinite(score) ? clampScore(score) : null;
+  const metadataCoverage = product => [
+    product.name,
+    normalizeList(product.platform).length ? product.platform : '',
+    product.cheatType,
+    product.keySystem,
+    product.freeOrPaid,
+    product.stability,
+    product.trustLevel,
+    product.status,
+    Number.isFinite(product.sunc) ? product.sunc : '',
+    normalizeList(product.pricingOptions).length ? product.pricingOptions : '',
+    normalizeList(product.tags).length ? product.tags : '',
+    normalizeList(product.pros).length ? product.pros : '',
+    normalizeList(product.cons).length ? product.cons : ''
+  ].filter(hasValue).length;
+  const confidenceLabel = product => {
+    const coverage = metadataCoverage(product);
+    if (coverage >= 10) return 'High';
+    if (coverage >= 7) return 'Medium';
+    return 'Low';
+  };
+  const reasonList = (...items) => items.filter(Boolean).slice(0, 3);
 
-  const safetyScore = product => clampScore(
-    (mapValue(product.trustLevel, trustScoreMap) * 0.52)
-    + (mapValue(product.stability, stabilityScoreLabelMap) * 0.28)
-    + ((10 - detectionRiskScore(product)) * 10 * 0.2)
-  );
-  const powerScore = product => clampScore(
-    ((Number.isFinite(product.sunc) ? product.sunc : 52) * 0.65)
-    + (((product.features || []).length * 7) * 0.2)
-    + ((product.cheatType === 'internal' ? 92 : 72) * 0.15)
-  );
-  const beginnerScore = product => {
-    const baseline = (safetyScore(product) * 0.36) + (mapValue(product.stability, stabilityScoreLabelMap) * 0.24);
-    const freeBoost = ['free', 'both'].includes(product.freeOrPaid) ? 18 : 0;
-    const keyPenalty = String(product.keySystem || '').toLowerCase() === 'keyed' ? -10 : 8;
-    const desc = String(product.description || '').toLowerCase();
-    const easeBoost = /(simple|easy|beginner|quick setup|user interface)/.test(desc) ? 12 : 0;
-    return clampScore(baseline + freeBoost + keyPenalty + easeBoost);
+  const safetyScore = product => {
+    const trust = mapValue(product.trustLevel, trustScoreMap);
+    const stability = mapValue(product.stability, stabilityScoreLabelMap);
+    const risk = hasValue(product.status) || hasValue(product.trustLevel) ? (10 - detectionRiskScore(product)) * 10 : null;
+    const parts = [
+      trust === null ? null : { value: trust, weight: 0.52 },
+      stability === null ? null : { value: stability, weight: 0.28 },
+      risk === null ? null : { value: risk, weight: 0.2 }
+    ].filter(Boolean);
+    if (!parts.length) return null;
+    const weight = parts.reduce((sum, part) => sum + part.weight, 0);
+    return clampScore(parts.reduce((sum, part) => sum + (part.value * part.weight), 0) / weight);
+  };
+  const stabilityScore = product => mapValue(product.stability, stabilityScoreLabelMap);
+  const suncScore = product => Number.isFinite(product.sunc) ? clampScore(product.sunc) : null;
+  const powerScore = product => {
+    const sunc = suncScore(product);
+    const features = normalizeList(product.features).length ? Math.min(100, normalizeList(product.features).length * 14) : null;
+    const type = hasValue(product.cheatType) ? (String(product.cheatType).toLowerCase() === 'internal' ? 92 : 72) : null;
+    const parts = [
+      sunc === null ? null : { value: sunc, weight: 0.65 },
+      features === null ? null : { value: features, weight: 0.2 },
+      type === null ? null : { value: type, weight: 0.15 }
+    ].filter(Boolean);
+    if (!parts.length) return null;
+    const weight = parts.reduce((sum, part) => sum + part.weight, 0);
+    return clampScore(parts.reduce((sum, part) => sum + (part.value * part.weight), 0) / weight);
   };
   const valueScore = product => {
+    const safety = safetyScore(product);
+    const power = powerScore(product);
     const price = estimatedPriceValue(product);
-    const normalizedPrice = price <= 0 ? 100 : Math.max(18, 100 - (price * 2.4));
-    return clampScore((powerScore(product) * 0.4) + (safetyScore(product) * 0.28) + (normalizedPrice * 0.32));
+    const hasPricing = normalizeList(product.pricingOptions).length || hasValue(product.freeOrPaid);
+    const normalizedPrice = !hasPricing ? null : price <= 0 ? 100 : Math.max(18, 100 - (price * 2.4));
+    const parts = [
+      power === null ? null : { value: power, weight: 0.4 },
+      safety === null ? null : { value: safety, weight: 0.28 },
+      normalizedPrice === null ? null : { value: normalizedPrice, weight: 0.32 }
+    ].filter(Boolean);
+    if (!parts.length) return null;
+    const weight = parts.reduce((sum, part) => sum + part.weight, 0);
+    return clampScore(parts.reduce((sum, part) => sum + (part.value * part.weight), 0) / weight);
   };
-  const mobileScore = product => {
-    const platforms = (product.platform || []).map(item => String(item).toLowerCase());
-    const mobileReady = platforms.some(item => item.includes('android') || item.includes('ios') || item.includes('mobile'));
-    if (!mobileReady) return -1;
-    return clampScore((safetyScore(product) * 0.33) + (powerScore(product) * 0.29) + (beginnerScore(product) * 0.2) + (valueScore(product) * 0.18));
+  const overallScore = product => {
+    const scores = [safetyScore(product), powerScore(product), valueScore(product), stabilityScore(product)].filter(Number.isFinite);
+    return scores.length ? clampScore(scores.reduce((sum, score) => sum + score, 0) / scores.length) : null;
+  };
+  const riskScoreForRanking = product => hasValue(product.status) || hasValue(product.trustLevel) ? detectionRiskScore(product) : null;
+
+  const buildEntry = (id, title, product, score, why) => ({
+    id,
+    title,
+    executor: product || null,
+    score: formatScore(score),
+    riskLevel: product && (hasValue(product.status) || hasValue(product.trustLevel)) ? detectionRiskLabel(product) : 'Unknown',
+    platformOrType: product ? formatPlatformOrType(product) : 'Unknown',
+    confidence: product ? confidenceLabel(product) : 'Low',
+    why: why && why.length ? why : ['Unknown']
+  });
+
+  const pickTop = (id, title, filterFn, scoreFn, whyBuilder) => {
+    const scored = products
+      .filter(filterFn)
+      .map(product => ({ product, score: scoreFn(product) }))
+      .filter(item => Number.isFinite(item.score))
+      .sort((a, b) => b.score - a.score);
+    const winner = scored[0];
+    if (!winner) return buildEntry(id, title, null, null, ['Unknown']);
+    return buildEntry(id, title, winner.product, winner.score, whyBuilder(winner.product));
   };
 
-  const pickTop = (id, title, scoreFn, noteBuilder) => {
-    const scored = products.map(product => ({ product, score: scoreFn(product) }))
-      .filter(item => Number.isFinite(item.score) && item.score >= 0)
-      .sort((a, b) => b.score - a.score);
-    const winner = scored[0] || null;
-    if (!winner) return null;
-    return {
-      id,
-      title,
-      executor: winner.product,
-      score: winner.score,
-      riskLevel: detectionRiskLabel(winner.product),
-      reason: noteBuilder(winner.product, winner.score),
-      weakness: (winner.product.cons && winner.product.cons[0]) || 'Watch status and trust updates before long sessions.',
-      bestFor: winner.product.tags?.[0] || winner.product.cheatType || 'General use'
-    };
-  };
+  const isFree = product => ['free', 'both'].includes(String(product.freeOrPaid || '').toLowerCase());
+  const isKeyless = product => String(product.keySystem || '').toLowerCase() === 'keyless';
+  const isTrending = product => normalizeList(product.tags).some(tag => tag.toLowerCase() === 'trending');
 
   const categories = [
-    pickTop('bestFree', scriptsHubData.smartRankingLabels.bestFree, product => (['free', 'both'].includes(product.freeOrPaid) ? valueScore(product) : -1), (p, s) => `${p.name} leads free access value with a balanced ${s}/100 overall score.`),
-    pickTop('safest', scriptsHubData.smartRankingLabels.safest, safetyScore, (p, s) => `${p.name} rates highest for safety based on trust, stability, and risk signals (${s}/100).`),
-    pickTop('beginners', scriptsHubData.smartRankingLabels.beginners, beginnerScore, (p, s) => `${p.name} is easiest for new users thanks to onboarding simplicity and practical safety (${s}/100).`),
-    pickTop('powerful', scriptsHubData.smartRankingLabels.powerful, powerScore, (p, s) => `${p.name} delivers the strongest execution profile right now (${s}/100).`),
-    pickTop('bestValue', 'Best Value', valueScore, (p, s) => `${p.name} gives the strongest feature-to-cost balance overall (${s}/100).`),
-    pickTop('bestMobile', 'Best Mobile', mobileScore, (p, s) => `${p.name} is currently the top mobile-oriented pick from platform-ready executors (${s}/100).`)
-  ].filter(Boolean);
+    pickTop('bestOverall', 'Best Overall', () => true, overallScore, p => reasonList(
+      'balanced safety, stability, value, and capability metadata',
+      p.stability ? `listed stability: ${p.stability}` : '',
+      Number.isFinite(p.sunc) ? `sUNC metadata: ${p.sunc}` : ''
+    )),
+    pickTop('safest', 'Safest Right Now', () => true, safetyScore, p => reasonList(
+      p.trustLevel ? `trust level: ${p.trustLevel}` : '',
+      p.status ? `status: ${p.status}` : '',
+      p.stability ? `stability: ${p.stability}` : ''
+    )),
+    pickTop('bestFree', 'Best Free Option', isFree, valueScore, p => reasonList(
+      'free option available',
+      p.stability ? `stability: ${p.stability}` : '',
+      normalizeList(p.pricingOptions).length ? `pricing metadata: ${normalizeList(p.pricingOptions).join(', ')}` : ''
+    )),
+    pickTop('bestKeyless', 'Best Keyless', isKeyless, overallScore, p => reasonList(
+      'keyless access listed',
+      p.stability ? `stability: ${p.stability}` : '',
+      p.trustLevel ? `trust level: ${p.trustLevel}` : ''
+    )),
+    pickTop('mostStable', 'Most Stable', product => Number.isFinite(stabilityScore(product)), stabilityScore, p => reasonList(
+      p.stability ? `listed stability: ${p.stability}` : '',
+      p.status ? `status: ${p.status}` : '',
+      p.trustLevel ? `trust level: ${p.trustLevel}` : ''
+    )),
+    pickTop('highestSunc', 'Highest sUNC', product => Number.isFinite(product.sunc), suncScore, p => reasonList(
+      Number.isFinite(p.sunc) ? `sUNC metadata: ${p.sunc}` : '',
+      p.cheatType ? `type: ${p.cheatType}` : '',
+      normalizeList(p.features).length ? `features listed: ${normalizeList(p.features).join(', ')}` : ''
+    )),
+    pickTop('trendingRisky', 'Trending but Risky', product => isTrending(product) && Number.isFinite(riskScoreForRanking(product)), product => riskScoreForRanking(product) * 10, p => reasonList(
+      'trending tag listed',
+      p.trustLevel ? `trust level: ${p.trustLevel}` : '',
+      p.status ? `status: ${p.status}` : ''
+    ))
+  ];
 
   return {
     monthLabel: new Date().toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
     categories
   };
 }
-
-let smartRankingRotationTimer = 0;
-let activeSmartRankingIndex = 0;
 
 function renderSmartRankings() {
   const wrap = qs('#smartRankingSections');
@@ -1331,47 +1410,37 @@ function renderSmartRankings() {
     wrap.innerHTML = '';
     return;
   }
-  const selected = ranking.categories[activeSmartRankingIndex % ranking.categories.length];
 
   wrap.innerHTML = `
-    <article class="smart-ranking-hero">
-      <p class="smart-ranking-kicker">Updated for ${escapeHtml(ranking.monthLabel)}</p>
-      <h4>${escapeHtml(selected.title)}</h4>
-      <p class="smart-ranking-executor">${escapeHtml(selected.executor?.name || 'Unavailable')}</p>
-      <div class="smart-ranking-detail-grid">
-        <div><span>Score</span><strong>${escapeHtml(String(selected.score || 0))}/100</strong></div>
-        <div><span>Risk Level</span><strong>${escapeHtml(selected.riskLevel || 'Unknown')}</strong></div>
-        <div><span>Best For</span><strong>${escapeHtml(selected.bestFor || 'General')}</strong></div>
+    <div class="smart-ranking-dashboard" aria-label="Smart rankings dashboard">
+      <div class="smart-ranking-dashboard-head">
+        <p class="smart-ranking-kicker">Updated for ${escapeHtml(ranking.monthLabel)}</p>
+        <p class="smart-ranking-intro">Concise rankings generated from the executor metadata already listed on this page. Missing fields stay marked as Unknown.</p>
       </div>
-      <p><strong>Reason:</strong> ${escapeHtml(selected.reason || '')}</p>
-      <p><strong>Watch-out:</strong> ${escapeHtml(selected.weakness || '')}</p>
-    </article>
-    <div class="smart-ranking-grid">
-      ${ranking.categories.map((entry, index) => `
-        <button class="smart-ranking-card ${index === (activeSmartRankingIndex % ranking.categories.length) ? 'is-active' : ''}" data-smart-ranking-index="${index}" type="button">
-          <span>${escapeHtml(entry.title)}</span>
-          <strong>${escapeHtml(entry.executor?.name || 'Unavailable')}</strong>
-          <small>Score: ${escapeHtml(String(entry.score || 0))}/100 · Risk: ${escapeHtml(entry.riskLevel || 'Unknown')}</small>
-        </button>
-      `).join('')}
+      <div class="smart-ranking-grid">
+        ${ranking.categories.map(entry => `
+          <article class="smart-ranking-card">
+            <div class="smart-ranking-card-top">
+              <span class="smart-ranking-card-title">${escapeHtml(entry.title)}</span>
+              <span class="smart-ranking-confidence">${escapeHtml(entry.confidence || 'Unknown')}</span>
+            </div>
+            <strong class="smart-ranking-executor">${escapeHtml(entry.executor?.name || 'Unknown')}</strong>
+            <div class="smart-ranking-metrics">
+              <div><span>Score</span><strong>${entry.score === null ? 'Unknown' : `${escapeHtml(String(entry.score))}/100`}</strong></div>
+              <div><span>Risk</span><strong>${escapeHtml(entry.riskLevel || 'Unknown')}</strong></div>
+              <div><span>Platform / Type</span><strong>${escapeHtml(entry.platformOrType || 'Unknown')}</strong></div>
+            </div>
+            <div class="smart-ranking-why">
+              <span>Why ranked here</span>
+              <ul>
+                ${entry.why.map(reason => `<li>${escapeHtml(reason || 'Unknown')}</li>`).join('')}
+              </ul>
+            </div>
+          </article>
+        `).join('')}
+      </div>
     </div>
   `;
-
-  wrap.querySelectorAll('[data-smart-ranking-index]').forEach(button => {
-    button.addEventListener('click', () => {
-      activeSmartRankingIndex = Number(button.getAttribute('data-smart-ranking-index')) || 0;
-      renderSmartRankings();
-    });
-  });
-
-  if (smartRankingRotationTimer) window.clearInterval(smartRankingRotationTimer);
-  smartRankingRotationTimer = window.setInterval(() => {
-    const smartPanel = qs('#smartRankingsPanel');
-    const scriptsPage = qs('#scriptsPage');
-    if (!smartPanel || !scriptsPage || scriptsPage.hidden || smartPanel.hidden) return;
-    activeSmartRankingIndex = (activeSmartRankingIndex + 1) % ranking.categories.length;
-    renderSmartRankings();
-  }, 9000);
 }
 
 let comparisonSelection = [];
@@ -2935,154 +3004,9 @@ function hideInitialLoadingOverlay() {
   }, 260);
 }
 
-function initCustomScrollbars() {
-  const candidates = new Set();
-  const selector = '.sidebar, .main-content, .modal, .assistant-messages, .assistant-markdown pre, .assistant-table-wrap, .comparison-table-wrap, .script-card pre, .xy-sidepanel, .script-textarea, [data-custom-scroll]';
-  const syncElement = element => {
-    if (!element || element.nodeType !== 1 || element.dataset.xyScrollReady === 'true') return;
-    const style = getComputedStyle(element);
-    const canScrollY = /(auto|scroll)/.test(style.overflowY) || element.scrollHeight > element.clientHeight + 1;
-    const canScrollX = /(auto|scroll)/.test(style.overflowX) || element.scrollWidth > element.clientWidth + 1;
-    if (!canScrollY && !canScrollX) return;
-    element.dataset.xyScrollReady = 'true';
-    element.classList.add('xy-custom-scroll-host');
-    if (style.position === 'static') element.style.position = 'relative';
-
-    const vertical = document.createElement('span');
-    vertical.className = 'xy-custom-scrollbar xy-custom-scrollbar-y';
-    vertical.innerHTML = '<span></span>';
-    const horizontal = document.createElement('span');
-    horizontal.className = 'xy-custom-scrollbar xy-custom-scrollbar-x';
-    horizontal.innerHTML = '<span></span>';
-    element.append(vertical, horizontal);
-    const verticalThumb = vertical.firstElementChild;
-    const horizontalThumb = horizontal.firstElementChild;
-
-    const update = () => {
-      const hasY = element.scrollHeight > element.clientHeight + 1;
-      const hasX = element.scrollWidth > element.clientWidth + 1;
-      vertical.hidden = !hasY;
-      horizontal.hidden = !hasX;
-      if (hasY) {
-        const track = vertical.clientHeight || element.clientHeight;
-        const thumbSize = Math.max(34, (element.clientHeight / element.scrollHeight) * track);
-        const maxTop = Math.max(0, track - thumbSize);
-        const top = maxTop * (element.scrollTop / Math.max(1, element.scrollHeight - element.clientHeight));
-        verticalThumb.style.height = `${thumbSize}px`;
-        verticalThumb.style.transform = `translate3d(0, ${top}px, 0)`;
-      }
-      if (hasX) {
-        const track = horizontal.clientWidth || element.clientWidth;
-        const thumbSize = Math.max(34, (element.clientWidth / element.scrollWidth) * track);
-        const maxLeft = Math.max(0, track - thumbSize);
-        const left = maxLeft * (element.scrollLeft / Math.max(1, element.scrollWidth - element.clientWidth));
-        horizontalThumb.style.width = `${thumbSize}px`;
-        horizontalThumb.style.transform = `translate3d(${left}px, 0, 0)`;
-      }
-    };
-
-    const bindDrag = (track, thumb, axis) => {
-      thumb.addEventListener('pointerdown', event => {
-        event.preventDefault();
-        event.stopPropagation();
-        thumb.setPointerCapture(event.pointerId);
-        const startPointer = axis === 'y' ? event.clientY : event.clientX;
-        const startScroll = axis === 'y' ? element.scrollTop : element.scrollLeft;
-        const onMove = moveEvent => {
-          const pointer = axis === 'y' ? moveEvent.clientY : moveEvent.clientX;
-          const delta = pointer - startPointer;
-          const trackSize = axis === 'y' ? track.clientHeight : track.clientWidth;
-          const thumbSize = axis === 'y' ? thumb.offsetHeight : thumb.offsetWidth;
-          const maxScroll = axis === 'y' ? element.scrollHeight - element.clientHeight : element.scrollWidth - element.clientWidth;
-          const next = startScroll + (delta / Math.max(1, trackSize - thumbSize)) * maxScroll;
-          if (axis === 'y') element.scrollTop = next;
-          else element.scrollLeft = next;
-        };
-        const onUp = () => {
-          thumb.releasePointerCapture(event.pointerId);
-          window.removeEventListener('pointermove', onMove);
-          window.removeEventListener('pointerup', onUp);
-        };
-        window.addEventListener('pointermove', onMove);
-        window.addEventListener('pointerup', onUp, { once: true });
-      });
-    };
-
-    bindDrag(vertical, verticalThumb, 'y');
-    bindDrag(horizontal, horizontalThumb, 'x');
-    element.addEventListener('scroll', update, { passive: true });
-    new ResizeObserver(update).observe(element);
-    update();
-  };
-
-  const initPageScrollbar = () => {
-    if (document.querySelector('.xy-page-scrollbar')) return;
-    const track = document.createElement('span');
-    track.className = 'xy-custom-scrollbar xy-custom-scrollbar-y xy-page-scrollbar';
-    track.innerHTML = '<span></span>';
-    document.body.appendChild(track);
-    const thumb = track.firstElementChild;
-    const update = () => {
-      const scroller = document.scrollingElement || document.documentElement;
-      const hasScroll = scroller.scrollHeight > window.innerHeight + 1;
-      track.hidden = !hasScroll;
-      if (!hasScroll) return;
-      const trackSize = track.clientHeight || window.innerHeight;
-      const thumbSize = Math.max(38, (window.innerHeight / scroller.scrollHeight) * trackSize);
-      const maxTop = Math.max(0, trackSize - thumbSize);
-      const top = maxTop * (window.scrollY / Math.max(1, scroller.scrollHeight - window.innerHeight));
-      thumb.style.height = `${thumbSize}px`;
-      thumb.style.transform = `translate3d(0, ${top}px, 0)`;
-    };
-    thumb.addEventListener('pointerdown', event => {
-      event.preventDefault();
-      thumb.setPointerCapture(event.pointerId);
-      const scroller = document.scrollingElement || document.documentElement;
-      const startY = event.clientY;
-      const startScroll = window.scrollY;
-      const onMove = moveEvent => {
-        const maxScroll = scroller.scrollHeight - window.innerHeight;
-        const next = startScroll + ((moveEvent.clientY - startY) / Math.max(1, track.clientHeight - thumb.offsetHeight)) * maxScroll;
-        window.scrollTo({ top: next });
-      };
-      const onUp = () => {
-        thumb.releasePointerCapture(event.pointerId);
-        window.removeEventListener('pointermove', onMove);
-        window.removeEventListener('pointerup', onUp);
-      };
-      window.addEventListener('pointermove', onMove);
-      window.addEventListener('pointerup', onUp, { once: true });
-    });
-    window.addEventListener('scroll', update, { passive: true });
-    window.addEventListener('resize', update, { passive: true });
-    update();
-  };
-
-  const scan = () => {
-    document.querySelectorAll(selector).forEach(element => {
-      candidates.add(element);
-      syncElement(element);
-    });
-    initPageScrollbar();
-  };
-  scan();
-  let queued = false;
-  new MutationObserver(() => {
-    if (queued) return;
-    queued = true;
-    requestAnimationFrame(() => {
-      queued = false;
-      scan();
-      candidates.forEach(syncElement);
-    });
-  }).observe(document.body, { childList: true, subtree: true });
-  window.addEventListener('resize', scan, { passive: true });
-}
-
 function init() {
   setBetaFeaturesEnabled(getBetaFeaturesEnabled());
   syncNavigationLayoutMetrics();
-  initCustomScrollbars();
   renderProducts(products);
   initWeaoStatuses();
   initScriptsHub();

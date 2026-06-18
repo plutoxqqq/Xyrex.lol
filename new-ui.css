@@ -497,22 +497,33 @@ body.new-ui-enabled .sidebar,
 body.new-ui-enabled .main-content,
 body.new-ui-enabled .script-textarea,
 body.new-ui-enabled .modal {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--periwinkle-2) 72%, transparent) color-mix(in srgb, var(--panel) 52%, transparent);
+}
+
+body.new-ui-enabled .sidebar::-webkit-scrollbar,
+body.new-ui-enabled .main-content::-webkit-scrollbar,
+body.new-ui-enabled .script-textarea::-webkit-scrollbar,
+body.new-ui-enabled .modal::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
 }
 
 body.new-ui-enabled .sidebar::-webkit-scrollbar-thumb,
 body.new-ui-enabled .main-content::-webkit-scrollbar-thumb,
 body.new-ui-enabled .script-textarea::-webkit-scrollbar-thumb,
 body.new-ui-enabled .modal::-webkit-scrollbar-thumb {
-  display: none;
+  background: color-mix(in srgb, var(--periwinkle-2) 78%, var(--panel) 22%);
+  border: 2px solid color-mix(in srgb, var(--panel) 78%, transparent);
+  border-radius: 999px;
 }
 
 body.new-ui-enabled .sidebar::-webkit-scrollbar-track,
 body.new-ui-enabled .main-content::-webkit-scrollbar-track,
 body.new-ui-enabled .script-textarea::-webkit-scrollbar-track,
 body.new-ui-enabled .modal::-webkit-scrollbar-track {
-  display: none;
+  background: color-mix(in srgb, var(--panel) 52%, transparent);
+  border-radius: 999px;
 }
 
 body.new-ui-enabled .official-link-btn,
