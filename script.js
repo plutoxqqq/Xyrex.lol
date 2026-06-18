@@ -1082,10 +1082,27 @@ const EXECUTOR_FILTERS_COLLAPSED_KEY = 'xyrex_executor_filters_collapsed';
 const EXECUTOR_COLUMNS_KEY = 'xyrex_executor_columns';
 const EXECUTOR_DENSITY_KEY = 'xyrex_executor_density';
 const EXECUTOR_LEGEND_VISIBLE_KEY = 'xyrex_executor_legend_visible';
+const UI_MOTION_KEY = 'xyrex_ui_motion';
+const UI_FONT_SCALE_KEY = 'xyrex_ui_font_scale';
+const UI_ROUNDNESS_KEY = 'xyrex_ui_roundness';
+const UI_CARD_STYLE_KEY = 'xyrex_ui_card_style';
+const UI_BACKGROUND_KEY = 'xyrex_ui_background';
+const UI_WIDTH_KEY = 'xyrex_ui_width';
+const UI_IMAGE_VISIBILITY_KEY = 'xyrex_ui_image_visibility';
 
 function getExecutorPreference(key, fallback) {
   const value = localStorage.getItem(key);
   return value === null ? fallback : value;
+}
+
+function getChoicePreference(key, fallback, options) {
+  const value = getExecutorPreference(key, fallback);
+  return options.includes(value) ? value : fallback;
+}
+
+function setChoicePreference(key, value, fallback, options) {
+  localStorage.setItem(key, options.includes(value) ? value : fallback);
+  applyDisplayPreferences();
 }
 
 function getExecutorFiltersCollapsed() {
@@ -1126,6 +1143,48 @@ function setExecutorLegendVisible(visible) {
   applyExecutorTabPreferences();
 }
 
+function getUiMotionPreference() { return getChoicePreference(UI_MOTION_KEY, 'full', ['full', 'reduced', 'off']); }
+function setUiMotionPreference(value) { setChoicePreference(UI_MOTION_KEY, value, 'full', ['full', 'reduced', 'off']); }
+function getUiFontScalePreference() { return getChoicePreference(UI_FONT_SCALE_KEY, 'normal', ['small', 'normal', 'large', 'extra-large']); }
+function setUiFontScalePreference(value) { setChoicePreference(UI_FONT_SCALE_KEY, value, 'normal', ['small', 'normal', 'large', 'extra-large']); }
+function getUiRoundnessPreference() { return getChoicePreference(UI_ROUNDNESS_KEY, 'soft', ['sharp', 'soft', 'round']); }
+function setUiRoundnessPreference(value) { setChoicePreference(UI_ROUNDNESS_KEY, value, 'soft', ['sharp', 'soft', 'round']); }
+function getUiCardStylePreference() { return getChoicePreference(UI_CARD_STYLE_KEY, 'glass', ['flat', 'glass', 'outlined']); }
+function setUiCardStylePreference(value) { setChoicePreference(UI_CARD_STYLE_KEY, value, 'glass', ['flat', 'glass', 'outlined']); }
+function getUiBackgroundPreference() { return getChoicePreference(UI_BACKGROUND_KEY, 'aurora', ['plain', 'aurora', 'high-contrast']); }
+function setUiBackgroundPreference(value) { setChoicePreference(UI_BACKGROUND_KEY, value, 'aurora', ['plain', 'aurora', 'high-contrast']); }
+function getUiWidthPreference() { return getChoicePreference(UI_WIDTH_KEY, 'standard', ['narrow', 'standard', 'wide']); }
+function setUiWidthPreference(value) { setChoicePreference(UI_WIDTH_KEY, value, 'standard', ['narrow', 'standard', 'wide']); }
+function getUiImageVisibilityPreference() { return getChoicePreference(UI_IMAGE_VISIBILITY_KEY, 'show', ['show', 'hide']); }
+function setUiImageVisibilityPreference(value) { setChoicePreference(UI_IMAGE_VISIBILITY_KEY, value, 'show', ['show', 'hide']); }
+
+function getNextChoice(current, options) {
+  const index = options.indexOf(current);
+  return options[(index + 1) % options.length] || options[0];
+}
+
+function formatPreferenceLabel(value) {
+  return String(value || '')
+    .split('-')
+    .map(word => word ? `${word.charAt(0).toUpperCase()}${word.slice(1)}` : '')
+    .join(' ');
+}
+
+function cycleDisplayPreference(getter, setter, options) {
+  setter(getNextChoice(getter(), options));
+  openSettingsModal();
+}
+
+function applyDisplayPreferences() {
+  document.body.dataset.uiMotion = getUiMotionPreference();
+  document.body.dataset.uiFontScale = getUiFontScalePreference();
+  document.body.dataset.uiRoundness = getUiRoundnessPreference();
+  document.body.dataset.uiCardStyle = getUiCardStylePreference();
+  document.body.dataset.uiBackground = getUiBackgroundPreference();
+  document.body.dataset.uiWidth = getUiWidthPreference();
+  document.body.dataset.uiImages = getUiImageVisibilityPreference();
+}
+
 function applyExecutorTabPreferences() {
   const filtersCollapsed = getExecutorFiltersCollapsed();
   const columns = getExecutorColumnsPreference();
@@ -1137,6 +1196,7 @@ function applyExecutorTabPreferences() {
   document.body.setAttribute('data-executor-columns', filtersCollapsed ? '3' : columns);
   const sidebar = qs('#sidebar');
   if (sidebar) sidebar.setAttribute('aria-hidden', filtersCollapsed ? 'true' : 'false');
+  applyDisplayPreferences();
 }
 
 function getBetaFeaturesEnabled() {
@@ -1173,16 +1233,16 @@ function openSettingsModal() {
           <button id="settingsCollapseFiltersBtn" class="btn-primary settings-action-btn" type="button">${getExecutorFiltersCollapsed() ? 'Restore Filters' : 'Collapse Filters'}</button>
           <button id="settingsLegendToggleBtn" class="btn-primary settings-action-btn" type="button">${getExecutorLegendVisible() ? 'Hide Legend' : 'Show Legend'}</button>
           <button id="settingsDensityToggleBtn" class="btn-primary settings-action-btn" type="button">${getExecutorDensityPreference() === 'compact' ? 'Comfortable Cards' : 'Compact Cards'}</button>
+          <button id="settingsImagesToggleBtn" class="btn-primary settings-action-btn" type="button">${getUiImageVisibilityPreference() === 'hide' ? 'Show Logos' : 'Hide Logos'}</button>
+          <button id="settingsColumnsCycleBtn" class="btn-primary settings-action-btn" type="button">Cards Per Row: ${formatPreferenceLabel(getExecutorColumnsPreference())}</button>
+          <button id="settingsCardStyleCycleBtn" class="btn-primary settings-action-btn" type="button">Card Style: ${formatPreferenceLabel(getUiCardStylePreference())}</button>
+          <button id="settingsMotionCycleBtn" class="btn-primary settings-action-btn" type="button">Animations: ${formatPreferenceLabel(getUiMotionPreference())}</button>
+          <button id="settingsFontScaleCycleBtn" class="btn-primary settings-action-btn" type="button">Text Size: ${formatPreferenceLabel(getUiFontScalePreference())}</button>
+          <button id="settingsRoundnessCycleBtn" class="btn-primary settings-action-btn" type="button">Corners: ${formatPreferenceLabel(getUiRoundnessPreference())}</button>
+          <button id="settingsBackgroundCycleBtn" class="btn-primary settings-action-btn" type="button">Background: ${formatPreferenceLabel(getUiBackgroundPreference())}</button>
+          <button id="settingsWidthCycleBtn" class="btn-primary settings-action-btn" type="button">Page Width: ${formatPreferenceLabel(getUiWidthPreference())}</button>
         </div>
-        <label class="settings-field" for="settingsExecutorColumnsSelect">
-          <span>Executor cards per row</span>
-          <select id="settingsExecutorColumnsSelect" class="settings-select">
-            <option value="auto" ${getExecutorColumnsPreference() === 'auto' ? 'selected' : ''}>Automatic</option>
-            <option value="2" ${getExecutorColumnsPreference() === '2' ? 'selected' : ''}>2 per row</option>
-            <option value="3" ${getExecutorColumnsPreference() === '3' ? 'selected' : ''}>3 per row</option>
-          </select>
-        </label>
-        <p class="settings-note">Collapse Filters completely removes the filters sidebar and automatically uses 3 executor cards per row on wider screens.</p>
+        <p class="settings-note">Use these buttons to customize the Executors tab instantly. Each button cycles through the available choices and saves automatically.</p>
       </div>
       <div class="settings-group">
         <h3>Games</h3>
@@ -1233,10 +1293,20 @@ function openSettingsModal() {
     openSettingsModal();
   });
 
-  const columnsSelect = qs('#settingsExecutorColumnsSelect');
-  columnsSelect?.addEventListener('change', event => {
-    setExecutorColumnsPreference(event.target.value);
+  qs('#settingsImagesToggleBtn')?.addEventListener('click', () => {
+    setUiImageVisibilityPreference(getUiImageVisibilityPreference() === 'hide' ? 'show' : 'hide');
+    openSettingsModal();
   });
+  qs('#settingsColumnsCycleBtn')?.addEventListener('click', () => {
+    setExecutorColumnsPreference(getNextChoice(getExecutorColumnsPreference(), ['auto', '2', '3']));
+    openSettingsModal();
+  });
+  qs('#settingsCardStyleCycleBtn')?.addEventListener('click', () => cycleDisplayPreference(getUiCardStylePreference, setUiCardStylePreference, ['glass', 'flat', 'outlined']));
+  qs('#settingsMotionCycleBtn')?.addEventListener('click', () => cycleDisplayPreference(getUiMotionPreference, setUiMotionPreference, ['full', 'reduced', 'off']));
+  qs('#settingsFontScaleCycleBtn')?.addEventListener('click', () => cycleDisplayPreference(getUiFontScalePreference, setUiFontScalePreference, ['small', 'normal', 'large', 'extra-large']));
+  qs('#settingsRoundnessCycleBtn')?.addEventListener('click', () => cycleDisplayPreference(getUiRoundnessPreference, setUiRoundnessPreference, ['sharp', 'soft', 'round']));
+  qs('#settingsBackgroundCycleBtn')?.addEventListener('click', () => cycleDisplayPreference(getUiBackgroundPreference, setUiBackgroundPreference, ['aurora', 'plain', 'high-contrast']));
+  qs('#settingsWidthCycleBtn')?.addEventListener('click', () => cycleDisplayPreference(getUiWidthPreference, setUiWidthPreference, ['narrow', 'standard', 'wide']));
 
   const dodgeBtn = qs('#settingsDodgeBtn');
   dodgeBtn?.addEventListener('click', () => {
@@ -3107,6 +3177,7 @@ function hideInitialLoadingOverlay() {
 }
 
 function init() {
+  applyDisplayPreferences();
   applyExecutorTabPreferences();
   setBetaFeaturesEnabled(getBetaFeaturesEnabled());
   syncNavigationLayoutMetrics();
