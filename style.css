@@ -50,45 +50,30 @@
 
 *{ box-sizing:border-box; }
 
-/* Site-native custom scrollbars. Native browser scrollbar painting is hidden; script.js renders themed draggable rails. */
+/* Native periwinkle scrollbars that fit the Xyrex theme without injected custom rails. */
 *{
-  scrollbar-width:none;
-  -ms-overflow-style:none;
+  scrollbar-width:thin;
+  scrollbar-color:rgba(178,188,255,.72) rgba(9,12,26,.38);
 }
 *::-webkit-scrollbar{
-  width:0 !important;
-  height:0 !important;
-  display:none !important;
+  width:10px;
+  height:10px;
 }
-.xy-custom-scroll-host{
-  scrollbar-width:none !important;
-  -ms-overflow-style:none !important;
-}
-.xy-custom-scrollbar{
-  position:absolute;
-  z-index:35;
-  pointer-events:none;
-  opacity:.78;
-  transition:opacity var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease);
-}
-.xy-custom-scroll-host:hover > .xy-custom-scrollbar,
-.xy-custom-scroll-host:focus-within > .xy-custom-scrollbar{ opacity:1; }
-.xy-custom-scrollbar[hidden]{ display:none !important; }
-.xy-custom-scrollbar-y{ top:8px; right:5px; bottom:8px; width:10px; }
-.xy-page-scrollbar{ position:fixed; top:calc(var(--safe-top) + 8px); right:5px; bottom:calc(var(--safe-bottom) + 8px); width:10px; z-index:100; pointer-events:none; opacity:.78; }
-.xy-custom-scrollbar-x{ left:8px; right:8px; bottom:5px; height:10px; }
-.xy-custom-scrollbar > span{
-  display:block;
-  pointer-events:auto;
+*::-webkit-scrollbar-track{
+  background:rgba(9,12,26,.38);
   border-radius:999px;
-  background:linear-gradient(180deg, rgba(178,188,255,.92), rgba(108,229,255,.62));
-  border:2px solid rgba(8,12,26,.82);
-  box-shadow:0 0 16px rgba(108,229,255,.18);
-  cursor:grab;
 }
-.xy-custom-scrollbar > span:active{ cursor:grabbing; }
-.xy-custom-scrollbar-y > span{ width:100%; min-height:34px; }
-.xy-custom-scrollbar-x > span{ height:100%; min-width:34px; background:linear-gradient(90deg, rgba(178,188,255,.92), rgba(108,229,255,.62)); }
+*::-webkit-scrollbar-thumb{
+  background:linear-gradient(180deg, rgba(178,188,255,.88), rgba(129,146,255,.72));
+  border:2px solid rgba(9,12,26,.72);
+  border-radius:999px;
+}
+*::-webkit-scrollbar-thumb:hover{
+  background:linear-gradient(180deg, rgba(214,220,255,.96), rgba(178,188,255,.86));
+}
+*::-webkit-scrollbar-corner{
+  background:transparent;
+}
 
 
 html, body {
@@ -247,13 +232,9 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
   body.easter-game-mode .page-layout{ margin-top:var(--nav-height); min-height:calc(100dvh - var(--nav-height)); }
 }
 .sidebar,.main-content{ min-height:0; }
-.sidebar{ background:linear-gradient(180deg,color-mix(in srgb, var(--panel) 92%, var(--bg) 8%), color-mix(in srgb, var(--panel-2) 90%, var(--bg-2) 10%)); border-radius:var(--radius); border:1px solid rgba(178,188,255,.16); box-shadow:var(--soft-shadow); padding:16px 16px 22px; overflow-y:auto; overflow-x:hidden; scrollbar-width:none;  transition:max-height var(--motion-med) ease-in-out, padding var(--motion-med) ease-in-out; }
-.main-content{ background:linear-gradient(180deg, rgba(17,20,38,.86), rgba(12,15,28,.86)); border-radius:var(--radius); border:1px solid rgba(178,188,255,.16); box-shadow:var(--soft-shadow); padding:14px; overflow-y:auto; overflow-x:hidden; scrollbar-width:none;  transform-origin:center center; }
+.sidebar{ background:linear-gradient(180deg,color-mix(in srgb, var(--panel) 92%, var(--bg) 8%), color-mix(in srgb, var(--panel-2) 90%, var(--bg-2) 10%)); border-radius:var(--radius); border:1px solid rgba(178,188,255,.16); box-shadow:var(--soft-shadow); padding:16px 16px 22px; overflow-y:auto; overflow-x:hidden; transition:max-height var(--motion-med) ease-in-out, padding var(--motion-med) ease-in-out; }
+.main-content{ background:linear-gradient(180deg, rgba(17,20,38,.86), rgba(12,15,28,.86)); border-radius:var(--radius); border:1px solid rgba(178,188,255,.16); box-shadow:var(--soft-shadow); padding:14px; overflow-y:auto; overflow-x:hidden; transform-origin:center center; }
 .main-content.is-view-switching{ animation:viewSwitch var(--motion-slow) var(--motion-ease-entrance); will-change:transform, opacity; }
-.sidebar::-webkit-scrollbar,.main-content::-webkit-scrollbar,.modal::-webkit-scrollbar{ width:0 !important; height:0 !important; display:none !important; }
-.sidebar::-webkit-scrollbar-thumb,.main-content::-webkit-scrollbar-thumb,.modal::-webkit-scrollbar-thumb{ display:none !important; }
-.sidebar::-webkit-scrollbar-track,.main-content::-webkit-scrollbar-track,.modal::-webkit-scrollbar-track{ display:none !important; }
-.sidebar::-webkit-scrollbar-button,.main-content::-webkit-scrollbar-button,.modal::-webkit-scrollbar-button{ display:none; width:0; height:0; }
 .sidebar-title{ margin: 0 0 8px; color: var(--periwinkle-2); }
 .filter-group{ margin-bottom:14px; padding-bottom:10px; border-bottom:1px dashed rgba(178,188,255,.16); }
 .filter-title{ margin:6px 0 8px; font-size:.95rem; user-select:none; -webkit-user-select:none; }
@@ -346,7 +327,7 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 .modal-overlay{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.66); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); padding:20px; z-index:90; opacity:0; pointer-events:none; }
 .modal-overlay[aria-hidden="false"]{ opacity:1; pointer-events:auto; animation:overlayFadeIn var(--motion-med) var(--motion-ease-soft); }
 .modal-overlay.is-closing{ animation:overlayFadeOut var(--motion-med) var(--motion-ease-exit) forwards; }
-.modal{ width:min(760px,100%); max-height:88dvh; overflow-y:auto; overflow-x:hidden; border-radius:12px; padding:18px; background:linear-gradient(180deg,color-mix(in srgb, var(--panel) 90%, var(--bg) 10%), color-mix(in srgb, var(--panel-2) 88%, var(--bg-2) 12%)); border:1px solid rgba(178,188,255,.25); box-shadow:0 18px 48px rgba(0,0,0,.62); position:relative; transform-origin:center top; scrollbar-width:none;  }
+.modal{ width:min(760px,100%); max-height:88dvh; overflow-y:auto; overflow-x:hidden; border-radius:12px; padding:18px; background:linear-gradient(180deg,color-mix(in srgb, var(--panel) 90%, var(--bg) 10%), color-mix(in srgb, var(--panel-2) 88%, var(--bg-2) 12%)); border:1px solid rgba(178,188,255,.25); box-shadow:0 18px 48px rgba(0,0,0,.62); position:relative; transform-origin:center top; }
 .modal.modal-compact{ width:min(360px,calc(100vw - 32px)); text-align:center; }
 .modal-overlay[aria-hidden="false"] .modal{ animation:modalIn var(--motion-slow) var(--motion-ease-entrance); }
 .modal-overlay.is-closing .modal{ animation:modalOut var(--motion-med) var(--motion-ease-exit) forwards; }
@@ -437,20 +418,25 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 .rank-list,.script-list,.saved-script-list{ margin-top:12px; display:grid; gap:10px; }
 
 .smart-ranking-sections{ margin-top:12px; display:grid; gap:12px; }
-.smart-ranking-hero{ border:1px solid rgba(178,188,255,.3); border-radius:12px; padding:14px; background:linear-gradient(160deg, rgba(35,24,64,.9), rgba(18,18,38,.82)); }
-.smart-ranking-kicker{ margin:0 0 6px; color:var(--muted); font-size:.8rem; letter-spacing:.03em; text-transform:uppercase; }
-.smart-ranking-hero h4{ margin:0; font-size:1rem; color:var(--periwinkle-2); }
-.smart-ranking-executor{ margin:6px 0; font-size:1.15rem; font-weight:800; }
-.smart-ranking-detail-grid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-bottom:8px; }
-.smart-ranking-detail-grid div{ background:rgba(13,17,34,.62); border:1px solid rgba(178,188,255,.18); border-radius:8px; padding:8px; }
-.smart-ranking-detail-grid span{ display:block; color:var(--muted); font-size:.75rem; }
-.smart-ranking-detail-grid strong{ display:block; margin-top:2px; }
-.smart-ranking-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
-.smart-ranking-card{ border:1px solid rgba(178,188,255,.22); border-radius:10px; background:rgba(17,20,38,.72); color:var(--text); padding:12px; text-align:left; min-height:74px; cursor:pointer; }
-.smart-ranking-card span{ display:block; color:var(--muted); font-size:.82rem; }
-.smart-ranking-card strong{ display:block; margin-top:4px; }
-.smart-ranking-card small{ color:var(--muted); }
-.smart-ranking-card.is-active{ border-color:rgba(178,188,255,.55); box-shadow:0 0 0 1px rgba(178,188,255,.28), 0 12px 20px rgba(129,146,255,.2); }
+#smartRankingsPanel .smart-ranking-dashboard{ display:grid; gap:14px; }
+#smartRankingsPanel .smart-ranking-dashboard-head{ padding:14px; border:1px solid rgba(178,188,255,.18); border-radius:14px; background:linear-gradient(145deg, rgba(35,24,64,.72), rgba(13,17,34,.58)); box-shadow:inset 0 1px 0 rgba(255,255,255,.04); }
+#smartRankingsPanel .smart-ranking-kicker{ margin:0 0 6px; color:var(--periwinkle-2); font-size:.76rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+#smartRankingsPanel .smart-ranking-intro{ margin:0; max-width:760px; color:var(--muted); font-size:.92rem; line-height:1.5; }
+#smartRankingsPanel .smart-ranking-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; align-items:stretch; }
+#smartRankingsPanel .smart-ranking-card{ position:relative; overflow:hidden; display:flex; flex-direction:column; gap:12px; min-height:260px; border:1px solid rgba(178,188,255,.2); border-radius:16px; background:linear-gradient(155deg, rgba(28,22,54,.84), rgba(12,16,32,.78)); color:var(--text); padding:14px; text-align:left; box-shadow:0 14px 32px rgba(3,6,18,.24), inset 0 1px 0 rgba(255,255,255,.045); }
+#smartRankingsPanel .smart-ranking-card::before{ content:""; position:absolute; inset:0; pointer-events:none; background:radial-gradient(circle at 18% 0%, rgba(147,118,255,.18), transparent 36%); opacity:.85; }
+#smartRankingsPanel .smart-ranking-card:hover{ transform:translateY(-3px); border-color:rgba(178,188,255,.46); box-shadow:0 18px 38px rgba(10,10,32,.34), 0 0 0 1px rgba(178,188,255,.08) inset; }
+#smartRankingsPanel .smart-ranking-card-top{ position:relative; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+#smartRankingsPanel .smart-ranking-card-title{ display:block; color:#dfe4ff; font-size:.86rem; font-weight:800; letter-spacing:.02em; }
+#smartRankingsPanel .smart-ranking-confidence{ flex:0 0 auto; border:1px solid rgba(178,188,255,.24); border-radius:999px; background:rgba(129,146,255,.14); color:var(--periwinkle-2); padding:4px 8px; font-size:.72rem; font-weight:800; }
+#smartRankingsPanel .smart-ranking-executor{ position:relative; margin:0; color:#fff; font-size:1.22rem; font-weight:900; line-height:1.18; }
+#smartRankingsPanel .smart-ranking-metrics{ position:relative; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+#smartRankingsPanel .smart-ranking-metrics div{ min-width:0; border:1px solid rgba(178,188,255,.15); border-radius:11px; background:rgba(8,12,26,.5); padding:8px; }
+#smartRankingsPanel .smart-ranking-metrics span,#smartRankingsPanel .smart-ranking-why span{ display:block; color:var(--muted); font-size:.72rem; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
+#smartRankingsPanel .smart-ranking-metrics strong{ display:block; margin-top:4px; color:#f4f6ff; font-size:.86rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#smartRankingsPanel .smart-ranking-why{ position:relative; margin-top:auto; border-top:1px solid rgba(178,188,255,.13); padding-top:10px; }
+#smartRankingsPanel .smart-ranking-why ul{ margin:8px 0 0; padding-left:18px; color:#cdd4ff; font-size:.86rem; line-height:1.42; }
+#smartRankingsPanel .smart-ranking-why li+li{ margin-top:4px; }
 
 .comparison-note{ margin:10px 0; color:var(--muted); }
 .comparison-search-input{ width:100%; margin-bottom:10px; border:1px solid rgba(178,188,255,.24); border-radius:10px; background:rgba(14,18,35,.75); color:var(--text); padding:10px 12px; }
@@ -472,7 +458,7 @@ body.easter-game-mode .page-layout{ margin-top:var(--nav-height); height:calc(10
 .comparison-verdict-card{ border:1px solid rgba(178,188,255,.2); border-radius:10px; background:rgba(17,20,38,.65); padding:10px; }
 .comparison-verdict-card h4{ margin:0 0 6px; }
 .comparison-verdict-card p{ margin:4px 0; color:var(--muted); font-size:.9rem; }
-@media (max-width:700px){ .smart-ranking-detail-grid{ grid-template-columns:1fr; } }
+@media (max-width:700px){ #smartRankingsPanel .smart-ranking-metrics{ grid-template-columns:1fr; } }
 .rank-item,.script-card,.saved-script-item{ border:1px solid rgba(178,188,255,.2); border-radius:10px; background:rgba(17,20,38,.7); }
 .rank-item{ display:grid; grid-template-columns:42px 1fr; align-items:start; gap:12px; padding:10px; }
 .rank-item h4,.script-card h4{ margin:0; }
@@ -638,12 +624,8 @@ body.easter-game-mode .xy-sidepanel{ max-height:min(56dvh, 560px); overflow-y:au
     overflow-y:auto;
     overflow-x:hidden;
     overscroll-behavior:contain;
-    scrollbar-width:none;
 
   }
-  body.easter-game-mode .xy-sidepanel::-webkit-scrollbar{ width:0 !important; height:0 !important; display:none !important; }
-  body.easter-game-mode .xy-sidepanel::-webkit-scrollbar-thumb{ display:none !important; }
-  body.easter-game-mode .xy-sidepanel::-webkit-scrollbar-button{ display:none; width:0; height:0; }
 }
 
 .xy-help{ color:var(--muted); font-size:.84rem; margin:0; }
