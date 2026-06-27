@@ -467,7 +467,7 @@
     { label: 'Normal', skill: 2, think: 0.68, aimError: 0.40, bowLead: 0.38, reaction: 0.18, bridgeCd: 0.18, breakNeed: 0.54, detect: 285, comboSense: 0.48, objectiveSense: 0.58, clutchSense: 0.48, strafeSense: 0.45, panic: 0.46 },
     { label: 'Sweaty', skill: 3, think: 0.36, aimError: 0.18, bowLead: 0.72, reaction: 0.08, bridgeCd: 0.12, breakNeed: 0.38, detect: 365, comboSense: 0.76, objectiveSense: 0.82, clutchSense: 0.76, strafeSense: 0.78, panic: 0.20 },
     { label: 'Nightmare', skill: 4, think: 0.20, aimError: 0.055, bowLead: 0.96, reaction: 0.02, bridgeCd: 0.08, breakNeed: 0.26, detect: 455, comboSense: 0.95, objectiveSense: 0.96, clutchSense: 0.95, strafeSense: 0.94, panic: 0.07 },
-    { label: 'God', skill: 5, think: 0.04, aimError: 0.005, bowLead: 1.25, reaction: 0.0, bridgeCd: 0.025, breakNeed: 0.08, detect: 999, comboSense: 1.45, objectiveSense: 1.55, clutchSense: 1.55, strafeSense: 1.35, panic: 0.0 }
+    { label: 'God', skill: 5, think: 0.12, aimError: 0.03, bowLead: 1.05, reaction: 0.035, bridgeCd: 0.065, breakNeed: 0.18, detect: 620, comboSense: 1.08, objectiveSense: 1.12, clutchSense: 1.08, strafeSense: 1.05, panic: 0.03 }
   ];
 
   const botPersonalities = [
@@ -531,6 +531,7 @@
   let selectedStyleIndex = 0;
   let attackSwings = [];
   let floatingTexts = [];
+  let antiCheat = { enabled: false, lastX: 0, lastY: 0, lastT: 0, strikes: 0, wins: [] };
 
   function resize() {
     const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
@@ -716,17 +717,17 @@
     e.strafeTimer = rand(0.4, 1.2);
     e.memory = { lastSeenPlayer: 0, pressure: 0, stuck: 0, lastX: e.x, lastY: e.y, goalSwitch: 0 };
     if (profile.label === 'God') {
-      e.maxHp = e.hp = 96;
-      e.speed = 315;
-      e.blocks = 999;
+      e.maxHp = e.hp = 48;
+      e.speed = 255;
+      e.blocks = 160;
       e.sword = 3;
       e.armor = 3;
       e.pickaxe = 3;
       e.bow = true;
-      e.arrows = 999;
-      e.fireballs = 99;
-      e.tnt = 99;
-      e.pearls = 25;
+      e.arrows = 96;
+      e.fireballs = 8;
+      e.tnt = 4;
+      e.pearls = 3;
       e.sharpness = 3;
       e.protection = 3;
       e.haste = 2;
@@ -796,6 +797,7 @@
     state = 'gameover';
     shopOpen = false;
     shopEl.style.display = 'none';
+    if (win) antiCheat.wins.push(performance.now());
     window.AetherBedsBattlepass?.awardGame?.(win, {
       kills: player?.kills || 0,
       finalKills: player?.finalKills || 0,
@@ -836,8 +838,9 @@
     }
   }
 
-  function buy(slot) {
-    if (!shopOpen || state !== 'playing') return;
+  function buy(slot, force = false) {
+    if (state !== 'playing') return false;
+    if (!force && !shopOpen) return false;
     if (slot === '1') {
       if (spend(player.inv, 'iron', 8)) {
         const amount = player.builderBonus ? 24 : 16;
@@ -1145,16 +1148,16 @@
     // v5.3.3: real dash impulse. Movement no longer clamps the dash back to walking speed,
     // and moving in the same direction adds forward momentum instead of cancelling the boost.
     const currentForward = Math.max(0, player.vx * dx + player.vy * dy);
-    const dashPower = 2100 + (player.dashBonus || 0) * 620;
-    const momentumBonus = Math.min(720, currentForward * 0.9);
+    const dashPower = 1320 + (player.dashBonus || 0) * 260;
+    const momentumBonus = Math.min(260, currentForward * 0.45);
     const finalSpeed = dashPower + momentumBonus;
     player.vx = dx * finalSpeed;
     player.vy = dy * finalSpeed;
-    player.dashTime = 0.30 + Math.min(0.14, (player.dashBonus || 0) * 0.025);
+    player.dashTime = 0.18 + Math.min(0.07, (player.dashBonus || 0) * 0.014);
 
     // Invulnerability while dashing.
-    player.invuln = Math.max(player.invuln || 0, 0.72 + Math.min(0.55, (player.dashBonus || 0) * 0.11));
-    player.dashCd = Math.max(0.30, 0.72 - (player.dashBonus || 0) * 0.065);
+    player.invuln = Math.max(player.invuln || 0, 0.34 + Math.min(0.22, (player.dashBonus || 0) * 0.055));
+    player.dashCd = Math.max(0.42, 0.82 - (player.dashBonus || 0) * 0.04);
     burst(player.x, player.y, '#8be9ff', 30);
   }
 
@@ -1305,10 +1308,10 @@
     burst(c.x, c.y, '#ff5f78', 4);
   }
 
-  function shootArrow(shooter, targetX, targetY) {
-    if (!shooter.alive || shooter.bowCd > 0 || !shooter.bow || shooter.arrows <= 0) return;
+  function shootArrow(shooter, targetX, targetY, force = false) {
+    if (!shooter.alive || (!force && shooter.bowCd > 0) || !shooter.bow || shooter.arrows <= 0) return;
     shooter.arrows--;
-    shooter.bowCd = Math.max(0.32, 0.55 - (shooter.bowSpeedBonus || 0));
+    shooter.bowCd = force ? 0 : Math.max(0.32, 0.55 - (shooter.bowSpeedBonus || 0));
     const angle = Math.atan2(targetY - shooter.y, targetX - shooter.x);
     projectiles.push({
       x: shooter.x + Math.cos(angle) * 22,
@@ -1672,6 +1675,32 @@
     shopEl.style.display = shopOpen ? 'grid' : 'none';
   }
 
+  function antiCheatFlag(reason, lethal = true) {
+    if (!antiCheat.enabled || window.AetherBedsModAPI?.flags?.antiCheatBypass) return false;
+    antiCheat.strikes++;
+    toast(`AntiCheat: ${reason}`);
+    if (lethal && player?.alive) killEntity(player, 'blue');
+    return true;
+  }
+
+  function updateAntiCheat(dt) {
+    if (!antiCheat.enabled || !player || state !== 'playing') return;
+    const now = performance.now();
+    if (!antiCheat.lastT) { antiCheat.lastX = player.x; antiCheat.lastY = player.y; antiCheat.lastT = now; return; }
+    const elapsed = Math.max(0.016, (now - antiCheat.lastT) / 1000);
+    const moved = dist(player.x, player.y, antiCheat.lastX, antiCheat.lastY);
+    const speedLimit = (player.speed || 225) * (player.dashTime > 0 ? 7.2 : 1.75) + 90;
+    if (moved / elapsed > speedLimit && player.invuln < 1.6) antiCheatFlag('speed or teleport spike');
+    if (moved > 520 && player.dashTime <= 0 && player.invuln < 1.6) antiCheatFlag('teleport rejected');
+    if (player.blocks < 0 || player.arrows < 0 || player.fireballs < 0 || player.tnt < 0 || player.pearls < 0) antiCheatFlag('invalid item count');
+    if (player.attackCd < -0.02 || player.bowCd < -0.02 || player.dashCd < -0.02) antiCheatFlag('invalid cooldown');
+    const coverage = groundCoverage(player);
+    if (player.alive && coverage <= 0.001 && !isWalkableAt(player.x, player.y)) antiCheatFlag('void survival');
+    antiCheat.wins = antiCheat.wins.filter(t => now - t < 120000);
+    if (antiCheat.wins.length > 7) antiCheatFlag('win rate capped');
+    antiCheat.lastX = player.x; antiCheat.lastY = player.y; antiCheat.lastT = now;
+  }
+
   function update(dt) {
     if (state !== 'playing' || paused) return;
     gameTime += dt;
@@ -1682,6 +1711,7 @@
     updateProjectiles(dt);
     updateParticles(dt);
     updateMessages(dt);
+    updateAntiCheat(dt);
     screenShake = Math.max(0, screenShake - dt * 32);
   }
 
@@ -2232,7 +2262,7 @@ window.AetherBedsModAPI = {
   killEntity,
   respawnEntity,
   breakBed,
-  buy,
+  buy(slot, force = false) { return buy(slot, force); },
   shootArrow,
   throwUtility,
   consumeGapple,
@@ -2332,6 +2362,29 @@ window.AetherBedsModAPI = {
     return true;
   },
 
+  toggleAntiCheat(value) {
+    antiCheat.enabled = typeof value === "boolean" ? value : !antiCheat.enabled;
+    antiCheat.lastT = 0;
+    toast(`AntiCheat ${antiCheat.enabled ? "enabled" : "disabled"}.`);
+    return antiCheat.enabled;
+  },
+
+  get antiCheatEnabled() { return antiCheat.enabled; },
+
+  applyBattlepassRewards(rewards = []) {
+    if (!player) return;
+    const names = new Set(rewards.map(r => Array.isArray(r) ? r[1] : r));
+    if (names.has("Luxury Blocks")) player.blocks = Math.max(player.blocks, 96);
+    if (names.has("Launch Dash")) player.dashBonus = Math.max(player.dashBonus || 0, 0.45);
+    if (names.has("Speed Lines")) player.speed = Math.max(player.speed || 225, 238);
+    if (names.has("Haste Pulse")) player.haste = Math.max(player.haste || 0, 1);
+    if (names.has("Sharp Shine")) player.sharpness = Math.max(player.sharpness || 0, 1);
+    if (names.has("Armor Aura")) player.protection = Math.max(player.protection || 0, 1);
+    if (names.has("Meteor Balls")) player.fireballs = Math.max(player.fireballs || 0, 3);
+    if (names.has("Dragon Pearl")) player.pearls = Math.max(player.pearls || 0, 1);
+    if (names.has("Bow Flare")) { player.bow = true; player.arrows = Math.max(player.arrows || 0, 24); }
+  },
+
   setFlag(name, value) {
     if (Object.prototype.hasOwnProperty.call(this.flags, name)) {
       this.flags[name] = !!value;
@@ -2409,6 +2462,10 @@ window.AetherBedsModAPI = {
       Scaffold: { delay: 70, consumeBlocks: true, predictive: true, onlyVoid: true },
       SafeWalk: { safeDistance: 20, onlyVoid: true, allowDash: true, stopStrength: 0.08, highlight: true },
       RemovePlacementLimits: { consumeBlocks: true, allowFar: true, allowAir: true },
+      RemoveBreakLimits: { range: 9999 },
+      NoHitDelay: { delay: 18 },
+      ProjectileExploit: { delay: 35, preferFireballs: false },
+      AntiCheatBypass: { reduceSpeed: true, spoofCooldowns: true },
       ProjectileAimbot: { strength: 1, range: 900, arrows: true, fireballs: true, tnt: true },
       ArrowBypass: { arrows: true, showIndicator: false },
 
@@ -2448,6 +2505,10 @@ window.AetherBedsModAPI = {
       Scaffold: "KeyZ",
       SafeWalk: "KeyB",
       RemovePlacementLimits: "",
+      RemoveBreakLimits: "",
+      NoHitDelay: "",
+      ProjectileExploit: "",
+      AntiCheatBypass: "",
       ProjectileAimbot: "",
       ArrowBypass: "",
       InstantBreak: "",
@@ -2473,10 +2534,10 @@ window.AetherBedsModAPI = {
 
     /* Module categories shown in the GUI. */
     const categories = {
-      Combat: ["KillAura", "ComboAssist", "Reach", "ProjectileAura", "ProjectileAimbot", "ArrowBypass", "InstantBreak", "Breaker"],
+      Combat: ["KillAura", "ComboAssist", "Reach", "NoHitDelay", "ProjectileAura", "ProjectileExploit", "ProjectileAimbot", "ArrowBypass", "InstantBreak", "Breaker", "RemoveBreakLimits"],
       Movement: ["Speed", "DashExtender", "InfiniteDash", "SafeWalk", "Scaffold", "AntiVoid", "NoBoundaries"],
       Player: ["InstantRespawn", "AlwaysRespawn", "AntiDeath"],
-      Utility: ["RewardExploit", "Magnet", "AutoBuy", "InfiniteProjectiles", "RemovePlacementLimits"],
+      Utility: ["RewardExploit", "Magnet", "AutoBuy", "InfiniteProjectiles", "RemovePlacementLimits", "AntiCheatBypass"],
       Win: ["AutoWin"]
     };
 
@@ -2491,6 +2552,10 @@ window.AetherBedsModAPI = {
       Scaffold: "Places blocks beneath you while over void.",
       SafeWalk: "Stops you from accidentally walking off edges.",
       RemovePlacementLimits: "Removes reach and adjacent-block placement limits.",
+      RemoveBreakLimits: "Removes normal block and bed breaking distance limits.",
+      NoHitDelay: "Removes the attacker melee cooldown for this game.",
+      ProjectileExploit: "Removes projectile firing cooldowns and works with ProjectileAura and ProjectileAimbot.",
+      AntiCheatBypass: "Attempts to stay under this game's AntiCheat thresholds.",
       ProjectileAimbot: "Redirects your arrows/fireballs/TNT toward the bot.",
       ArrowBypass: "Makes arrows pass through wool/team blocks instead of disappearing.",
       InstantBreak: "Instantly breaks the enemy bed when close enough.",
@@ -2712,6 +2777,43 @@ window.AetherBedsModAPI = {
         }
       },
 
+      RemoveBreakLimits: {
+        on: () => api.setFlag?.("removeBreakLimits", true),
+        off: () => api.setFlag?.("removeBreakLimits", false)
+      },
+
+      NoHitDelay: {
+        on: () => loop("NoHitDelay", () => cfg.NoHitDelay.delay, () => {
+          const p = api.player;
+          if (p) p.attackCd = 0;
+        }),
+        off: () => stop("NoHitDelay")
+      },
+
+      ProjectileExploit: {
+        on: () => loop("ProjectileExploit", () => cfg.ProjectileExploit.delay, () => {
+          const p = api.player;
+          if (!alive(p)) return;
+          p.bowCd = 0;
+          p.bow = true;
+          p.arrows = Math.max(p.arrows || 0, 1);
+        }),
+        off: () => stop("ProjectileExploit")
+      },
+
+      AntiCheatBypass: {
+        on: () => {
+          api.setFlag?.("antiCheatBypass", true);
+          loop("AntiCheatBypass", 30, () => {
+            const p = api.player;
+            if (!alive(p)) return;
+            if (cfg.AntiCheatBypass.reduceSpeed) p.speed = Math.min(p.speed || 225, 300);
+            if (cfg.AntiCheatBypass.spoofCooldowns) { p.attackCd = Math.max(p.attackCd || 0, 0.02); p.dashCd = Math.max(p.dashCd || 0, 0.04); }
+          });
+        },
+        off: () => { api.setFlag?.("antiCheatBypass", false); stop("AntiCheatBypass"); }
+      },
+
       ProjectileAimbot: {
         on: () => loop("ProjectileAimbot", 20, () => {
           const e = api.enemy;
@@ -2834,22 +2936,22 @@ window.AetherBedsModAPI = {
           const p = api.player;
           if (!alive(p)) return;
 
-          if (p.armor < 1 && p.inv.gold >= 8 + cfg.AutoBuy.reserveGold) return api.buy("3");
-          if (p.sword < 1 && p.inv.iron >= 12 + cfg.AutoBuy.reserveIron) return api.buy("2");
-          if (p.blocks < cfg.AutoBuy.blocksAt && p.inv.iron >= 8 + cfg.AutoBuy.reserveIron) return api.buy("1");
-          if (p.pickaxe < 1 && p.inv.gold >= 4 + cfg.AutoBuy.reserveGold) return api.buy("4");
-          if (p.armor < 2 && p.inv.emerald >= 4) return api.buy("3");
-          if (p.sword < 2 && p.inv.gold >= 8 + cfg.AutoBuy.reserveGold) return api.buy("2");
+          if (p.armor < 1 && p.inv.gold >= 8 + cfg.AutoBuy.reserveGold) return api.buy("3", true);
+          if (p.sword < 1 && p.inv.iron >= 12 + cfg.AutoBuy.reserveIron) return api.buy("2", true);
+          if (p.blocks < cfg.AutoBuy.blocksAt && p.inv.iron >= 8 + cfg.AutoBuy.reserveIron) return api.buy("1", true);
+          if (p.pickaxe < 1 && p.inv.gold >= 4 + cfg.AutoBuy.reserveGold) return api.buy("4", true);
+          if (p.armor < 2 && p.inv.emerald >= 4) return api.buy("3", true);
+          if (p.sword < 2 && p.inv.gold >= 8 + cfg.AutoBuy.reserveGold) return api.buy("2", true);
 
           if (cfg.AutoBuy.projectiles) {
-            if (!p.bow && p.inv.gold >= 8 + cfg.AutoBuy.reserveGold) return api.buy("5");
-            if (p.fireballs < 2 && p.inv.gold >= 6 + cfg.AutoBuy.reserveGold) return api.buy("6");
+            if (!p.bow && p.inv.gold >= 8 + cfg.AutoBuy.reserveGold) return api.buy("5", true);
+            if (p.fireballs < 2 && p.inv.gold >= 6 + cfg.AutoBuy.reserveGold) return api.buy("6", true);
           }
 
           if (cfg.AutoBuy.upgrades) {
-            if (p.sharpness < 1 && p.inv.diamond >= 4) return api.buy("u1");
-            if (p.protection < 1 && p.inv.diamond >= 3) return api.buy("u2");
-            if (p.haste < 1 && p.inv.diamond >= 3) return api.buy("u3");
+            if (p.sharpness < 1 && p.inv.diamond >= 4) return api.buy("u1", true);
+            if (p.protection < 1 && p.inv.diamond >= 3) return api.buy("u2", true);
+            if (p.haste < 1 && p.inv.diamond >= 3) return api.buy("u3", true);
           }
         }),
         off: () => stop("AutoBuy")
@@ -2865,7 +2967,7 @@ window.AetherBedsModAPI = {
           if (cfg.Breaker.requirePickaxe && (p.pickaxe || 0) <= 0) return;
           if (cfg.Breaker.stopNearEnemy && alive(e) && api.dist(p.x, p.y, e.x, e.y) < 100) return;
 
-          if (api.pointNearRect(p.x, p.y, bed, cfg.Breaker.range)) {
+          if (api.pointNearRect(p.x, p.y, bed, toggles.RemoveBreakLimits ? cfg.RemoveBreakLimits.range : cfg.Breaker.range)) {
             const dmg = 1.8 + (p.pickaxe || 0) * 1.45 + (p.haste || 0) * 0.75 + (p.bedDamageBonus || 0);
             bed.hp -= dmg;
             api.floatText(`bed -${dmg.toFixed(1)}`, bed.x + bed.w / 2, bed.y - 10, "#b8d0ff");
@@ -2921,14 +3023,15 @@ window.AetherBedsModAPI = {
 
           if (!alive(p) || !alive(e)) return;
           if (api.dist(p.x, p.y, e.x, e.y) > cfg.ProjectileAura.range) return;
+          if (toggles.ProjectileExploit) p.bowCd = 0;
           if (cfg.ProjectileAura.requireLOS && !lineOfSight(p.x, p.y, e.x, e.y)) return;
 
           if (cfg.ProjectileAura.useFireballs && p.fireballs > 0 && api.throwUtility) {
-            api.throwUtility(p, "fireball", e.x, e.y);
+            api.throwUtility(p, e.x, e.y, "fireball");
           } else {
             p.bow = true;
             p.arrows = Math.max(p.arrows || 0, 2);
-            api.shootArrow(p, e.x, e.y);
+            api.shootArrow(p, e.x, e.y, toggles.ProjectileExploit);
           }
         }),
         off: () => stop("ProjectileAura")
@@ -3951,6 +4054,8 @@ window.AetherBedsModAPI = {
       <div class="abBpTitle"><h2>Battle Pass</h2><p>${SEASON} · horizontal rewards track · XP is saved locally from completed games.</p></div>
       <div class="abBpActions">
         <button class="gold" id="abBuyPro">Buy PRO (${PRO_COST} wins)</button>
+        <button class="secondary" id="abApplyRewards">Equip Rewards</button>
+        <button class="secondary" id="abToggleAc">PRO AntiCheat</button>
         <button class="secondary" id="abCloseBp">Close</button>
       </div>
     </div>
@@ -3975,6 +4080,8 @@ window.AetherBedsModAPI = {
     </div>`;
 
     c.querySelector('#abCloseBp').onclick = () => p.style.display = 'none';
+    c.querySelector('#abApplyRewards').onclick = () => { applyUnlockedRewards(); alert('Unlocked rewards equipped for the current game.'); };
+    c.querySelector('#abToggleAc').onclick = () => { const nd = norm(data()); if (!nd.pro) return alert('PRO is required for AntiCheat.'); window.AetherBedsModAPI?.toggleAntiCheat?.(); };
     c.querySelector('#abBuyPro').onclick = () => {
       const nd = norm(data());
       if (nd.pro) return alert('You already own PRO.');
@@ -4001,11 +4108,22 @@ window.AetherBedsModAPI = {
     return String(str).replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
   }
 
+  function unlockedRewards(d = norm(data())) {
+    const t = tier(d);
+    const rewards = freeRewards.slice(0, t);
+    if (d.pro) rewards.push(...proRewards.slice(0, t));
+    return rewards;
+  }
+  function applyUnlockedRewards() {
+    window.AetherBedsModAPI?.applyBattlepassRewards?.(unlockedRewards());
+  }
+
   window.AetherBedsBattlepass = {
     data: () => norm(data()),
     save,
     startGame(info = {}) {
       activeGame = { ...info, startedAt: Date.now() };
+      setTimeout(applyUnlockedRewards, 50);
       scheduleRender();
     },
     awardGame(win, stats = {}) {
