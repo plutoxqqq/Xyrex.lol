@@ -531,7 +531,22 @@
   let selectedStyleIndex = 0;
   let attackSwings = [];
   let floatingTexts = [];
-  let antiCheat = { enabled: true, lastX: 0, lastY: 0, lastT: 0, strikes: 0, wins: [] };
+  let antiCheat = {
+    enabled: true,
+    lastX: 0,
+    lastY: 0,
+    lastT: 0,
+    strikes: 0,
+    wins: [],
+    graceUntil: 0,
+    lastLegitTeleport: 0,
+    lastLegitAttack: -Infinity,
+    lastLegitDash: -Infinity,
+    lastLegitPlace: -Infinity,
+    lastLegitProjectile: -Infinity,
+    lastItems: null,
+    suspicious: []
+  };
 
   function resize() {
     const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
@@ -992,6 +1007,14 @@
     ent.bridgeCd = 0;
     if (ent.team === 'red') { ent.x = 13 * TILE + 16; ent.y = 35 * TILE + 16; }
     else { ent.x = 62 * TILE + 16; ent.y = 12 * TILE + 16; }
+    if (ent === player) {
+      const now = performance.now();
+      antiCheat.graceUntil = now + 2200;
+      antiCheat.lastLegitTeleport = now;
+      antiCheat.lastX = ent.x;
+      antiCheat.lastY = ent.y;
+      antiCheat.lastT = now;
+    }
   }
 
   function burst(x, y, color, count) {
@@ -1128,6 +1151,7 @@
 
   function playerDash() {
     if (state !== 'playing' || paused || shopOpen || !player.alive || player.dashCd > 0) return;
+    antiCheat.lastLegitDash = performance.now();
 
     let dx = 0, dy = 0;
     if (keys.has('w') || keys.has('arrowup')) dy--;
@@ -1163,6 +1187,7 @@
 
   function playerAttack() {
     if (state !== 'playing' || paused || shopOpen || !player.alive || player.attackCd > 0) return;
+    antiCheat.lastLegitAttack = performance.now();
     player.attackCd = Math.max(0.20, 0.30 - (player.attackSpeedBonus || 0));
     const aim = Math.atan2(mouse.worldY - player.y, mouse.worldX - player.x);
     const reach = 84;
@@ -1301,6 +1326,7 @@
     if (pointNearRect(c.x, c.y, redBed, 4) || pointNearRect(c.x, c.y, blueBed, 4)) return;
     const adj = [[1,0],[-1,0],[0,1],[0,-1]].some(([ax, ay]) => isWalkableTile(getTile(tx + ax, ty + ay)));
     if (!adj) { toast('Blocks must touch land or another block.'); return; }
+    antiCheat.lastLegitPlace = performance.now();
     setTile(tx, ty, RED_BLOCK);
     player.blocks--;
     player.clutchCd = clutch ? 0.18 : 0;
@@ -1310,6 +1336,7 @@
 
   function shootArrow(shooter, targetX, targetY, force = false) {
     if (!shooter.alive || (!force && shooter.bowCd > 0) || !shooter.bow || shooter.arrows <= 0) return;
+    if (shooter === player && !force) antiCheat.lastLegitProjectile = performance.now();
     shooter.arrows--;
     shooter.bowCd = force ? 0 : Math.max(0.32, 0.55 - (shooter.bowSpeedBonus || 0));
     const angle = Math.atan2(targetY - shooter.y, targetX - shooter.x);
@@ -1335,6 +1362,7 @@
 
   function throwUtility(shooter, targetX, targetY, kind) {
     if (!shooter.alive) return;
+    if (shooter === player) antiCheat.lastLegitProjectile = performance.now();
     if (kind === 'fireball' && shooter.fireballs <= 0) { if (shooter === player) toast('No fireballs.'); return; }
     if (kind === 'tnt' && shooter.tnt <= 0) { if (shooter === player) toast('No TNT.'); return; }
     if (kind === 'pearl' && shooter.pearls <= 0) { if (shooter === player) toast('No ender pearls.'); return; }
@@ -1676,29 +1704,58 @@
   }
 
   function antiCheatFlag(reason, lethal = true) {
-    if (!antiCheat.enabled || window.AetherBedsModAPI?.flags?.antiCheatBypass) return false;
+    if (!antiCheat.enabled) return false;
     antiCheat.strikes++;
     toast(`AntiCheat: ${reason}`);
     if (lethal && player?.alive) killEntity(player, 'blue');
     return true;
   }
 
+  function markSuspiciousAction(action, detail = '') {
+    if (!antiCheat.enabled || state !== 'playing') return false;
+    const now = performance.now();
+    antiCheat.suspicious.push({ action, detail, t: now });
+    antiCheat.suspicious = antiCheat.suspicious.filter(e => now - e.t < 5000);
+    return antiCheatFlag(`blocked suspicious ${action}${detail ? ': ' + detail : ''}`);
+  }
+
+  function antiCheatItemSnapshot() {
+    if (!player) return null;
+    return { blocks: player.blocks || 0, arrows: player.arrows || 0, fireballs: player.fireballs || 0, tnt: player.tnt || 0, pearls: player.pearls || 0, gapples: player.gapples || 0 };
+  }
+
   function updateAntiCheat(dt) {
     if (!antiCheat.enabled || !player || state !== 'playing') return;
     const now = performance.now();
-    if (!antiCheat.lastT) { antiCheat.lastX = player.x; antiCheat.lastY = player.y; antiCheat.lastT = now; return; }
+    if (!antiCheat.lastT || now < antiCheat.graceUntil || !player.alive || player.respawn > 0) {
+      antiCheat.lastX = player.x; antiCheat.lastY = player.y; antiCheat.lastT = now; antiCheat.lastItems = antiCheatItemSnapshot(); return;
+    }
     const elapsed = Math.max(0.016, (now - antiCheat.lastT) / 1000);
     const moved = dist(player.x, player.y, antiCheat.lastX, antiCheat.lastY);
-    const speedLimit = (player.speed || 225) * (player.dashTime > 0 ? 7.2 : 1.75) + 90;
-    if (moved / elapsed > speedLimit && player.invuln < 1.6) antiCheatFlag('speed or teleport spike');
-    if (moved > 520 && player.dashTime <= 0 && player.invuln < 1.6) antiCheatFlag('teleport rejected');
-    if (player.blocks < 0 || player.arrows < 0 || player.fireballs < 0 || player.tnt < 0 || player.pearls < 0) antiCheatFlag('invalid item count');
-    if (player.attackCd < -0.02 || player.bowCd < -0.02 || player.dashCd < -0.02) antiCheatFlag('invalid cooldown');
+    const speedBootBonus = player.speedBoots ? 28 : 0;
+    const assassinBonus = player.kit === 'Assassin' ? 18 : 0;
+    const legitBaseSpeed = 225 + speedBootBonus + assassinBonus;
+    const normalCap = Math.max(player.speed || 225, legitBaseSpeed) * 1.95 + 120;
+    const dashCap = 2920 + (player.dashBonus || 0) * 320;
+    const speedLimit = player.dashTime > 0 || now - antiCheat.lastLegitDash < 350 ? dashCap : normalCap;
+    if (moved / elapsed > speedLimit) antiCheatFlag('speed check failed');
+    if (moved > 460 && now - antiCheat.lastLegitTeleport > 1400 && now - antiCheat.lastLegitDash > 450) antiCheatFlag('teleport check failed');
+
+    const items = antiCheatItemSnapshot();
+    if (Object.values(items).some(v => v < 0 || !Number.isFinite(v))) antiCheatFlag('item check failed');
+    if (antiCheat.lastItems) {
+      if (items.blocks - antiCheat.lastItems.blocks > 80) antiCheatFlag('item check failed: block spike');
+      if (items.arrows - antiCheat.lastItems.arrows > 48) antiCheatFlag('item check failed: arrow spike');
+      if (items.fireballs - antiCheat.lastItems.fireballs > 3 || items.tnt - antiCheat.lastItems.tnt > 3 || items.pearls - antiCheat.lastItems.pearls > 2) antiCheatFlag('item check failed: utility spike');
+    }
+
+    if ((player.attackCd <= 0 && now - antiCheat.lastLegitAttack < 90) || (player.dashCd <= 0 && now - antiCheat.lastLegitDash < 260) || (player.bowCd <= 0 && now - antiCheat.lastLegitProjectile < 180)) antiCheatFlag('cooldown check failed');
     const coverage = groundCoverage(player);
-    if (player.alive && coverage <= 0.001 && !isWalkableAt(player.x, player.y)) antiCheatFlag('void survival');
+    if (player.alive && coverage <= 0.001 && !isWalkableAt(player.x, player.y) && (player.voidTime || 0) > 0.18 && player.invuln < 0.15) antiCheatFlag('void check failed');
     antiCheat.wins = antiCheat.wins.filter(t => now - t < 120000);
-    if (antiCheat.wins.length > 7) antiCheatFlag('win rate capped');
-    antiCheat.lastX = player.x; antiCheat.lastY = player.y; antiCheat.lastT = now;
+    if (antiCheat.wins.length > 7) antiCheatFlag('win cap reached');
+    if (antiCheat.suspicious.filter(e => now - e.t < 5000).length >= 3) antiCheatFlag('suspicious behaviour burst');
+    antiCheat.lastX = player.x; antiCheat.lastY = player.y; antiCheat.lastT = now; antiCheat.lastItems = items;
   }
 
   function update(dt) {
@@ -2211,7 +2268,7 @@ window.AetherBedsModAPI = {
   },
 
   get state() { return state; },
-  set state(v) { state = v; },
+  set state(v) { if (v !== state && markSuspiciousAction?.("state", String(v))) return; state = v; },
 
   get paused() { return paused; },
   set paused(v) { paused = !!v; },
@@ -2246,7 +2303,7 @@ window.AetherBedsModAPI = {
   clamp,
   centerOf,
   getTile,
-  setTile,
+  setTile(tx, ty, tile) { if (markSuspiciousAction?.("map edit", `${tx},${ty}`)) return; return setTile(tx, ty, tile); },
   isWalkableAt,
   isWalkableTile,
   nearestWalkableWorld,
@@ -2258,10 +2315,10 @@ window.AetherBedsModAPI = {
   toast,
   burst,
   floatText,
-  damageEntity,
-  killEntity,
-  respawnEntity,
-  breakBed,
+  damageEntity(target, amount, sourceTeam) { if (sourceTeam === "red" && target === enemy && markSuspiciousAction?.("direct damage", String(Math.round(amount)))) return; return damageEntity(target, amount, sourceTeam); },
+  killEntity(target, sourceTeam) { if (sourceTeam === "red" && target === enemy && markSuspiciousAction?.("direct kill", "enemy")) return; return killEntity(target, sourceTeam); },
+  respawnEntity(ent) { if (ent === player && markSuspiciousAction?.("direct respawn", "player")) return; return respawnEntity(ent); },
+  breakBed(bed, breakerTeam) { if (breakerTeam === "red" && markSuspiciousAction?.("direct bed break", bed?.team || "unknown")) return; return breakBed(bed, breakerTeam); },
   buy(slot, force = false) { return buy(slot, force); },
   shootArrow,
   throwUtility,
@@ -2279,6 +2336,7 @@ window.AetherBedsModAPI = {
 
   teleportPlayer(x, y) {
     if (!player) return;
+    if (markSuspiciousAction?.("teleport", "player")) return;
     player.x = x;
     player.y = y;
     player.vx = 0;
@@ -2309,6 +2367,7 @@ window.AetherBedsModAPI = {
 
   safeRespawn(ent = player, spawnMode = "base") {
     if (!ent) return;
+    if (ent === player && player.alive && markSuspiciousAction?.("respawn", "while alive")) return;
     ent.alive = true;
     ent.hp = ent.maxHp || 24;
     ent.invuln = Math.max(ent.invuln || 0, 1.25);
@@ -2459,7 +2518,7 @@ window.AetherBedsModAPI = {
         notifications: true
       },
 
-      KillAura: { range: 110, delay: 85, damageMultiplier: 1, requireLOS: false, knockback: 130 },
+      KillAura: { range: 110, attackTime: 0.085, damageMultiplier: 1, requireLOS: false, knockback: 130 },
       ComboAssist: { maxCombo: 8, delay: 95, keepDistance: 74, strafe: true, wtap: true, humanise: true },
       Reach: { distance: 145, dynamic: true, onlyMoving: false, requireLOS: false, showCircle: true },
       RewardExploit: { type: "iron", amount: 12, interval: 700, target: "red", randomOffset: true },
@@ -2495,7 +2554,7 @@ window.AetherBedsModAPI = {
       Breaker: { range: 105, delay: 430, requirePickaxe: false, stopNearEnemy: false },
       InfiniteProjectiles: { arrows: true, fireballs: true, tnt: true, pearls: true, visualSpoof: false },
       AutoWin: { delay: 160, returnBase: false, instantKill: true },
-      ProjectileAura: { delay: 260, range: 850, useFireballs: false, requireLOS: false },
+      ProjectileAura: { attackTime: 0.26, range: 850, useFireballs: false, requireLOS: false },
       DashExtender: { multiplier: 2.2 },
       Magnet: { range: 900, speed: 42, instantDistance: 28, types: "all" }
     };
@@ -2589,7 +2648,7 @@ window.AetherBedsModAPI = {
 
     const modules = {
       KillAura: {
-        on: () => loop("KillAura", () => cfg.KillAura.delay, () => {
+        on: () => loop("KillAura", () => Math.max(0.02, Number(cfg.KillAura.attackTime ?? (cfg.KillAura.delay || 85) / 1000)) * 1000, () => {
           const p = api.player, e = api.enemy;
           if (!alive(p) || !alive(e)) return;
 
@@ -2680,7 +2739,7 @@ window.AetherBedsModAPI = {
           if (api.groundCoverage(p) <= 0.001) {
             const safe = api.nearestWalkableWorld(p.x, p.y, cfg.AntiVoid.safeRadius);
             if (safe) api.teleportPlayer(safe.x, safe.y);
-            else if (cfg.AntiVoid.baseFallback) api.safeRespawn(p);
+            else if (cfg.AntiVoid.baseFallback) { p.vx = 0; p.vy = 0; }
 
             p.invuln = Math.max(p.invuln || 0, cfg.AntiVoid.invuln);
           }
@@ -3024,7 +3083,7 @@ window.AetherBedsModAPI = {
       },
 
       ProjectileAura: {
-        on: () => loop("ProjectileAura", () => cfg.ProjectileAura.delay, () => {
+        on: () => loop("ProjectileAura", () => Math.max(0.05, Number(cfg.ProjectileAura.attackTime ?? (cfg.ProjectileAura.delay || 260) / 1000)) * 1000, () => {
           const p = api.player;
           const e = api.enemy;
 
