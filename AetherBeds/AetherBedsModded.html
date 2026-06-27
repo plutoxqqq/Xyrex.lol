@@ -531,7 +531,7 @@
   let selectedStyleIndex = 0;
   let attackSwings = [];
   let floatingTexts = [];
-  let antiCheat = { enabled: false, lastX: 0, lastY: 0, lastT: 0, strikes: 0, wins: [] };
+  let antiCheat = { enabled: true, lastX: 0, lastY: 0, lastT: 0, strikes: 0, wins: [] };
 
   function resize() {
     const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
@@ -2362,10 +2362,17 @@ window.AetherBedsModAPI = {
     return true;
   },
 
-  toggleAntiCheat(value) {
-    antiCheat.enabled = typeof value === "boolean" ? value : !antiCheat.enabled;
+  toggleAntiCheat(value, opts = {}) {
+    const requested = typeof value === "boolean" ? value : !antiCheat.enabled;
+    if (!requested && !opts.pro) {
+      antiCheat.enabled = true;
+      antiCheat.lastT = 0;
+      if (!opts.silent) toast("AntiCheat is always on unless PRO disables it.");
+      return antiCheat.enabled;
+    }
+    antiCheat.enabled = requested;
     antiCheat.lastT = 0;
-    toast(`AntiCheat ${antiCheat.enabled ? "enabled" : "disabled"}.`);
+    if (!opts.silent) toast(`AntiCheat ${antiCheat.enabled ? "enabled" : "disabled"}.`);
     return antiCheat.enabled;
   },
 
@@ -3897,6 +3904,11 @@ window.AetherBedsModAPI = {
   background:linear-gradient(135deg,#8be9ff,#b8fff2);color:#061018;
 }
 #abBattleCard button.secondary{background:rgba(255,255,255,.08);color:white;border:1px solid rgba(255,255,255,.12)}
+#abBattleCard button.acToggle{display:inline-flex;align-items:center;gap:9px}
+#abBattleCard button.acToggle .pill{width:40px;height:22px;border-radius:999px;background:rgba(255,95,120,.35);border:1px solid rgba(255,255,255,.16);position:relative;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18)}
+#abBattleCard button.acToggle .pill:after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#ff5f78;transition:transform .18s ease,background .18s ease}
+#abBattleCard button.acToggle.on .pill{background:rgba(114,255,157,.22);border-color:rgba(114,255,157,.45)}
+#abBattleCard button.acToggle.on .pill:after{transform:translateX(18px);background:#72ff9d}
 #abBattleCard button.gold{background:linear-gradient(135deg,#ffd166,#fff0a8);color:#171006}
 .abBpStats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
 .abBpStat{padding:12px;border-radius:16px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09)}
@@ -3977,6 +3989,7 @@ window.AetherBedsModAPI = {
     d.wins = Number(d.wins || 0);
     d.games = Number(d.games || 0);
     d.pro = !!d.pro;
+    d.antiCheatEnabled = d.pro ? d.antiCheatEnabled !== false : true;
     d.lastAward = d.lastAward || null;
     d.claimedFree = Array.isArray(d.claimedFree) ? d.claimedFree : [];
     d.claimedPro = Array.isArray(d.claimedPro) ? d.claimedPro : [];
@@ -4036,6 +4049,8 @@ window.AetherBedsModAPI = {
     const t = tier(d);
     const pct = tierProgress(d);
     const last = d.lastAward;
+    const antiCheatOn = d.pro ? d.antiCheatEnabled !== false : true;
+    window.AetherBedsModAPI?.toggleAntiCheat?.(antiCheatOn, { pro: d.pro, silent: true });
     const btn = ensureButton();
     btn.innerHTML = `Battle Pass<small>T${t}/${TIERS} · ${d.xp} XP</small>`;
 
@@ -4055,7 +4070,7 @@ window.AetherBedsModAPI = {
       <div class="abBpActions">
         <button class="gold" id="abBuyPro">Buy PRO (${PRO_COST} wins)</button>
         <button class="secondary" id="abApplyRewards">Equip Rewards</button>
-        <button class="secondary" id="abToggleAc">PRO AntiCheat</button>
+        <button class="secondary acToggle ${antiCheatOn ? 'on' : 'off'}" id="abToggleAc"><span>AntiCheat: ${antiCheatOn ? 'ON' : 'OFF'}</span><span class="pill" aria-hidden="true"></span></button>
         <button class="secondary" id="abCloseBp">Close</button>
       </div>
     </div>
@@ -4081,13 +4096,26 @@ window.AetherBedsModAPI = {
 
     c.querySelector('#abCloseBp').onclick = () => p.style.display = 'none';
     c.querySelector('#abApplyRewards').onclick = () => { applyUnlockedRewards(); alert('Unlocked rewards equipped for the current game.'); };
-    c.querySelector('#abToggleAc').onclick = () => { const nd = norm(data()); if (!nd.pro) return alert('PRO is required for AntiCheat.'); window.AetherBedsModAPI?.toggleAntiCheat?.(); };
+    c.querySelector('#abToggleAc').onclick = () => {
+      const nd = norm(data());
+      if (!nd.pro) {
+        nd.antiCheatEnabled = true;
+        save(nd);
+        window.AetherBedsModAPI?.toggleAntiCheat?.(true, { pro: false });
+        return alert('AntiCheat is always ON. PRO is required to disable it.');
+      }
+      nd.antiCheatEnabled = !(nd.antiCheatEnabled !== false);
+      save(nd);
+      window.AetherBedsModAPI?.toggleAntiCheat?.(nd.antiCheatEnabled, { pro: true });
+      render();
+    };
     c.querySelector('#abBuyPro').onclick = () => {
       const nd = norm(data());
       if (nd.pro) return alert('You already own PRO.');
       if (nd.wins < PRO_COST) return alert('Need ' + PRO_COST + ' wins to unlock PRO.');
       nd.wins -= PRO_COST;
       nd.pro = true;
+      nd.antiCheatEnabled = true;
       nd.lastAward = { xp: 0, result: 'PRO unlocked', at: Date.now() };
       save(nd);
       render();
@@ -4115,7 +4143,9 @@ window.AetherBedsModAPI = {
     return rewards;
   }
   function applyUnlockedRewards() {
-    window.AetherBedsModAPI?.applyBattlepassRewards?.(unlockedRewards());
+    const d = norm(data());
+    window.AetherBedsModAPI?.applyBattlepassRewards?.(unlockedRewards(d));
+    window.AetherBedsModAPI?.toggleAntiCheat?.(d.pro ? d.antiCheatEnabled !== false : true, { pro: d.pro, silent: true });
   }
 
   window.AetherBedsBattlepass = {
