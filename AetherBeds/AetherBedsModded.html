@@ -1711,8 +1711,27 @@
     return true;
   }
 
+  function antiCheatBypassActive() {
+    return !!window.AetherBedsModAPI?.flags?.antiCheatBypass;
+  }
+
+  function syncAntiCheatPosition(graceMs = 700) {
+    const now = performance.now();
+    antiCheat.graceUntil = Math.max(antiCheat.graceUntil || 0, now + graceMs);
+    antiCheat.lastLegitTeleport = now;
+    antiCheat.lastX = player?.x || 0;
+    antiCheat.lastY = player?.y || 0;
+    antiCheat.lastT = now;
+    antiCheat.lastItems = antiCheatItemSnapshot();
+  }
+
   function markSuspiciousAction(action, detail = '') {
     if (!antiCheat.enabled || state !== 'playing') return false;
+    const bypassedActions = new Set(['teleport', 'respawn', 'direct respawn']);
+    if (antiCheatBypassActive() && bypassedActions.has(action)) {
+      syncAntiCheatPosition(900);
+      return false;
+    }
     const now = performance.now();
     antiCheat.suspicious.push({ action, detail, t: now });
     antiCheat.suspicious = antiCheat.suspicious.filter(e => now - e.t < 5000);
@@ -1739,9 +1758,10 @@
     if ((player.speed || 225) > legitSpeedStat + 8) antiCheatFlag('speed check failed: invalid speed stat');
     const normalCap = legitSpeedStat * 1.45 + 85;
     const dashCap = 2920 + (player.dashBonus || 0) * 320;
+    const bypassActive = antiCheatBypassActive();
     const speedLimit = player.dashTime > 0 || now - antiCheat.lastLegitDash < 350 ? dashCap : normalCap;
-    if (moved / elapsed > speedLimit) antiCheatFlag('speed check failed: movement too fast');
-    if (moved > 460 && now - antiCheat.lastLegitTeleport > 1400 && now - antiCheat.lastLegitDash > 450) antiCheatFlag('teleport check failed');
+    if (!bypassActive && moved / elapsed > speedLimit) antiCheatFlag('speed check failed: movement too fast');
+    if (!bypassActive && moved > 460 && now - antiCheat.lastLegitTeleport > 1400 && now - antiCheat.lastLegitDash > 450) antiCheatFlag('teleport check failed');
 
     const items = antiCheatItemSnapshot();
     if (Object.values(items).some(v => v < 0 || !Number.isFinite(v))) antiCheatFlag('item check failed');
@@ -1751,9 +1771,9 @@
       if (items.fireballs - antiCheat.lastItems.fireballs > 3 || items.tnt - antiCheat.lastItems.tnt > 3 || items.pearls - antiCheat.lastItems.pearls > 2) antiCheatFlag('item check failed: utility spike');
     }
 
-    if ((player.attackCd <= 0 && now - antiCheat.lastLegitAttack < 90) || (player.dashCd <= 0 && now - antiCheat.lastLegitDash < 260) || (player.bowCd <= 0 && now - antiCheat.lastLegitProjectile < 180)) antiCheatFlag('cooldown check failed');
+    if (!bypassActive && ((player.attackCd <= 0 && now - antiCheat.lastLegitAttack < 90) || (player.dashCd <= 0 && now - antiCheat.lastLegitDash < 260) || (player.bowCd <= 0 && now - antiCheat.lastLegitProjectile < 180))) antiCheatFlag('cooldown check failed');
     const coverage = groundCoverage(player);
-    if (player.alive && coverage <= 0.001 && !isWalkableAt(player.x, player.y) && (player.voidTime || 0) > 0.18 && player.invuln < 0.15) antiCheatFlag('void check failed');
+    if (!bypassActive && player.alive && coverage <= 0.001 && !isWalkableAt(player.x, player.y) && (player.voidTime || 0) > 0.18 && player.invuln < 0.15) antiCheatFlag('void check failed');
     antiCheat.wins = antiCheat.wins.filter(t => now - t < 120000);
     if (antiCheat.wins.length > 7) antiCheatFlag('win cap reached');
     if (antiCheat.suspicious.filter(e => now - e.t < 5000).length >= 3) antiCheatFlag('suspicious behaviour burst');
@@ -2252,7 +2272,9 @@ window.AetherBedsModAPI = {
   flags: {
     noBoundaries: false,
     removePlacementLimits: false,
-    alwaysRespawn: false
+    alwaysRespawn: false,
+    antiCheatBypass: false,
+    arrowBypass: false
   },
 
   constants: {
@@ -2335,6 +2357,8 @@ window.AetherBedsModAPI = {
   resetCombo,
   registerCombo,
   renderUI,
+  flagSuspicious(action, detail = '') { return markSuspiciousAction?.(action, detail); },
+  syncAntiCheat(graceMs = 700) { syncAntiCheatPosition(graceMs); },
 
   teleportPlayer(x, y) {
     if (!player) return;
@@ -2377,6 +2401,7 @@ window.AetherBedsModAPI = {
     ent.voidTime = 0;
     ent.vx = 0;
     ent.vy = 0;
+    if (ent === player) syncAntiCheatPosition(1400);
 
     if (spawnMode === "current") return;
 
@@ -2875,8 +2900,9 @@ window.AetherBedsModAPI = {
           loop("AntiCheatBypass", 30, () => {
             const p = api.player;
             if (!alive(p)) return;
-            if (cfg.AntiCheatBypass.reduceSpeed) p.speed = Math.min(p.speed || 225, 300);
-            if (cfg.AntiCheatBypass.spoofCooldowns) { p.attackCd = Math.max(p.attackCd || 0, 0.02); p.dashCd = Math.max(p.dashCd || 0, 0.04); }
+            if (cfg.AntiCheatBypass.reduceSpeed) p.speed = Math.min(p.speed || 225, 238);
+            if (cfg.AntiCheatBypass.spoofCooldowns) { p.attackCd = Math.max(p.attackCd || 0, 0.10); p.dashCd = Math.max(p.dashCd || 0, 0.28); p.bowCd = Math.max(p.bowCd || 0, 0.20); }
+            api.syncAntiCheat?.(350);
           });
         },
         off: () => { api.setFlag?.("antiCheatBypass", false); stop("AntiCheatBypass"); }
@@ -2953,15 +2979,33 @@ window.AetherBedsModAPI = {
           const p = api.player;
           if (!p) return;
 
-          if (!p.alive) api.safeRespawn(p);
+          const bypassActive = !!api.flags?.antiCheatBypass;
+          if (!p.alive) {
+            if (!bypassActive && api.antiCheatEnabled) return;
+            api.safeRespawn(p);
+          }
+
+          if (!bypassActive && api.antiCheatEnabled && (p.hp || 0) <= cfg.AntiDeath.minHp) {
+            api.flagSuspicious?.("AntiDeath", "health save");
+            return;
+          }
 
           p.hp = Math.max(p.hp || 1, cfg.AntiDeath.minHp);
           p.invuln = Math.max(p.invuln || 0, cfg.AntiDeath.invuln);
 
           if (api.groundCoverage(p) <= 0.001) {
-            const safe = api.nearestWalkableWorld(p.x, p.y, 5);
-            if (safe) api.teleportPlayer(safe.x, safe.y);
-            else api.safeRespawn(p);
+            if (!bypassActive && api.antiCheatEnabled) {
+              api.flagSuspicious?.("AntiDeath", "void save");
+              return;
+            }
+            const safe = api.nearestWalkableWorld(p.x, p.y, 8);
+            if (safe) {
+              api.teleportPlayer(safe.x, safe.y);
+              p.voidTime = 0;
+              api.syncAntiCheat?.(900);
+            } else {
+              api.safeRespawn(p);
+            }
           }
 
           if (cfg.AntiDeath.removeProjectiles) {
