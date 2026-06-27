@@ -1735,10 +1735,12 @@
     const speedBootBonus = player.speedBoots ? 28 : 0;
     const assassinBonus = player.kit === 'Assassin' ? 18 : 0;
     const legitBaseSpeed = 225 + speedBootBonus + assassinBonus;
-    const normalCap = Math.max(player.speed || 225, legitBaseSpeed) * 1.95 + 120;
+    const legitSpeedStat = Math.max(legitBaseSpeed, 238); // Speed Lines battlepass reward caps at 238.
+    if ((player.speed || 225) > legitSpeedStat + 8) antiCheatFlag('speed check failed: invalid speed stat');
+    const normalCap = legitSpeedStat * 1.45 + 85;
     const dashCap = 2920 + (player.dashBonus || 0) * 320;
     const speedLimit = player.dashTime > 0 || now - antiCheat.lastLegitDash < 350 ? dashCap : normalCap;
-    if (moved / elapsed > speedLimit) antiCheatFlag('speed check failed');
+    if (moved / elapsed > speedLimit) antiCheatFlag('speed check failed: movement too fast');
     if (moved > 460 && now - antiCheat.lastLegitTeleport > 1400 && now - antiCheat.lastLegitDash > 450) antiCheatFlag('teleport check failed');
 
     const items = antiCheatItemSnapshot();
